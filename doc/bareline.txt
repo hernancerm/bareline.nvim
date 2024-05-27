@@ -1,0 +1,466 @@
+*bareline* Library to facilitate building simple custom statuslines.
+
+MIT License Copyright (c) 2024 Hernán Cervera.
+
+Type |gO| to see the table of contents.
+
+==============================================================================
+Introduction                                                    *bareline.intro*
+
+The purpose of this library is to facilitate the building of simple custom
+statuslines by providing a high-level API around 'statusline'.
+
+Conceptually, bareline organizes a statusline in sections and components.
+Any number of sections is allowed. Sections contain one or more components.
+
+BareSection                                                        *BareSection*
+
+    Type: ~
+        BareComponent[]
+
+
+BareStatusline                                                  *BareStatusline*
+
+    Type: ~
+        BareSection[]
+
+
+Visualization ~
+
++----------------------------------------------------------------------------+
+| NOR  .config/nvim/init.lua                       H:2,W:4  (main)  42,21/50 |
++----------------------------------------------------------------------------+
+|  Components:             |                  |  Components:                 |
+|  • Vim mode.             |                  |  • Diagnostics by severity.  |
+|  • Relative file path.   |                  |  • Git branch.               |
+|                          |                  |  • Location.                 |
++---------Section 1--------+                  +-----------Section 2----------+
+
+==============================================================================
+Setup                                                           *bareline.setup*
+
+Bareline does not provide a `setup` function, instead use a preset to easily
+draw a statusline (|bareline.presets|). Currently, only one preset exists:
+>lua
+    require("bareline").presets.bare()
+<
+
+If the preset above is not enough for your liking, consider any of the
+following approaches for configuring the statusline:
+  1. Use an existent draw method (|bareline.draw_methods|).
+  2. Implement your draw method (|bareline.draw_methods.custom|).
+  3. Do your own and just use the |bareline.providers| or |bareline.components|.
+
+Regarding option number 1, here is a complete example:
+>lua
+    local bareline = require("bareline")
+    bareline.draw_methods.draw_active_inactive_plugin {
+      {
+        {
+          bareline.components.vim_mode,
+          bareline.providers.get_file_path_relative_to_cwd,
+          "%m",
+          "%h",
+          "%r",
+        },
+        {
+          bareline.components.diagnostics,
+          vim.bo.fileformat,
+          bareline.components.indent_style,
+          bareline.components.end_of_line,
+          bareline.components.git_branch,
+          bareline.components.position,
+        },
+      },
+      {
+        {
+          {
+            value = bareline.components.vim_mode.value,
+            opts = {
+              format = bareline.formatters.mask(
+                  bareline.components.vim_mode.opts.format, " ")
+            },
+          },
+          bareline.providers.get_file_path_relative_to_cwd,
+          "%m",
+          "%h",
+          "%r",
+        },
+        {
+          bareline.components.diagnostics,
+          vim.bo.fileformat,
+          bareline.components.indent_style,
+          bareline.components.end_of_line,
+          bareline.components.position,
+        },
+      },
+      {
+        { bareline.components.plugin_name },
+        { bareline.components.position },
+      },
+    }
+<
+
+==============================================================================
+Providers                                                   *bareline.providers*
+
+The functions in this section provide data in a structure to be easily
+parsed into any desired format. For ready-to-use statusline components,
+see |bareline.components|.
+
+
+bareline.providers.get_vim_mode()              *bareline.providers.get_vim_mode*
+    Returns the first char of the current Vim mode (see |mode()|). For
+    block modes, two characters are returned, a "b" followed by the mode;
+    currently, only `bv` for "block visual mode" and `bs` for "block select
+    mode". The returned string has only lower case letters.
+
+    Returns: ~
+        (string)
+
+
+bareline.providers.get_git_head()              *bareline.providers.get_git_head*
+    Returns the Git HEAD. The file `.git/HEAD` is read and its first line
+    is returned. If the current directory does not have a `.git` dir, an
+    upwards search is performed. If the dir isn't found, then nil is
+    returned.
+
+    Returns: ~
+        (string|nil)
+
+
+bareline.providers.get_diagnostics()        *bareline.providers.get_diagnostics*
+    Returns the diagnostics count of the current buffer by severity, where
+    a lower index is a higher severity. Use numeric indices or the the
+    keys in |vim.diagnostic.severity| to get the diagnostic count per
+    severity.
+    Example output: `{ 4, 1, 0, 1 }`
+
+    Returns: ~
+        (table|nil)
+
+    Usage: ~
+>lua
+        local bareline = require("bareline")
+        local errors = bareline.components.providers.get_diagnostics()[1]
+        print(errors) -- Output: 4
+<
+
+
+                              *bareline.providers.get_file_path_relative_to_cwd*
+bareline.providers.get_file_path_relative_to_cwd()
+    Returns the file path of the current buffer relative to the current
+    working directory (|:pwd|). If the file opened is not in this dir, then
+    the absolute path is returned. This is meant to be used instead of the
+    field `%f` (see 'statusline') for a more consistent experience.
+
+    Returns: ~
+        (string)
+
+
+==============================================================================
+Formatters                                                 *bareline.formatters*
+
+                                                      *bareline.formatters.mask*
+bareline.formatters.mask({format}, {mask})
+    Mask with a character. Useful for making a component invisible.
+
+    Parameters: ~
+        {format}  (function)
+        {mask}    (string)
+
+    Returns: ~
+        (function)
+
+    Usage: ~
+>lua
+        local invisible_vim_mode_component = {
+          value = M.components.vim_mode.value,
+          opts = {
+            format = M.formatters.mask(
+                M.components.vim_mode.opts.format, " ")
+          }
+        }
+<
+
+
+==============================================================================
+Components                                                 *bareline.components*
+
+All bundled components are structured as a |StdComponent|. To build the
+components listed below to get a meaningful value, follow this example:
+>lua
+    local bareline = require("bareline")
+    local vim_mode = bareline.build_component(bareline.components.vim_mode)
+    print(vim_mode) -- Output: NOR
+<
+
+
+bareline.components.vim_mode                      *bareline.components.vim_mode*
+    The Vim mode in 3 characters.
+    Mockups: `NOR`, `VIS`
+
+    Type: ~
+        (StdComponent)
+
+
+bareline.components.plugin_name                *bareline.components.plugin_name*
+    When on a plugin window, the formatted name of the plugin window.
+    Mockup: `[Nvim Tree]`
+
+    Type: ~
+        (StdComponent)
+
+
+bareline.components.indent_style              *bareline.components.indent_style*
+    The indent style on insert mode. Relies on 'expandtab' and 'tabstop'.
+    Mockups: `spaces-2`, `tabs-4`
+
+    Type: ~
+        (StdComponent)
+
+
+bareline.components.end_of_line                *bareline.components.end_of_line*
+    Indicate when the file does not have an end of line (EOL) on its last
+    line. Return `noeol` in this case, nil otherwise. This uses the option 'eol'.
+
+    Type: ~
+        (StdComponent)
+
+
+bareline.components.git_branch                  *bareline.components.git_branch*
+    The Git HEAD.
+    Mockup: `(main)`
+
+    Type: ~
+        (StdComponent)
+
+
+bareline.components.diagnostics                *bareline.components.diagnostics*
+    The diagnostics of the current buffer.
+    Mockup: `E:2,W:1`
+
+    Type: ~
+        (StdComponent)
+
+
+bareline.components.position                      *bareline.components.position*
+    The current cursor position in the format: line,column/total-lines.
+    Mockup: `181,43/329`
+
+    Type: ~
+        (StdComponent)
+
+
+==============================================================================
+Building                                                     *bareline.building*
+
+Building can be done in the sense of a component or a complete statusline.
+
+                                                   *bareline.building-component*
+Building a component ~
+
+Building a component means obtaining its string or nil value. Below are
+the type transformations, starting at what the user provides to what gets
+placed in 'statusline':
+
+    |BareComponent| > |StdComponent| > |StdComponentBuilt|
+
+See:
+  • |bareline.build_component|
+  • |bareline.build_statusline|
+
+
+BareComponent                                                    *BareComponent*
+    • Function: Must return either a string or nil. The returned string is
+      what gets placed in the statusline. When nil is returned, the component
+      is skipped, leaving no gap.
+    • String: The string is considered as if a function component had already
+      been executed and its output is the provided string. Handy for placing
+      statusline fields, for example `%f`.
+    • |StdComponent|: Table which allows component configuration.
+
+    Type: ~
+        function|string|StdComponent
+
+
+StdComponent                                                      *StdComponent*
+    Standard component. All |bareline.components| are structured like this.
+
+    Fields: ~
+        {value}  (function|string|nil)      As a function, return string|nil.
+        {opts}   (StdComponentOptions|nil)
+
+
+StdComponentOptions                                        *StdComponentOptions*
+    Options to configure the building of a standard component. The option
+    {cache_on_vim_modes} expects a list of Vim modes as per the first
+    letter returned by |mode()|.
+
+    Fields: ~
+        {format}              (function|nil)  As a function, return string|nil.
+        {cache_on_vim_modes}  (table|nil)     Use cache in these Vim modes.
+
+
+StdComponentBuilt                                            *StdComponentBuilt*
+    The standard component built into a string or nil.
+
+    Type: ~
+        string|nil
+
+
+bareline.build_component({component})                 *bareline.build_component*
+    Use this function to get the built value of components from |bareline.components|.
+
+    Parameters: ~
+        {component}  (BareComponent)
+
+    Returns: ~
+        (StdComponentBuilt)
+
+
+                                                  *bareline.building-statusline*
+Building a statusline ~
+
+bareline.build_statusline({sections})                *bareline.build_statusline*
+    Use this function when implementing a custom draw method.
+    See |bareline.draw_methods|.
+
+    Parameters: ~
+        {sections}  (table)
+
+    Returns: ~
+        (string)  String assignable to 'statusline'.
+
+
+==============================================================================
+Drawing                                                       *bareline.drawing*
+
+                                                         *bareline.draw_helpers*
+Draw helpers ~
+
+                                        *bareline.draw_helpers.is_plugin_window*
+bareline.draw_helpers.is_plugin_window({buffer})
+
+    Parameters: ~
+        {buffer}  (integer)  The window number, as returned by |bufnr()|.
+
+    Returns: ~
+        (boolean)
+
+
+                                  *bareline.draw_helpers.draw_window_statusline*
+bareline.draw_helpers.draw_window_statusline({statusline})
+    Assign the built statusline with |bareline.build_statusline| to the
+    current window's 'statusline'.
+
+    Parameters: ~
+        {statusline}  (BareStatusline)
+
+
+                                                         *bareline.draw_methods*
+Draw methods ~
+
+Draw methods rely on |autocmd|s and a |timer| to properly draw the provided
+statusline on all windows. Use |bareline.draw_methods.stop_all| to stop the
+drawing.
+
+bareline.draw_methods.stop_all({opts})          *bareline.draw_methods.stop_all*
+    Stop the drawing of statuslines done by the draw methods provided by this
+    plugin. Then, conditionally draw the default statusline on all windows on
+    all tab pages.
+
+    Parameters: ~
+        {opts}  (table|nil)  Optional parameters.
+                             • {default_statusline} (boolean) Draw the default
+                               statusline on all windows.
+
+
+                             *bareline.draw_methods.draw_active_inactive_plugin*
+bareline.draw_methods.draw_active_inactive_plugin({statuslines})
+    Use distinct statuslines for active, inactive and plugin windows. The
+    provided statuslines are handled in this order by table index: (1) drawn
+    on the active window, (2) drawn on the inactive window and (3) drawn on
+    the plugin window, having precedence over the active window statusline.
+
+    Parameters: ~
+        {statuslines}  (BareStatusline[])
+
+
+                                                  *bareline.draw_methods.custom*
+Developing a custom draw method ~
+
+Example. Draw method which draws the same statusline on every visited window.
+For |bareline.draw_methods.stop_all| to work, use the autocmd group
+`bareline.draw_methods.augroup` and insert the timer id in
+`bareline.draw_methods.timers`.
+>lua
+    local bareline = require("bareline")
+    ---Draw a statusline. Initially, only the current window is affected.
+    ---@param statusline BareStatusline
+    local function draw(statusline)
+      bareline.draw_methods.stop_all({ draw_default_statusline = false })
+
+      -- Redraw statusline immediately to update specific components.
+      vim.api.nvim_create_autocmd(
+        { "ModeChanged", "DiagnosticChanged", "BufEnter" },
+        {
+          group = bareline.draw_methods.augroup,
+          callback = function()
+            bareline.draw_helpers.draw_window_statusline(
+                statusline)
+          end,
+        }
+      )
+
+      -- Redraw statusline of active window to update components hard to
+      -- watch, e.g. the Git branch.
+      table.insert(bareline.draw_methods.timers, vim.fn.timer_start(
+          500,
+          function()
+            bareline.draw_helpers.draw_window_statusline(
+                statusline)
+          end,
+          { ["repeat"] = -1 }
+        )
+      )
+
+      bareline.draw_helpers.draw_window_statusline(statusline)
+    end
+<
+
+Sample usage:
+>lua
+    draw {
+      { bareline.components.git_branch, "%f", "%m", "%h", "%r" },
+      { bareline.components.position }
+    }
+<
+
+Mockup of output statusline:
+
+| (main) .config/nvim/init.lua                                      42,21/50 |
+
+
+==============================================================================
+Presets                                                       *bareline.presets*
+
+Presets provide a config-free experience to start using a statusline.
+
+bareline.presets.bare()                                  *bareline.presets.bare*
+    Use distinct statuslines for active, inactive and plugin windows. Uses
+    |bareline.draw_methods.draw_active_inactive_plugin|. This preset is inspired
+    by Helix's default statusline. See: https://github.com/helix-editor/helix
+    Mockups:
+
+    Active window:   | NOR  file   H:2,W:4  unix  spaces-2  (main)  42,21/50 |
+    Inactive window: |      file           H:2,W:4  unix  spaces-2  42,21/50 |
+    Plugin window:   | [Nvim Tree]                                  28,09/33 |
+
+    Usage: ~
+>lua
+        require("bareline").presets.bare()
+<
+
+
+vim:tw=78:ts=8:noet:ft=help:norl:
