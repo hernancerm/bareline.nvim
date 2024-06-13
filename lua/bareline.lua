@@ -654,12 +654,23 @@ end
 ---@param statuslines BareStatusline[]
 function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   bareline.draw_methods.stop_all({ draw_default_statusline = false })
-  ---@type BareSection[]
-  local active_window_sections = statuslines[1]
-  ---@type BareSection[]
-  local inactive_window_sections = statuslines[2]
-  ---@type BareSection[]
-  local plugin_window_sections = statuslines[3]
+  ---@type BareStatusline
+  local active_window_statusline = statuslines[1]
+  ---@type BareStatusline
+  local inactive_window_statusline = statuslines[2]
+  ---@type BareStatusline
+  local plugin_window_statusline = statuslines[3]
+
+  ---@param statusline_1 BareStatusline Statusline drawn when the current
+  ---window is used by a plugin.
+  ---@param statusline_2 BareStatusline Statusline drawn otherwise.
+  local function draw_statusline_if_plugin_window(statusline_1, statusline_2)
+    if bareline.draw_helpers.is_plugin_window(vim.fn.bufnr()) then
+      bareline.draw_helpers.draw_window_statusline(statusline_1)
+    else
+      bareline.draw_helpers.draw_window_statusline(statusline_2)
+    end
+  end
 
   -- Redraw statusline immediately to update specific components, e.g. the Vim
   -- mode. For plugin windows (e.g. nvim-tree), use a special statusline.
@@ -668,11 +679,22 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     {
       group = bareline.draw_methods.augroup,
       callback = function()
-        if bareline.draw_helpers.is_plugin_window(vim.fn.bufnr()) then
-          bareline.draw_helpers.draw_window_statusline(plugin_window_sections)
-        else
-          bareline.draw_helpers.draw_window_statusline(active_window_sections)
-        end
+        draw_statusline_if_plugin_window(
+          plugin_window_statusline,
+          active_window_statusline
+        )
+      end,
+    }
+  )
+
+  vim.api.nvim_create_autocmd("OptionSet", {
+      group = bareline.draw_methods.augroup,
+      pattern = "expandtab,tabstop,endofline",
+      callback = function()
+        draw_statusline_if_plugin_window(
+          plugin_window_statusline,
+          active_window_statusline
+        )
       end,
     }
   )
@@ -682,11 +704,10 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   table.insert(bareline.draw_methods.timers, vim.fn.timer_start(
       500,
       function()
-        if bareline.draw_helpers.is_plugin_window(vim.fn.bufnr()) then
-          bareline.draw_helpers.draw_window_statusline(plugin_window_sections)
-        else
-          bareline.draw_helpers.draw_window_statusline(active_window_sections)
-        end
+        draw_statusline_if_plugin_window(
+          plugin_window_statusline,
+          active_window_statusline
+        )
       end,
       { ["repeat"] = -1 }
     )
@@ -698,15 +719,14 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   vim.api.nvim_create_autocmd("WinLeave", {
     group = bareline.draw_methods.augroup,
     callback = function()
-      if bareline.draw_helpers.is_plugin_window(vim.fn.bufnr()) then
-        bareline.draw_helpers.draw_window_statusline(plugin_window_sections)
-      else
-        bareline.draw_helpers.draw_window_statusline(inactive_window_sections)
-      end
+      draw_statusline_if_plugin_window(
+          plugin_window_statusline,
+          inactive_window_statusline
+        )
     end,
   })
 
-  bareline.draw_helpers.draw_window_statusline(active_window_sections)
+  bareline.draw_helpers.draw_window_statusline(active_window_statusline)
 end
 
 ---@tag bareline.draw_methods.custom
