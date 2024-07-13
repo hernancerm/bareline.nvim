@@ -689,7 +689,7 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
 
   vim.api.nvim_create_autocmd("OptionSet", {
       group = bareline.draw_methods.augroup,
-      pattern = "expandtab,tabstop,endofline",
+      pattern = "expandtab,tabstop,endofline,fileformat,formatoptions",
       callback = function()
         draw_statusline_if_plugin_window(
           plugin_window_statusline,
