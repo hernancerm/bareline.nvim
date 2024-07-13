@@ -6,7 +6,7 @@ Library to facilitate building simple statuslines.
 
 - Preset statusline for a batteries included experience.
 - Basic data providers and components for building your own statusline.
-- Support for user-defined statusline drawing methods.
+- Simple.
 
 Not implemented:
 

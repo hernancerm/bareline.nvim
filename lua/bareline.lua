@@ -805,8 +805,8 @@ bareline.presets = {}
 ---by Helix's default statusline. See: https://github.com/helix-editor/helix
 ---Mockups:
 ---
----Active window:   | NOR  file   H:2,W:4  unix  spaces-2  (main)  42,21/50 |
----Inactive window: |      file           H:2,W:4  unix  spaces-2  42,21/50 |
+---Active window:   | NOR  init.lua     H:2,W:4  spaces-2  (main)  42,21/50 |
+---Inactive window: |      init.lua             H:2,W:4  spaces-2  42,21/50 |
 ---Plugin window:   | [Nvim Tree]                                  28,09/33 |
 ---@usage `require("bareline").presets.bare()`
 function bareline.presets.bare()
@@ -824,7 +824,6 @@ function bareline.presets.bare()
       },
       {
         bareline.components.diagnostics,
-        vim.bo.fileformat,
         bareline.components.indent_style,
         bareline.components.end_of_line,
         bareline.components.git_branch,
@@ -849,7 +848,6 @@ function bareline.presets.bare()
       },
       {
         bareline.components.diagnostics,
-        vim.bo.fileformat,
         bareline.components.indent_style,
         bareline.components.end_of_line,
         bareline.components.position,
