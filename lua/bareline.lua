@@ -3,7 +3,6 @@
 local Bareline = {
   providers = {},
   components = {},
-  formatters = {},
   draw_methods = {}
 }
 local H = {}
@@ -81,7 +80,6 @@ function Bareline.providers.get_vim_mode()
     if character == "" then return "bs" end
     return character:lower()
   end
-
   return standardize_mode(vim.fn.mode())
 end
 
@@ -120,13 +118,11 @@ end
 ---@usage ]]
 function Bareline.providers.get_diagnostics()
   if vim.fn.empty(vim.diagnostic.get(0)) == 1 then return nil end
-
   local diagnostics_per_severity = { 0, 0, 0, 0 }
   for _, diagnostic in ipairs(vim.diagnostic.get(0)) do
     diagnostics_per_severity[diagnostic.severity] =
         diagnostics_per_severity[diagnostic.severity] + 1
   end
-
   return diagnostics_per_severity
 end
 
@@ -143,91 +139,6 @@ function Bareline.providers.get_file_path_relative_to_cwd()
       H.escape_lua_pattern(vim.fn.getcwd()) .. "/",
       "")
   return replacement
-end
-
---: FORMATTERS
-
----@param vim_mode string
----@return string _ The Vim mode in 3 characters, e.g. `NOR`, `INS`.
-local function format_vim_mode(vim_mode)
-  local mode_labels = {
-    n = "nor",
-    i = "ins",
-    v = "vis",
-    s = "sel",
-    t = "ter",
-    c = "cmd",
-    r = "rep",
-    bv = "vis",
-    bs = "sel",
-    ["!"] = "ext",
-  }
-  return mode_labels[vim_mode]:upper()
-end
-
----@param git_head string|nil
----@return string|nil _ The Git HEAD surrounded by parentheses, e.g. `(main)`.
-local function format_git_head(git_head)
-  if git_head == nil then return nil end
-  local function format(head)
-    local formatted_head
-    if head:match "^ref: " then
-      formatted_head = head:gsub("^ref: refs/%w+/", "")
-    else
-      formatted_head = head:sub(1, 7)
-    end
-    return formatted_head
-  end
-  return string.format("(%s)", format(git_head))
-end
-
----Return the formatted lsp server names, e.g. "[luals]".
----@param lsp_servers table
----@return string|nil
-local function format_lsp_servers(lsp_servers)
-  if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then return nil end
-  return "[" .. vim.fn.join(lsp_servers, ",") .. "]"
-end
-
----Return the formatted diagnostics sorted by severity, e.g. "W:2,I:8".
----@return string|nil
----@param diagnostics_per_severity table|nil
-local function format_diagnostics(diagnostics_per_severity)
-  if diagnostics_per_severity == nil then return nil end
-  local formatted_diagnostics = ""
-  local diagnostics_severity_label = { "E", "W", "I", "H" }
-  local separator = ""
-  for index, count in ipairs(diagnostics_per_severity) do
-    if count > 0 then
-      formatted_diagnostics = formatted_diagnostics
-        .. string.format(
-            "%s%s:%s", separator, diagnostics_severity_label[index], count)
-      separator = ","
-    end
-  end
-  return formatted_diagnostics
-end
-
--- TODO: This does not need to be public!
----Mask with a character. Useful for making a component invisible.
----@param format function
----@param mask string
----@return function
--- TODO: Properly use this @usage.
--- ---@usage [[
--- ---local invisible_vim_mode_component = {
--- ---  value = M.components.vim_mode.value,
--- ---  opts = {
--- ---    format = M.formatters.mask(
--- ---        M.components.vim_mode.opts.format, " ")
--- ---  }
--- ---}
--- ---@usage ]]
-function Bareline.formatters.mask(format, mask)
-  return function (built_std_component)
-    if built_std_component == nil then return "" end
-    return format(built_std_component):gsub(".", mask)
-  end
 end
 
 --: COMPONENTS
@@ -262,89 +173,128 @@ end
 ---@type BareComponent
 Bareline.components.vim_mode = Bareline.BareComponent:new(
   Bareline.providers.get_vim_mode,
-  { format = format_vim_mode }
+  {
+    format = function (vim_mode)
+      local mode_labels = {
+        n = "nor", i = "ins", v = "vis", s = "sel",
+        t = "ter", c = "cmd", r = "rep", bv = "vis",
+        bs = "sel", ["!"] = "ext",
+      }
+      return mode_labels[vim_mode]:upper()
+    end
+  }
 )
 
 ---When on a plugin window, the formatted name of the plugin window.
 ---Mockup: `[Nvim Tree]`
----@type StdComponent
-Bareline.components.plugin_name = {
-  provider = function()
-    local plugin_file_type = {
-      nvimtree = "Nvim Tree",
-    }
-    if plugin_file_type[vim.bo.filetype:lower()] then
-      return string.format("[%s]", plugin_file_type[vim.bo.filetype:lower()])
-    else
+---@type BareComponent
+Bareline.components.plugin_name = Bareline.BareComponent:new(
+  function() return vim.bo.filetype end,
+  {
+    format = function(file_type)
+      local plugin_file_type = {
+        nvimtree = "Nvim Tree",
+      }
+      if plugin_file_type[file_type:lower()] then
+        return string.format("[%s]", plugin_file_type[file_type:lower()])
+      end
       return nil
     end
-  end,
-}
+  }
+)
 
 ---The indent style on insert mode. Relies on 'expandtab' and 'tabstop'.
 ---Mockups: `spaces-2`, `tabs-4`
----@type StdComponent
-Bareline.components.indent_style = {
-  provider = function()
+---@type BareComponent
+Bareline.components.indent_style = Bareline.BareComponent:new(
+  function()
     local whitespace_type = "tabs"
     if vim.bo.expandtab then whitespace_type = "spaces" end
     return whitespace_type .. "-" .. vim.bo.tabstop
-  end,
-}
+  end
+)
 
 ---Indicate when the file does not have an end of line (EOL) on its last
 ---line. Return `noeol` in this case, nil otherwise. This uses the option 'eol'.
----@type StdComponent
-Bareline.components.end_of_line = {
-  provider = function()
+---@type BareComponent
+Bareline.components.end_of_line = Bareline.BareComponent:new(
+  function()
     if vim.bo.eol then return nil end
     return "noeol"
-  end,
-}
+  end
+)
 
 ---The Git HEAD.
 ---Mockup: `(main)`
----@type StdComponent
-Bareline.components.git_branch = {
-  provider = Bareline.providers.get_git_head,
-  opts = {
-    format = format_git_head,
-  },
-}
+---@type BareComponent
+Bareline.components.git_branch = Bareline.BareComponent:new(
+  Bareline.providers.get_git_head,
+  {
+    format = function(git_head)
+      if git_head == nil then return nil end
+      local function format(head)
+        local formatted_head
+        if head:match "^ref: " then
+          formatted_head = head:gsub("^ref: refs/%w+/", "")
+        else
+          formatted_head = head:sub(1, 7)
+        end
+        return formatted_head
+      end
+      return string.format("(%s)", format(git_head))
+    end
+  }
+)
 
 ---The LSP servers attached to the current buffer.
 ---Mockup: `[lua_ls]`
----@type StdComponent
-Bareline.components.lsp_servers = {
-  provider = Bareline.providers.lsp_server_names,
-  opts = {
-    format = format_lsp_servers,
-  },
-}
+---@type BareComponent
+Bareline.components.lsp_servers = Bareline.BareComponent:new(
+  Bareline.providers.lsp_server_names,
+  {
+    format = function(lsp_servers)
+      if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then return nil end
+      return "[" .. vim.fn.join(lsp_servers, ",") .. "]"
+    end
+  }
+)
 
 ---The file path relative to the current working directory (|:pwd|).
 ---Mockup: `lua/bareline.lua`
----@type StdComponent
-Bareline.components.get_file_path_relative_to_cwd = {
-  provider = Bareline.providers.get_file_path_relative_to_cwd,
-}
+---@type BareComponent
+Bareline.components.get_file_path_relative_to_cwd = Bareline.BareComponent:new(
+  Bareline.providers.get_file_path_relative_to_cwd
+)
+
 ---The diagnostics of the current buffer.
 ---Mockup: `E:2,W:1`
----@type StdComponent
-Bareline.components.diagnostics = {
-  provider = Bareline.providers.get_diagnostics,
-  opts = {
+---@type BareComponent
+Bareline.components.diagnostics = Bareline.BareComponent:new(
+  Bareline.providers.get_diagnostics,
+  {
     cache_on_vim_modes = { "i" },
-    format = format_diagnostics,
-  },
-}
+    format = function(diagnostics_per_severity)
+      if diagnostics_per_severity == nil then return nil end
+      local formatted_diagnostics = ""
+      local diagnostics_severity_label = { "E", "W", "I", "H" }
+      local separator = ""
+      for index, count in ipairs(diagnostics_per_severity) do
+        if count > 0 then
+          formatted_diagnostics = formatted_diagnostics
+            .. string.format(
+                "%s%s:%s", separator, diagnostics_severity_label[index], count)
+          separator = ","
+        end
+      end
+      return formatted_diagnostics
+    end
+  }
+)
 
 ---The current cursor position in the format: line,column/total-lines.
 ---Mockup: `181,43/329`
----@type StdComponent
-Bareline.components.position = {
-  provider = "%02l,%02c/%02L",
-}
+---@type BareComponent
+Bareline.components.position = Bareline.BareComponent:new("%02l,%02c/%02L")
 
 apply_default_config()
 
