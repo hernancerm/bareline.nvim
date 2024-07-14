@@ -23,7 +23,7 @@ end
 -- TODO: Properly use this @usage.
 ---@usage `require("bareline").presets.bare()`
 local function apply_default_config()
-  Bareline.config = {
+  Bareline.default_config = {
     draw_method = Bareline.draw_methods.draw_active_inactive_plugin,
     statusline = {
       -- Active.
@@ -299,9 +299,6 @@ Bareline.components.diagnostics = Bareline.BareComponent:new(
 ---@type BareComponent
 Bareline.components.position = Bareline.BareComponent:new("%02l,%02c/%02L")
 
--- Apply default config to module once providers and components are defined.
-apply_default_config()
-
 --: DRAW METHODS
 
 Bareline.draw_methods = {}
@@ -384,6 +381,9 @@ function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
 
   H.draw_window_statusline(active_window_statusline)
 end
+
+-- Set module default config.
+apply_default_config()
 
 --: HELPERS > BUILD
 
@@ -550,17 +550,14 @@ vim.api.nvim_create_autocmd({ "WinClosed" }, {
 
 --: HELPERS
 
-function H.get_default_config()
-  return vim.deepcopy(Bareline.config)
-end
-
 ---Merge user-supplied config with the plugin's default config. For every key
 ---which is not supplied by the user, the value in the default config will be
 ---used. The user's config has precedence.
 ---@return table
 function H.get_config_with_fallback(config)
   vim.validate { config = { config, "table", true } }
-  config = vim.tbl_deep_extend("force", H.get_default_config(), config)
+  config = vim.tbl_deep_extend(
+    "force", vim.deepcopy(Bareline.default_config), config)
   vim.validate {
     draw_method = { config.draw_method, "function" },
     statusline = { config.statusline, "table" }
