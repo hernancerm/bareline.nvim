@@ -1,31 +1,27 @@
-local bareline = {}
+--: MODULE DEFINITION
 
---: UTILITIES
+local Bareline = {
+  providers = {},
+  components = {},
+  formatters = {},
+  draw_methods = {}
+}
+local H = {}
 
----Given a string, escape the Lua magic pattern characters so that the string
----can be used as a Lua pattern for an exact match, e.g. as the pattern supplied
----to 'string.gsub'. Reference: https://www.lua.org/manual/5.1/manual.html#5.4.1
----@param string string
----@return string
-local function escape_lua_pattern(string)
-  local special_chars = {
-    "%", "(", ")", ".", "+", "-", "*", "?", "[", "]", "^", "$" }
-  for _, special_char in ipairs(special_chars) do
-    string, _ = string.gsub(string, "%" .. special_char, "%%" .. special_char)
-  end
-  return string
+-- Module setup
+function Bareline.setup(config)
+  Bareline.config = H.get_config_with_fallback(config)
+  Bareline.config.draw_method(Bareline.config.statusline)
 end
 
 --: PROVIDERS
-
-bareline.providers = {}
 
 ---Returns the first char of the current Vim mode (see |mode()|). For
 ---block modes, two characters are returned, a "b" followed by the mode;
 ---currently, only `bv` for "block visual mode" and `bs` for "block select
 ---mode". The returned string has only lower case letters.
 ---@return string
-function bareline.providers.get_vim_mode()
+function Bareline.providers.get_vim_mode()
   local function standardize_mode(character)
     if character == "" then return "bv" end
     if character == "" then return "bs" end
@@ -40,7 +36,7 @@ end
 ---upwards search is performed. If the dir isn't found, then nil is
 ---returned.
 ---@return string|nil
-function bareline.providers.get_git_head()
+function Bareline.providers.get_git_head()
   local git_dir = vim.fn.finddir(".git", ".;")
   return (git_dir ~= "" and vim.fn.readfile(git_dir .. "/HEAD")[1]) or nil
 end
@@ -48,7 +44,7 @@ end
 ---Returns the names of the LSP servers attached to the current buffer.
 ---Example output: `{ "luals" }`
 ---@return table
-function bareline.providers.lsp_server_names()
+function Bareline.providers.lsp_server_names()
   return vim.tbl_map(
     function (client)
       return client.name
@@ -68,7 +64,7 @@ end
 ---local errors = bareline.components.providers.get_diagnostics()[1]
 ---print(errors) -- Output: 4
 ---@usage ]]
-function bareline.providers.get_diagnostics()
+function Bareline.providers.get_diagnostics()
   if vim.fn.empty(vim.diagnostic.get(0)) == 1 then return nil end
 
   local diagnostics_per_severity = { 0, 0, 0, 0 }
@@ -85,19 +81,17 @@ end
 ---the absolute path is returned. This is meant to be used instead of the
 ---field `%f` (see 'statusline') for a more consistent experience.
 ---@return string
-function bareline.providers.get_file_path_relative_to_cwd()
+function Bareline.providers.get_file_path_relative_to_cwd()
   local buf_name = vim.api.nvim_buf_get_name(0)
   if buf_name == "" or vim.bo.filetype == "help" then return "%f" end
   local replacement, _ = string.gsub(
       vim.api.nvim_buf_get_name(0),
-      escape_lua_pattern(vim.fn.getcwd()) .. "/",
+      H.escape_lua_pattern(vim.fn.getcwd()) .. "/",
       "")
   return replacement
 end
 
 --: FORMATTERS
-
-bareline.formatters = {}
 
 ---@param vim_mode string
 ---@return string _ The Vim mode in 3 characters, e.g. `NOR`, `INS`.
@@ -160,6 +154,7 @@ local function format_diagnostics(diagnostics_per_severity)
   return formatted_diagnostics
 end
 
+-- TODO: This does not need to be public!
 ---Mask with a character. Useful for making a component invisible.
 ---@param format function
 ---@param mask string
@@ -174,7 +169,7 @@ end
 -- ---  }
 -- ---}
 -- ---@usage ]]
-function bareline.formatters.mask(format, mask)
+function Bareline.formatters.mask(format, mask)
   return function (built_std_component)
     if built_std_component == nil then return "" end
     return format(built_std_component):gsub(".", mask)
@@ -183,20 +178,18 @@ end
 
 --: COMPONENTS
 
-bareline.components = {}
-
 ---The Vim mode in 3 characters.
 ---Mockups: `NOR`, `VIS`
 ---@type StdComponent
-bareline.components.vim_mode = {
-  value = bareline.providers.get_vim_mode,
+Bareline.components.vim_mode = {
+  value = Bareline.providers.get_vim_mode,
   opts = { format = format_vim_mode },
 }
 
 ---When on a plugin window, the formatted name of the plugin window.
 ---Mockup: `[Nvim Tree]`
 ---@type StdComponent
-bareline.components.plugin_name = {
+Bareline.components.plugin_name = {
   value = function()
     local plugin_file_type = {
       nvimtree = "Nvim Tree",
@@ -212,7 +205,7 @@ bareline.components.plugin_name = {
 ---The indent style on insert mode. Relies on 'expandtab' and 'tabstop'.
 ---Mockups: `spaces-2`, `tabs-4`
 ---@type StdComponent
-bareline.components.indent_style = {
+Bareline.components.indent_style = {
   value = function()
     local whitespace_type = "tabs"
     if vim.bo.expandtab then whitespace_type = "spaces" end
@@ -223,7 +216,7 @@ bareline.components.indent_style = {
 ---Indicate when the file does not have an end of line (EOL) on its last
 ---line. Return `noeol` in this case, nil otherwise. This uses the option 'eol'.
 ---@type StdComponent
-bareline.components.end_of_line = {
+Bareline.components.end_of_line = {
   value = function()
     if vim.bo.eol then return nil end
     return "noeol"
@@ -233,8 +226,8 @@ bareline.components.end_of_line = {
 ---The Git HEAD.
 ---Mockup: `(main)`
 ---@type StdComponent
-bareline.components.git_branch = {
-  value = bareline.providers.get_git_head,
+Bareline.components.git_branch = {
+  value = Bareline.providers.get_git_head,
   opts = {
     format = format_git_head,
   },
@@ -243,8 +236,8 @@ bareline.components.git_branch = {
 ---The LSP servers attached to the current buffer.
 ---Mockup: `[lua_ls]`
 ---@type StdComponent
-bareline.components.lsp_servers = {
-  value = bareline.providers.lsp_server_names,
+Bareline.components.lsp_servers = {
+  value = Bareline.providers.lsp_server_names,
   opts = {
     format = format_lsp_servers,
   },
@@ -253,14 +246,14 @@ bareline.components.lsp_servers = {
 ---The file path relative to the current working directory (|:pwd|).
 ---Mockup: `lua/bareline.lua`
 ---@type StdComponent
-bareline.components.get_file_path_relative_to_cwd = {
-  value = bareline.providers.get_file_path_relative_to_cwd,
+Bareline.components.get_file_path_relative_to_cwd = {
+  value = Bareline.providers.get_file_path_relative_to_cwd,
 }
 ---The diagnostics of the current buffer.
 ---Mockup: `E:2,W:1`
 ---@type StdComponent
-bareline.components.diagnostics = {
-  value = bareline.providers.get_diagnostics,
+Bareline.components.diagnostics = {
+  value = Bareline.providers.get_diagnostics,
   opts = {
     cache_on_vim_modes = { "i" },
     format = format_diagnostics,
@@ -270,7 +263,7 @@ bareline.components.diagnostics = {
 ---The current cursor position in the format: line,column/total-lines.
 ---Mockup: `181,43/329`
 ---@type StdComponent
-bareline.components.position = {
+Bareline.components.position = {
   value = "%02l,%02c/%02L",
 }
 
@@ -328,11 +321,10 @@ end
 ---@param std_component StdComponent
 ---@return any
 local function build_std_component(std_component)
-  local output = nil
   local value = std_component.value
-  if type(value) == "string" then output = value end
-  if type(value) == "function" then output = value() end
-  return output
+  if type(value) == "string" then return value end
+  if type(value) == "function" then return value() end
+  return nil
 end
 
 ---@param component BareComponent
@@ -354,7 +346,7 @@ end
 ---Use this function to get the built value of components from |bareline.components|.
 ---@param component BareComponent
 ---@return StdComponentBuilt
-function bareline.build_component(component)
+function Bareline.build_component(component)
   ---@type StdComponent
   local std_component = standardize_component(component)
   ---@type StdComponentCache|nil
@@ -388,7 +380,7 @@ local component_separator = "  "
 local function build_section(section)
   local built_components = {}
   for _, component in ipairs(section) do
-    table.insert(built_components, bareline.build_component(component))
+    table.insert(built_components, Bareline.build_component(component))
   end
   return table.concat(
     vim.tbl_filter(function(built_component) return built_component ~= nil end, built_components),
@@ -402,7 +394,7 @@ end
 ---See |bareline.draw_methods|.
 ---@param sections table
 ---@return string _ String assignable to 'statusline'.
-function bareline.build_statusline(sections)
+function Bareline.build_statusline(sections)
   local built_sections = {}
   for _, section in ipairs(sections) do
     table.insert(built_sections, build_section(section))
@@ -412,11 +404,11 @@ end
 
 --: DRAW STATUSLINE
 
-bareline.draw_helpers = {}
+Bareline.draw_helpers = {}
 
 ---@param buffer integer The window number, as returned by |bufnr()|.
 ---@return boolean
-function bareline.draw_helpers.is_plugin_window(buffer)
+function Bareline.draw_helpers.is_plugin_window(buffer)
   local plugin_file_types = {
     "nvimtree"
   }
@@ -426,8 +418,8 @@ end
 ---Assign the built statusline with |bareline.build_statusline| to the
 ---current window's 'statusline'.
 ---@param statusline BareStatusline
-function bareline.draw_helpers.draw_window_statusline(statusline)
-  vim.wo.statusline = bareline.build_statusline(statusline)
+function Bareline.draw_helpers.draw_window_statusline(statusline)
+  vim.wo.statusline = Bareline.build_statusline(statusline)
 end
 
 local draw_helpers_augroup = vim.api.nvim_create_augroup("BarelineDrawHelpers", {})
@@ -441,10 +433,8 @@ vim.api.nvim_create_autocmd({ "WinClosed" }, {
   end,
 })
 
-bareline.draw_methods = {}
-
-bareline.draw_methods.augroup = vim.api.nvim_create_augroup("BarelineDrawMethods", {})
-bareline.draw_methods.timers = {}
+Bareline.draw_methods.augroup = vim.api.nvim_create_augroup("BarelineDrawMethods", {})
+Bareline.draw_methods.timers = {}
 
 ---Stop the drawing of statuslines done by the draw methods provided by this
 ---plugin. Then, conditionally draw the default statusline on all windows on
@@ -452,14 +442,14 @@ bareline.draw_methods.timers = {}
 ---@param opts table|nil Optional parameters.
 ---• {default_statusline} (boolean) Draw the default
 ---  statusline on all windows.
-function bareline.draw_methods.stop_all(opts)
+function Bareline.draw_methods.stop_all(opts)
   if opts == nil or vim.tbl_isempty(opts) then
     opts = { default_statusline = true }
   end
   -- Clear all autocommands.
-  vim.api.nvim_clear_autocmds({ group = bareline.draw_methods.augroup })
+  vim.api.nvim_clear_autocmds({ group = Bareline.draw_methods.augroup })
   -- Stop all timers.
-  for _, timer_id in ipairs(bareline.draw_methods.timers) do
+  for _, timer_id in ipairs(Bareline.draw_methods.timers) do
     vim.fn.timer_stop(timer_id)
   end
   -- Draw default statusline on all windows.
@@ -481,8 +471,8 @@ end
 ---on the active window, (2) drawn on the inactive window and (3) drawn on
 ---the plugin window, having precedence over the active window statusline.
 ---@param statuslines BareStatusline[]
-function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
-  bareline.draw_methods.stop_all({ draw_default_statusline = false })
+function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
+  Bareline.draw_methods.stop_all({ draw_default_statusline = false })
   ---@type BareStatusline
   local active_window_statusline = statuslines[1]
   ---@type BareStatusline
@@ -494,10 +484,10 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   ---window is used by a plugin.
   ---@param statusline_2 BareStatusline Statusline drawn otherwise.
   local function draw_statusline_if_plugin_window(statusline_1, statusline_2)
-    if bareline.draw_helpers.is_plugin_window(vim.fn.bufnr()) then
-      bareline.draw_helpers.draw_window_statusline(statusline_1)
+    if Bareline.draw_helpers.is_plugin_window(vim.fn.bufnr()) then
+      Bareline.draw_helpers.draw_window_statusline(statusline_1)
     else
-      bareline.draw_helpers.draw_window_statusline(statusline_2)
+      Bareline.draw_helpers.draw_window_statusline(statusline_2)
     end
   end
 
@@ -506,7 +496,7 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   vim.api.nvim_create_autocmd(
     { "ModeChanged", "DiagnosticChanged", "BufEnter" },
     {
-      group = bareline.draw_methods.augroup,
+      group = Bareline.draw_methods.augroup,
       callback = function()
         draw_statusline_if_plugin_window(
           plugin_window_statusline,
@@ -517,7 +507,7 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   )
 
   vim.api.nvim_create_autocmd("OptionSet", {
-      group = bareline.draw_methods.augroup,
+      group = Bareline.draw_methods.augroup,
       pattern = "expandtab,tabstop,endofline,fileformat,formatoptions",
       callback = function()
         draw_statusline_if_plugin_window(
@@ -530,7 +520,7 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
 
   -- Redraw statusline of active window to update components hard to watch,
   -- for example the Git branch.
-  table.insert(bareline.draw_methods.timers, vim.fn.timer_start(
+  table.insert(Bareline.draw_methods.timers, vim.fn.timer_start(
       500,
       function()
         draw_statusline_if_plugin_window(
@@ -546,7 +536,7 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   -- windows (e.g. nvim-tree), use a special statusline, the same one as for
   -- active plugin windows.
   vim.api.nvim_create_autocmd("WinLeave", {
-    group = bareline.draw_methods.augroup,
+    group = Bareline.draw_methods.augroup,
     callback = function()
       draw_statusline_if_plugin_window(
           plugin_window_statusline,
@@ -555,77 +545,99 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     end,
   })
 
-  bareline.draw_helpers.draw_window_statusline(active_window_statusline)
+  Bareline.draw_helpers.draw_window_statusline(active_window_statusline)
 end
 
---: PRESETS
+--: HELPERS
 
-bareline.presets = {}
+function H.get_default_config()
+  return vim.deepcopy(Bareline.config)
+end
+
+---Merge user-supplied config with the plugin's default config. For every key which is not supplied
+---by the user, the value in the default config will be used. The user's config has precedence.
+---@return table
+function H.get_config_with_fallback(config)
+  vim.validate { config = { config, "table", true } }
+  config = vim.tbl_deep_extend("force", H.get_default_config(), config)
+  vim.validate {
+    draw_method = { config.draw_method, "function" },
+    statusline = { config.statusline, "table" }
+  }
+  return config
+end
+
+---Given a string, escape the Lua magic pattern characters so that the string
+---can be used as a Lua pattern for an exact match, e.g. as the pattern supplied
+---to 'string.gsub'. Reference: https://www.lua.org/manual/5.1/manual.html#5.4.1
+---@param string string
+---@return string
+function H.escape_lua_pattern(string)
+  local special_chars = {
+    "%", "(", ")", ".", "+", "-", "*", "?", "[", "]", "^", "$" }
+  for _, special_char in ipairs(special_chars) do
+    string, _ = string.gsub(string, "%" .. special_char, "%%" .. special_char)
+  end
+  return string
+end
 
 ---Use distinct statuslines for active, inactive and plugin windows. Uses
 ---|bareline.draw_methods.draw_active_inactive_plugin|. This preset is inspired
 ---by Helix's default statusline. See: https://github.com/helix-editor/helix
 ---Mockups:
 ---
----Active window:   | NOR  init.lua     H:2,W:4  spaces-2  (main)  42,21/50 |
----Inactive window: |      init.lua             H:2,W:4  spaces-2  42,21/50 |
----Plugin window:   | [Nvim Tree]                                  28,09/33 |
+---Active window:    | NOR  lua/bareline.lua  [lua_ls]  [+]    H:2,W:4  spaces-2  (main)  42,21/50 |
+---Inactive window:  |      lua/bareline.lua  [lua_ls]  [+]            H:2,W:4  spaces-2  42,21/50 |
+---Plugin window:    | [Nvim Tree]                                                        28,09/33 |
 -- TODO: Properly use this @usage.
 -- ---@usage `require("bareline").presets.bare()`
-function bareline.presets.bare()
-  vim.o.showmode = false
-  bareline.draw_methods.draw_active_inactive_plugin {
+Bareline.config = {
+  draw_method = Bareline.draw_methods.draw_active_inactive_plugin,
+  statusline = {
     -- Active.
     {
       {
-        bareline.components.vim_mode,
-        bareline.providers.get_file_path_relative_to_cwd,
-        bareline.components.lsp_servers,
+        Bareline.components.vim_mode,
+        Bareline.components.get_file_path_relative_to_cwd,
+        Bareline.components.lsp_servers,
         "%m", "%h", "%r",
       },
       {
-        bareline.components.diagnostics,
-        bareline.components.indent_style,
-        bareline.components.end_of_line,
-        bareline.components.git_branch,
-        bareline.components.position,
+        Bareline.components.diagnostics,
+        Bareline.components.indent_style,
+        Bareline.components.end_of_line,
+        Bareline.components.git_branch,
+        Bareline.components.position,
       },
     },
     -- Inactive.
     {
       {
         {
-          value = bareline.components.vim_mode.value,
+          value = Bareline.components.vim_mode.value,
           opts = {
-            format = bareline.formatters.mask(
-                bareline.components.vim_mode.opts.format, " ")
+            format = Bareline.formatters.mask(
+                Bareline.components.vim_mode.opts.format, " ")
           },
         },
-        bareline.providers.get_file_path_relative_to_cwd,
-        bareline.components.lsp_servers,
+        Bareline.components.get_file_path_relative_to_cwd,
+        Bareline.components.lsp_servers,
         "%m", "%h", "%r",
       },
       {
-        bareline.components.diagnostics,
-        bareline.components.indent_style,
-        bareline.components.end_of_line,
-        bareline.components.position,
+        Bareline.components.diagnostics,
+        Bareline.components.indent_style,
+        Bareline.components.end_of_line,
+        Bareline.components.position,
       },
     },
     -- Plugin.
     {
-      { bareline.components.plugin_name },
-      { bareline.components.position },
+      { Bareline.components.plugin_name },
+      { Bareline.components.position },
     },
   }
-end
+}
 
-function bareline.setup(config)
-  if config.preset then
-    config.preset();
-    return
-  end
-  config.statusline.draw_method(config.statusline.sections)
-end
-
-return bareline
+-- Export module.
+return Bareline
