@@ -18,11 +18,14 @@ end
 ---by Helix's default statusline. See: https://github.com/helix-editor/helix
 ---Mockups:
 ---
----Active window:    | NOR  lua/bareline.lua  [lua_ls]  [+]    H:2,W:4  spaces-2  (main)  42,21/50 |
----Inactive window:  |      lua/bareline.lua  [lua_ls]  [+]            H:2,W:4  spaces-2  42,21/50 |
----Plugin window:    | [Nvim Tree]                                                        28,09/33 |
+---Active window:
+--- • | NOR  lua/bareline.lua    [lua_ls]  H:2,W:4  spaces-2  (main)  42,21/50 |
+---Inactive window:
+--- • |      lua/bareline.lua            [lua_ls]  H:2,W:4  spaces-2  42,21/50 |
+---Plugin window:
+--- • | [Nvim Tree]                                                   28,09/33 |
 -- TODO: Properly use this @usage.
--- ---@usage `require("bareline").presets.bare()`
+---@usage `require("bareline").presets.bare()`
 local function apply_default_config()
   Bareline.config = {
     draw_method = Bareline.draw_methods.draw_active_inactive_plugin,
@@ -300,36 +303,8 @@ apply_default_config()
 
 --: DRAW STATUSLINE
 
-Bareline.draw_helpers = {}
-
----@param buffer integer The window number, as returned by |bufnr()|.
----@return boolean
-function Bareline.draw_helpers.is_plugin_window(buffer)
-  local plugin_file_types = {
-    "nvimtree"
-  }
-  return vim.tbl_contains(plugin_file_types, vim.bo[buffer].filetype:lower())
-end
-
----Assign the built statusline with |bareline.build_statusline| to the
----current window's 'statusline'.
----@param statusline BareStatusline
-function Bareline.draw_helpers.draw_window_statusline(statusline)
-  vim.wo.statusline = Bareline.build_statusline(statusline)
-end
-
-local draw_helpers_augroup = vim.api.nvim_create_augroup("BarelineDrawHelpers", {})
-
--- Cleanup components cache.
-vim.api.nvim_create_autocmd({ "WinClosed" }, {
-  group = draw_helpers_augroup,
-  callback = function(event)
-    local window = event.match
-    H.component_cache_by_window_id[window] = nil
-  end,
-})
-
-Bareline.draw_methods.augroup = vim.api.nvim_create_augroup("BarelineDrawMethods", {})
+Bareline.draw_methods.augroup =
+  vim.api.nvim_create_augroup("BarelineDrawMethods", {})
 Bareline.draw_methods.timers = {}
 
 ---Stop the drawing of statuslines done by the draw methods provided by this
@@ -352,9 +327,9 @@ function Bareline.draw_methods.stop_all(opts)
   if not opts.default_statusline then return end
   for _, tabpage in ipairs(vim.api.nvim_list_tabpages()) do
     for _, window in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
-      -- The statusline string is documented in the help page for 'statusline'. See
-      -- the 'Examples' section, refer to the first example: "Emulate standard status
-      -- line with 'ruler' set". TODO: Use 'nvim_eval_statusline' if/when it can
+      -- The statusline string is documented in the help page for 'statusline'.
+      -- See the 'Examples' section, first example: "Emulate standard status
+      -- line with 'ruler' set". TODO: Use 'nvim_eval_statusline' when it can
       -- return the default statusline, see:
       -- https://github.com/neovim/neovim/issues/28444
       vim.wo[window].statusline = "%<%f %h%m%r%=%-14.(%l,%c%V%) %P"
@@ -380,10 +355,10 @@ function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   ---window is used by a plugin.
   ---@param statusline_2 BareStatusline Statusline drawn otherwise.
   local function draw_statusline_if_plugin_window(statusline_1, statusline_2)
-    if Bareline.draw_helpers.is_plugin_window(vim.fn.bufnr()) then
-      Bareline.draw_helpers.draw_window_statusline(statusline_1)
+    if H.is_plugin_window(vim.fn.bufnr()) then
+      H.draw_window_statusline(statusline_1)
     else
-      Bareline.draw_helpers.draw_window_statusline(statusline_2)
+      H.draw_window_statusline(statusline_2)
     end
   end
 
@@ -441,7 +416,7 @@ function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     end,
   })
 
-  Bareline.draw_helpers.draw_window_statusline(active_window_statusline)
+  H.draw_window_statusline(active_window_statusline)
 end
 
 --: HELPERS > BUILD COMPONENTS
@@ -510,12 +485,14 @@ function H.standardize_component(component)
     return component
   end
   vim.api.nvim_echo({
-    { "Provided statusline component is not a string, function or table.", "Error" },
+    {
+      "Provided statusline component is not a string, function or table.",
+      "Error"
+    },
   }, true, {})
   return {}
 end
 
----Use this function to get the built value of components from |bareline.components|.
 ---@param component UserSuppliedComponent
 ---@return ComponentValue
 function H.build_user_supplied_component(component)
@@ -547,15 +524,19 @@ local component_separator = "  "
 ---@alias BareSection UserSuppliedComponent[]
 ---@alias BareStatusline BareSection[]
 
+---At least one component is expected to be built into a non-nil value.
 ---@param section table Statusline section, as may be provided by a user.
----@return string At least one component is expected to be built into a non-nil value.
+---@return string
 local function build_section(section)
   local built_components = {}
   for _, component in ipairs(section) do
     table.insert(built_components, H.build_user_supplied_component(component))
   end
   return table.concat(
-    vim.tbl_filter(function(built_component) return built_component ~= nil end, built_components),
+    vim.tbl_filter(function(built_component)
+      return built_component ~= nil
+    end,
+    built_components),
     component_separator
   )
 end
@@ -574,14 +555,44 @@ function Bareline.build_statusline(sections)
   return string.format(" %s ", table.concat(built_sections, "%="))
 end
 
+--: HELPERS > DRAW
+
+---@param buffer integer The window number, as returned by |bufnr()|.
+---@return boolean
+function H.is_plugin_window(buffer)
+  local plugin_file_types = {
+    "nvimtree"
+  }
+  return vim.tbl_contains(plugin_file_types, vim.bo[buffer].filetype:lower())
+end
+
+---Assign the built statusline with |bareline.build_statusline| to the
+---current window's 'statusline'.
+---@param statusline BareStatusline
+function H.draw_window_statusline(statusline)
+  vim.wo.statusline = Bareline.build_statusline(statusline)
+end
+
+H.draw_helpers_augroup = vim.api.nvim_create_augroup("BarelineDrawHelpers", {})
+
+-- Cleanup components cache.
+vim.api.nvim_create_autocmd({ "WinClosed" }, {
+  group = H.draw_helpers_augroup,
+  callback = function(event)
+    local window = event.match
+    H.component_cache_by_window_id[window] = nil
+  end,
+})
+
 --: HELPERS
 
 function H.get_default_config()
   return vim.deepcopy(Bareline.config)
 end
 
----Merge user-supplied config with the plugin's default config. For every key which is not supplied
----by the user, the value in the default config will be used. The user's config has precedence.
+---Merge user-supplied config with the plugin's default config. For every key
+---which is not supplied by the user, the value in the default config will be
+---used. The user's config has precedence.
 ---@return table
 function H.get_config_with_fallback(config)
   vim.validate { config = { config, "table", true } }
