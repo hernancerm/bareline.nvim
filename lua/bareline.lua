@@ -1,10 +1,6 @@
 --: MODULE DEFINITION
 
-local Bareline = {
-  providers = {},
-  components = {},
-  draw_methods = {}
-}
+local Bareline = {}
 local H = {}
 
 -- Module setup.
@@ -71,6 +67,8 @@ local function apply_default_config()
 end
 
 --: PROVIDERS
+
+Bareline.providers = {}
 
 ---Returns the first char of the current Vim mode (see |mode()|). For
 ---block modes, two characters are returned, a "b" followed by the mode;
@@ -145,6 +143,8 @@ function Bareline.providers.get_file_path_relative_to_cwd()
 end
 
 --: COMPONENTS
+
+Bareline.components = {}
 
 ---Standard component. All |bareline.components| are structured like this.
 ---@class BareComponent
@@ -299,43 +299,12 @@ Bareline.components.diagnostics = Bareline.BareComponent:new(
 ---@type BareComponent
 Bareline.components.position = Bareline.BareComponent:new("%02l,%02c/%02L")
 
+-- Apply default config to module once providers and components are defined.
 apply_default_config()
 
---: DRAW STATUSLINE
+--: DRAW METHODS
 
-Bareline.draw_methods.augroup =
-  vim.api.nvim_create_augroup("BarelineDrawMethods", {})
-Bareline.draw_methods.timers = {}
-
----Stop the drawing of statuslines done by the draw methods provided by this
----plugin. Then, conditionally draw the default statusline on all windows on
----all tab pages.
----@param opts table|nil Optional parameters.
----• {default_statusline} (boolean) Draw the default
----  statusline on all windows.
-function Bareline.draw_methods.stop_all(opts)
-  if opts == nil or vim.tbl_isempty(opts) then
-    opts = { default_statusline = true }
-  end
-  -- Clear all autocommands.
-  vim.api.nvim_clear_autocmds({ group = Bareline.draw_methods.augroup })
-  -- Stop all timers.
-  for _, timer_id in ipairs(Bareline.draw_methods.timers) do
-    vim.fn.timer_stop(timer_id)
-  end
-  -- Draw default statusline on all windows.
-  if not opts.default_statusline then return end
-  for _, tabpage in ipairs(vim.api.nvim_list_tabpages()) do
-    for _, window in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
-      -- The statusline string is documented in the help page for 'statusline'.
-      -- See the 'Examples' section, first example: "Emulate standard status
-      -- line with 'ruler' set". TODO: Use 'nvim_eval_statusline' when it can
-      -- return the default statusline, see:
-      -- https://github.com/neovim/neovim/issues/28444
-      vim.wo[window].statusline = "%<%f %h%m%r%=%-14.(%l,%c%V%) %P"
-    end
-  end
-end
+Bareline.draw_methods = {}
 
 ---Use distinct statuslines for active, inactive and plugin windows. The
 ---provided statuslines are handled in this order by table index: (1) drawn
@@ -343,7 +312,6 @@ end
 ---the plugin window, having precedence over the active window statusline.
 ---@param statuslines BareStatusline[]
 function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
-  Bareline.draw_methods.stop_all({ draw_default_statusline = false })
   ---@type BareStatusline
   local active_window_statusline = statuslines[1]
   ---@type BareStatusline
@@ -351,8 +319,7 @@ function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   ---@type BareStatusline
   local plugin_window_statusline = statuslines[3]
 
-  ---@param statusline_1 BareStatusline Statusline drawn when the current
-  ---window is used by a plugin.
+  ---@param statusline_1 BareStatusline Statusline for a plugin window.
   ---@param statusline_2 BareStatusline Statusline drawn otherwise.
   local function draw_statusline_if_plugin_window(statusline_1, statusline_2)
     if H.is_plugin_window(vim.fn.bufnr()) then
@@ -367,7 +334,7 @@ function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   vim.api.nvim_create_autocmd(
     { "ModeChanged", "DiagnosticChanged", "BufEnter" },
     {
-      group = Bareline.draw_methods.augroup,
+      group = H.draw_methods_augroup,
       callback = function()
         draw_statusline_if_plugin_window(
           plugin_window_statusline,
@@ -378,7 +345,7 @@ function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   )
 
   vim.api.nvim_create_autocmd("OptionSet", {
-      group = Bareline.draw_methods.augroup,
+      group = H.draw_methods_augroup,
       pattern = "expandtab,tabstop,endofline,fileformat,formatoptions",
       callback = function()
         draw_statusline_if_plugin_window(
@@ -390,24 +357,23 @@ function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   )
 
   -- Redraw statusline of active window to update components hard to watch,
-  -- for example the Git branch.
-  table.insert(Bareline.draw_methods.timers, vim.fn.timer_start(
-      500,
-      function()
-        draw_statusline_if_plugin_window(
-          plugin_window_statusline,
-          active_window_statusline
-        )
-      end,
-      { ["repeat"] = -1 }
-    )
+  -- for example the attached LSP servers.
+  vim.fn.timer_start(
+    500,
+    function()
+      draw_statusline_if_plugin_window(
+        plugin_window_statusline,
+        active_window_statusline
+      )
+    end,
+    { ["repeat"] = -1 }
   )
 
   -- Draw a different statusline for inactive windows. For inactive plugin
   -- windows (e.g. nvim-tree), use a special statusline, the same one as for
   -- active plugin windows.
   vim.api.nvim_create_autocmd("WinLeave", {
-    group = Bareline.draw_methods.augroup,
+    group = H.draw_methods_augroup,
     callback = function()
       draw_statusline_if_plugin_window(
           plugin_window_statusline,
@@ -419,7 +385,7 @@ function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   H.draw_window_statusline(active_window_statusline)
 end
 
---: HELPERS > BUILD COMPONENTS
+--: HELPERS > BUILD
 
 ---• Function: Must return either a string or nil. The returned string is
 ---  what gets placed in the statusline. When nil is returned, the component
@@ -517,9 +483,7 @@ function H.build_user_supplied_component(component)
   return built_component
 end
 
---: HELPERS > BUILD SECTIONS
-
-local component_separator = "  "
+H.component_separator = "  "
 
 ---@alias BareSection UserSuppliedComponent[]
 ---@alias BareStatusline BareSection[]
@@ -537,11 +501,9 @@ local function build_section(section)
       return built_component ~= nil
     end,
     built_components),
-    component_separator
+    H.component_separator
   )
 end
-
---: HELPERS > BUILD STATUSLINE
 
 ---Use this function when implementing a custom draw method.
 ---See |bareline.draw_methods|.
@@ -556,6 +518,8 @@ function Bareline.build_statusline(sections)
 end
 
 --: HELPERS > DRAW
+
+H.draw_methods_augroup = vim.api.nvim_create_augroup("BarelineDrawMethods", {})
 
 ---@param buffer integer The window number, as returned by |bufnr()|.
 ---@return boolean
