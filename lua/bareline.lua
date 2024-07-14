@@ -47,13 +47,7 @@ local function apply_default_config()
       -- Inactive.
       {
         {
-          {
-            value = Bareline.components.vim_mode.value,
-            opts = {
-              format = Bareline.formatters.mask(
-              Bareline.components.vim_mode.opts.format, " ")
-            },
-          },
+          Bareline.components.vim_mode:mask(" "),
           Bareline.components.get_file_path_relative_to_cwd,
           Bareline.components.lsp_servers,
           "%m", "%h", "%r",
@@ -238,19 +232,44 @@ end
 
 --: COMPONENTS
 
+---Standard component. All |bareline.components| are structured like this.
+---@class BareComponent
+---@field provider function|string|nil As a function, return string|nil.
+---@field mask function Mask the component value with a char.
+---@field opts BareComponentOpts|nil
+Bareline.BareComponent = {}
+Bareline.BareComponent["__index"] = Bareline.BareComponent
+
+function Bareline.BareComponent:new(provider, opts)
+  local std_component = {}
+  setmetatable(std_component, self)
+  std_component.provider = provider
+  std_component.opts = opts
+  return std_component
+end
+
+function Bareline.BareComponent:mask(char)
+  local this = self
+  return function()
+    local component_value = H.build_user_supplied_component(this)
+    if component_value == nil then return nil end
+    return component_value:gsub(".", char)
+  end
+end
+
 ---The Vim mode in 3 characters.
 ---Mockups: `NOR`, `VIS`
----@type StdComponent
-Bareline.components.vim_mode = {
-  value = Bareline.providers.get_vim_mode,
-  opts = { format = format_vim_mode },
-}
+---@type BareComponent
+Bareline.components.vim_mode = Bareline.BareComponent:new(
+  Bareline.providers.get_vim_mode,
+  { format = format_vim_mode }
+)
 
 ---When on a plugin window, the formatted name of the plugin window.
 ---Mockup: `[Nvim Tree]`
 ---@type StdComponent
 Bareline.components.plugin_name = {
-  value = function()
+  provider = function()
     local plugin_file_type = {
       nvimtree = "Nvim Tree",
     }
@@ -266,7 +285,7 @@ Bareline.components.plugin_name = {
 ---Mockups: `spaces-2`, `tabs-4`
 ---@type StdComponent
 Bareline.components.indent_style = {
-  value = function()
+  provider = function()
     local whitespace_type = "tabs"
     if vim.bo.expandtab then whitespace_type = "spaces" end
     return whitespace_type .. "-" .. vim.bo.tabstop
@@ -277,7 +296,7 @@ Bareline.components.indent_style = {
 ---line. Return `noeol` in this case, nil otherwise. This uses the option 'eol'.
 ---@type StdComponent
 Bareline.components.end_of_line = {
-  value = function()
+  provider = function()
     if vim.bo.eol then return nil end
     return "noeol"
   end,
@@ -287,7 +306,7 @@ Bareline.components.end_of_line = {
 ---Mockup: `(main)`
 ---@type StdComponent
 Bareline.components.git_branch = {
-  value = Bareline.providers.get_git_head,
+  provider = Bareline.providers.get_git_head,
   opts = {
     format = format_git_head,
   },
@@ -297,7 +316,7 @@ Bareline.components.git_branch = {
 ---Mockup: `[lua_ls]`
 ---@type StdComponent
 Bareline.components.lsp_servers = {
-  value = Bareline.providers.lsp_server_names,
+  provider = Bareline.providers.lsp_server_names,
   opts = {
     format = format_lsp_servers,
   },
@@ -307,13 +326,13 @@ Bareline.components.lsp_servers = {
 ---Mockup: `lua/bareline.lua`
 ---@type StdComponent
 Bareline.components.get_file_path_relative_to_cwd = {
-  value = Bareline.providers.get_file_path_relative_to_cwd,
+  provider = Bareline.providers.get_file_path_relative_to_cwd,
 }
 ---The diagnostics of the current buffer.
 ---Mockup: `E:2,W:1`
 ---@type StdComponent
 Bareline.components.diagnostics = {
-  value = Bareline.providers.get_diagnostics,
+  provider = Bareline.providers.get_diagnostics,
   opts = {
     cache_on_vim_modes = { "i" },
     format = format_diagnostics,
@@ -324,143 +343,10 @@ Bareline.components.diagnostics = {
 ---Mockup: `181,43/329`
 ---@type StdComponent
 Bareline.components.position = {
-  value = "%02l,%02c/%02L",
+  provider = "%02l,%02c/%02L",
 }
 
---: BUILD COMPONENTS
-
----• Function: Must return either a string or nil. The returned string is
----  what gets placed in the statusline. When nil is returned, the component
----  is skipped, leaving no gap.
----• String: The string is considered as if a function component had already
----  been executed and its output is the provided string. Handy for placing
----  statusline fields, for example `%f`.
----• |StdComponent|: Table which allows component configuration.
----@alias BareComponent function|string|StdComponent
-
----Standard component. All |bareline.components| are structured like this.
----@class StdComponent
----@field value function|string|nil As a function, return string|nil.
----@field opts StdComponentOptions|nil
-
----Options to configure the building of a standard component. The option
----{cache_on_vim_modes} expects a list of Vim modes as per the first
----letter returned by |mode()|.
----@class StdComponentOptions
----@field format function|nil As a function, return string|nil.
----@field cache_on_vim_modes table|nil Use cache in these Vim modes.
-
----The standard component built into a string or nil.
----@alias StdComponentBuilt string|nil
-
----@private
----@class StdComponentCache Cache of a built component.
----@field value string|nil Component cache value.
-
-local component_cache_by_window_id = {}
-
----@param std_component table
----@return StdComponentCache|nil
-local function get_std_component_cache(std_component)
-  local win_id = vim.fn.win_getid()
-  if component_cache_by_window_id[win_id] == nil then return nil end
-  return component_cache_by_window_id[win_id][tostring(std_component.value)]
-end
-
----@param std_component StdComponent
----@param bare_component_built StdComponentBuilt
-local function store_std_component_cache(std_component, bare_component_built)
-  local win_id = vim.fn.win_getid()
-  if component_cache_by_window_id[win_id] == nil then
-    component_cache_by_window_id[win_id] = {}
-  end
-  component_cache_by_window_id[win_id][tostring(std_component.value)] =
-    { value = bare_component_built }
-end
-
----@param std_component StdComponent
----@return any
-local function build_std_component(std_component)
-  local value = std_component.value
-  if type(value) == "string" then return value end
-  if type(value) == "function" then return value() end
-  return nil
-end
-
----@param component BareComponent
----@return StdComponent
-local function standardize_component(component)
-  if type(component) == "function" or type(component) == "string" then
-    return { value = component, opts = {} }
-  end
-  if type(component) == "table" then
-    component.opts = component.opts or {}
-    return component
-  end
-  vim.api.nvim_echo({
-    { "Provided statusline component is not a string, function or table.", "Error" },
-  }, true, {})
-  return {}
-end
-
----Use this function to get the built value of components from |bareline.components|.
----@param component BareComponent
----@return StdComponentBuilt
-function Bareline.build_component(component)
-  ---@type StdComponent
-  local std_component = standardize_component(component)
-  ---@type StdComponentCache|nil
-  local component_cache = get_std_component_cache(std_component)
-  ---@type StdComponentOptions
-  local opts = std_component.opts
-
-  if opts.cache_on_vim_modes and component_cache then
-    local is_cache_vim_mode = vim.fn.mode():lower():match(
-      string.format("[%s]", table.concat(opts.cache_on_vim_modes, ""))
-    )
-    if is_cache_vim_mode then return component_cache.value end
-  end
-
-  local built_component = build_std_component(std_component)
-  if opts.format then built_component = opts.format(built_component) end
-  store_std_component_cache(std_component, built_component)
-
-  return built_component
-end
-
---: BUILD SECTIONS
-
-local component_separator = "  "
-
----@alias BareSection BareComponent[]
----@alias BareStatusline BareSection[]
-
----@param section table Statusline section, as may be provided by a user.
----@return string At least one component is expected to be built into a non-nil value.
-local function build_section(section)
-  local built_components = {}
-  for _, component in ipairs(section) do
-    table.insert(built_components, Bareline.build_component(component))
-  end
-  return table.concat(
-    vim.tbl_filter(function(built_component) return built_component ~= nil end, built_components),
-    component_separator
-  )
-end
-
---: BUILD STATUSLINE
-
----Use this function when implementing a custom draw method.
----See |bareline.draw_methods|.
----@param sections table
----@return string _ String assignable to 'statusline'.
-function Bareline.build_statusline(sections)
-  local built_sections = {}
-  for _, section in ipairs(sections) do
-    table.insert(built_sections, build_section(section))
-  end
-  return string.format(" %s ", table.concat(built_sections, "%="))
-end
+apply_default_config()
 
 --: DRAW STATUSLINE
 
@@ -489,7 +375,7 @@ vim.api.nvim_create_autocmd({ "WinClosed" }, {
   group = draw_helpers_augroup,
   callback = function(event)
     local window = event.match
-    component_cache_by_window_id[window] = nil
+    H.component_cache_by_window_id[window] = nil
   end,
 })
 
@@ -608,9 +494,137 @@ function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   Bareline.draw_helpers.draw_window_statusline(active_window_statusline)
 end
 
---: HELPERS
+--: HELPERS > BUILD COMPONENTS
 
-apply_default_config()
+---• Function: Must return either a string or nil. The returned string is
+---  what gets placed in the statusline. When nil is returned, the component
+---  is skipped, leaving no gap.
+---• String: The string is considered as if a function component had already
+---  been executed and its output is the provided string. Handy for placing
+---  statusline fields, for example `%f`.
+---• |StdComponent|: Table which allows component configuration.
+---@alias UserSuppliedComponent function|string|BareComponent
+
+---Options to configure the building of a standard component. The option
+---{cache_on_vim_modes} expects a list of Vim modes as per the first
+---letter returned by |mode()|.
+---@class BareComponentOpts
+---@field format function|nil As a function, return string|nil.
+---@field cache_on_vim_modes table|nil Use cache in these Vim modes.
+
+---The standard component built into a string or nil.
+---@alias ComponentValue string|nil
+
+---@private
+---@class ComponentValueCache Cache of a built component.
+---@field value string|nil Component cache value.
+
+H.component_cache_by_window_id = {}
+
+---@param std_component table
+---@return ComponentValueCache|nil
+function H.get_component_cache(std_component)
+  local win_id = vim.fn.win_getid()
+  if H.component_cache_by_window_id[win_id] == nil then return nil end
+  return H.component_cache_by_window_id[win_id][tostring(std_component.value)]
+end
+
+---@param bare_component BareComponent
+---@param bare_component_built ComponentValue
+function H.store_std_component_cache(bare_component, bare_component_built)
+  local win_id = vim.fn.win_getid()
+  if H.component_cache_by_window_id[win_id] == nil then
+    H.component_cache_by_window_id[win_id] = {}
+  end
+  H.component_cache_by_window_id[win_id][tostring(bare_component.provider)] =
+    { provider = bare_component_built }
+end
+
+---@param bare_component BareComponent
+---@return any
+function H.build_bare_component(bare_component)
+  local provider = bare_component.provider
+  if type(provider) == "string" then return provider end
+  if type(provider) == "function" then return provider() end
+  return nil
+end
+
+---@param component UserSuppliedComponent
+---@return BareComponent
+function H.standardize_component(component)
+  if type(component) == "function" or type(component) == "string" then
+    return { provider = component, opts = {} }
+  end
+  if type(component) == "table" then
+    component.opts = component.opts or {}
+    return component
+  end
+  vim.api.nvim_echo({
+    { "Provided statusline component is not a string, function or table.", "Error" },
+  }, true, {})
+  return {}
+end
+
+---Use this function to get the built value of components from |bareline.components|.
+---@param component UserSuppliedComponent
+---@return ComponentValue
+function H.build_user_supplied_component(component)
+  ---@type BareComponent
+  local bare_component = H.standardize_component(component)
+  ---@type ComponentValueCache|nil
+  local component_cache = H.get_component_cache(bare_component)
+  ---@type BareComponentOpts
+  local opts = bare_component.opts
+
+  if opts.cache_on_vim_modes and component_cache then
+    local is_cache_vim_mode = vim.fn.mode():lower():match(
+      string.format("[%s]", table.concat(opts.cache_on_vim_modes, ""))
+    )
+    if is_cache_vim_mode then return component_cache.value end
+  end
+
+  local built_component = H.build_bare_component(bare_component)
+  if opts.format then built_component = opts.format(built_component) end
+  H.store_std_component_cache(bare_component, built_component)
+
+  return built_component
+end
+
+--: HELPERS > BUILD SECTIONS
+
+local component_separator = "  "
+
+---@alias BareSection UserSuppliedComponent[]
+---@alias BareStatusline BareSection[]
+
+---@param section table Statusline section, as may be provided by a user.
+---@return string At least one component is expected to be built into a non-nil value.
+local function build_section(section)
+  local built_components = {}
+  for _, component in ipairs(section) do
+    table.insert(built_components, H.build_user_supplied_component(component))
+  end
+  return table.concat(
+    vim.tbl_filter(function(built_component) return built_component ~= nil end, built_components),
+    component_separator
+  )
+end
+
+--: HELPERS > BUILD STATUSLINE
+
+---Use this function when implementing a custom draw method.
+---See |bareline.draw_methods|.
+---@param sections table
+---@return string _ String assignable to 'statusline'.
+function Bareline.build_statusline(sections)
+  local built_sections = {}
+  for _, section in ipairs(sections) do
+    table.insert(built_sections, build_section(section))
+  end
+  return string.format(" %s ", table.concat(built_sections, "%="))
+end
+
+--: HELPERS
 
 function H.get_default_config()
   return vim.deepcopy(Bareline.config)
