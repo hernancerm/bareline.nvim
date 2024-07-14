@@ -8,10 +8,70 @@ local Bareline = {
 }
 local H = {}
 
--- Module setup
+-- Module setup.
 function Bareline.setup(config)
   Bareline.config = H.get_config_with_fallback(config)
   Bareline.config.draw_method(Bareline.config.statusline)
+end
+
+---Use distinct statuslines for active, inactive and plugin windows. Uses
+---|bareline.draw_methods.draw_active_inactive_plugin|. This preset is inspired
+---by Helix's default statusline. See: https://github.com/helix-editor/helix
+---Mockups:
+---
+---Active window:    | NOR  lua/bareline.lua  [lua_ls]  [+]    H:2,W:4  spaces-2  (main)  42,21/50 |
+---Inactive window:  |      lua/bareline.lua  [lua_ls]  [+]            H:2,W:4  spaces-2  42,21/50 |
+---Plugin window:    | [Nvim Tree]                                                        28,09/33 |
+-- TODO: Properly use this @usage.
+-- ---@usage `require("bareline").presets.bare()`
+local function apply_default_config()
+  Bareline.config = {
+    draw_method = Bareline.draw_methods.draw_active_inactive_plugin,
+    statusline = {
+      -- Active.
+      {
+        {
+          Bareline.components.vim_mode,
+          Bareline.components.get_file_path_relative_to_cwd,
+          Bareline.components.lsp_servers,
+          "%m", "%h", "%r",
+        },
+        {
+          Bareline.components.diagnostics,
+          Bareline.components.indent_style,
+          Bareline.components.end_of_line,
+          Bareline.components.git_branch,
+          Bareline.components.position,
+        },
+      },
+      -- Inactive.
+      {
+        {
+          {
+            value = Bareline.components.vim_mode.value,
+            opts = {
+              format = Bareline.formatters.mask(
+              Bareline.components.vim_mode.opts.format, " ")
+            },
+          },
+          Bareline.components.get_file_path_relative_to_cwd,
+          Bareline.components.lsp_servers,
+          "%m", "%h", "%r",
+        },
+        {
+          Bareline.components.diagnostics,
+          Bareline.components.indent_style,
+          Bareline.components.end_of_line,
+          Bareline.components.position,
+        },
+      },
+      -- Plugin.
+      {
+        { Bareline.components.plugin_name },
+        { Bareline.components.position },
+      },
+    }
+  }
 end
 
 --: PROVIDERS
@@ -550,6 +610,8 @@ end
 
 --: HELPERS
 
+apply_default_config()
+
 function H.get_default_config()
   return vim.deepcopy(Bareline.config)
 end
@@ -580,64 +642,6 @@ function H.escape_lua_pattern(string)
   end
   return string
 end
-
----Use distinct statuslines for active, inactive and plugin windows. Uses
----|bareline.draw_methods.draw_active_inactive_plugin|. This preset is inspired
----by Helix's default statusline. See: https://github.com/helix-editor/helix
----Mockups:
----
----Active window:    | NOR  lua/bareline.lua  [lua_ls]  [+]    H:2,W:4  spaces-2  (main)  42,21/50 |
----Inactive window:  |      lua/bareline.lua  [lua_ls]  [+]            H:2,W:4  spaces-2  42,21/50 |
----Plugin window:    | [Nvim Tree]                                                        28,09/33 |
--- TODO: Properly use this @usage.
--- ---@usage `require("bareline").presets.bare()`
-Bareline.config = {
-  draw_method = Bareline.draw_methods.draw_active_inactive_plugin,
-  statusline = {
-    -- Active.
-    {
-      {
-        Bareline.components.vim_mode,
-        Bareline.components.get_file_path_relative_to_cwd,
-        Bareline.components.lsp_servers,
-        "%m", "%h", "%r",
-      },
-      {
-        Bareline.components.diagnostics,
-        Bareline.components.indent_style,
-        Bareline.components.end_of_line,
-        Bareline.components.git_branch,
-        Bareline.components.position,
-      },
-    },
-    -- Inactive.
-    {
-      {
-        {
-          value = Bareline.components.vim_mode.value,
-          opts = {
-            format = Bareline.formatters.mask(
-                Bareline.components.vim_mode.opts.format, " ")
-          },
-        },
-        Bareline.components.get_file_path_relative_to_cwd,
-        Bareline.components.lsp_servers,
-        "%m", "%h", "%r",
-      },
-      {
-        Bareline.components.diagnostics,
-        Bareline.components.indent_style,
-        Bareline.components.end_of_line,
-        Bareline.components.position,
-      },
-    },
-    -- Plugin.
-    {
-      { Bareline.components.plugin_name },
-      { Bareline.components.position },
-    },
-  }
-}
 
 -- Export module.
 return Bareline
