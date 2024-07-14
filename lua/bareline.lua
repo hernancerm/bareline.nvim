@@ -1,5 +1,3 @@
--- vim: fdm=marker fdl=0 tw=81
-
 local bareline = {}
 
 -- Preface{{{
@@ -379,6 +377,12 @@ bareline.components.lsp_servers = {
   },
 }
 
+---The file path relative to the current working directory (|:pwd|).
+---Mockup: `lua/bareline.lua`
+---@type StdComponent
+bareline.components.get_file_path_relative_to_cwd = {
+  value = bareline.providers.get_file_path_relative_to_cwd,
+}
 ---The diagnostics of the current buffer.
 ---Mockup: `E:2,W:1`
 ---@type StdComponent
@@ -862,4 +866,16 @@ function bareline.presets.bare()
 end
 -- }}}
 
+function bareline.setup(config)
+  if config.preset then
+    config.preset()
+    return
+  end
+  -- print(vim.inspect(config))
+  config.statusline.draw_method(config.statusline.sections)
+end
+
 return bareline
+-- TODO: Remove the fold method marker. Instead I can leverage the loclist by
+-- searching for a pattern I use in comments to indicate a section.
+-- vim: fdm=marker
