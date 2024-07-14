@@ -571,11 +571,7 @@ end
 ---@param string string
 ---@return string
 function H.escape_lua_pattern(string)
-  local special_chars = {
-    "%", "(", ")", ".", "+", "-", "*", "?", "[", "]", "^", "$" }
-  for _, special_char in ipairs(special_chars) do
-    string, _ = string.gsub(string, "%" .. special_char, "%%" .. special_char)
-  end
+  string, _ = string:gsub("[%(%)%.%%%+%-%*%?%[%]%^%$]", "%%%0")
   return string
 end
 
