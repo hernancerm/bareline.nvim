@@ -17,8 +17,10 @@
 --- Plugin window:
 ---  • | [Nvim Tree]                                                    28,09/33 |
 
--- MODULE DEFINITION
+-- MODULE CONFIG
+
 --- #delimiter
+--- #tag Bareline.config
 
 local Bareline = {}
 local H = require("helpers")
@@ -80,7 +82,9 @@ end
 --minidoc_afterlines_end
 
 -- PROVIDERS
+
 --- #delimiter
+--- #tag Bareline.providers
 
 Bareline.providers = {}
 
@@ -155,7 +159,9 @@ function Bareline.providers.get_file_path_relative_to_cwd()
 end
 
 -- COMPONENTS
+
 --- #delimiter
+--- #tag Bareline.components
 
 Bareline.components = {}
 
@@ -313,7 +319,9 @@ Bareline.components.diagnostics = Bareline.BareComponent:new(
 Bareline.components.position = Bareline.BareComponent:new("%02l,%02c/%02L")
 
 -- DRAW METHODS
+
 --- #delimiter
+--- #tag Bareline.draw_methods
 
 Bareline.draw_methods = {}
 
