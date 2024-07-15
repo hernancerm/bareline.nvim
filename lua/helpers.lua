@@ -1,4 +1,4 @@
---: BUILD
+-- BUILD
 
 local H = {}
 
@@ -131,7 +131,7 @@ function H.build_statusline(sections)
   return string.format(" %s ", table.concat(built_sections, "%="))
 end
 
---: DRAW
+-- DRAW
 
 H.draw_methods_augroup = vim.api.nvim_create_augroup("BarelineDrawMethods", {})
 
@@ -160,7 +160,7 @@ vim.api.nvim_create_autocmd({ "WinClosed" }, {
   end,
 })
 
---: OTHER
+-- OTHER
 
 --- Merge user-supplied config with the plugin's default config. For every key
 --- which is not supplied by the user, the value in the default config will be
