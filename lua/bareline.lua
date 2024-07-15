@@ -18,18 +18,22 @@
 ---  • | [Nvim Tree]                                                    28,09/33 |
 
 -- MODULE DEFINITION
+--- #delimiter
 
 local Bareline = {}
 local H = require("helpers")
 
 -- Module setup.
 function Bareline.setup(config)
-  Bareline.config = H.get_config_with_fallback(config, Bareline.default_config)
+  Bareline.config = H.get_config_with_fallback(config, Bareline.config)
   Bareline.config.draw_method(Bareline.config.statusline)
 end
 
+---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
+--minidoc_replace_start
 local function apply_default_config()
-  Bareline.default_config = {
+--minidoc_replace_end
+  Bareline.config = {
     draw_method = Bareline.draw_methods.draw_active_inactive_plugin,
     statusline = {
       -- Active.
@@ -70,7 +74,10 @@ local function apply_default_config()
       },
     }
   }
+--minidoc_replace_start
 end
+--minidoc_replace_end
+--minidoc_afterlines_end
 
 -- PROVIDERS
 --- #delimiter
