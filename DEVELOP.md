@@ -6,4 +6,4 @@ TODO: Write this section.
 
 ## Navigate bareline.lua
 
-TODO: Write this section. (Use `:lgrep ^--:`<CR>).
+TODO: Write this section. (Use `:lgrep '^-- [A-Z\s]+$' %`<CR>).
