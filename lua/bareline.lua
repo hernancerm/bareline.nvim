@@ -155,11 +155,11 @@ Bareline.BareComponent = {}
 Bareline.BareComponent["__index"] = Bareline.BareComponent
 
 function Bareline.BareComponent:new(provider, opts)
-  local std_component = {}
-  setmetatable(std_component, self)
-  std_component.provider = provider
-  std_component.opts = opts
-  return std_component
+  local bare_component = {}
+  setmetatable(bare_component, self)
+  bare_component.provider = provider
+  bare_component.opts = opts
+  return bare_component
 end
 
 function Bareline.BareComponent:mask(char)
@@ -406,28 +406,27 @@ apply_default_config()
 --- The standard component built into a string or nil.
 ---@alias ComponentValue string|nil
 
----@private
 ---@class ComponentValueCache Cache of a built component.
 ---@field value string|nil Component cache value.
 
-H.component_cache_by_window_id = {}
+H.component_cache_by_win_id = {}
 
----@param std_component table
+---@param bare_component table
 ---@return ComponentValueCache|nil
-function H.get_component_cache(std_component)
+function H.get_component_cache(bare_component)
   local win_id = vim.fn.win_getid()
-  if H.component_cache_by_window_id[win_id] == nil then return nil end
-  return H.component_cache_by_window_id[win_id][tostring(std_component.value)]
+  if H.component_cache_by_win_id[win_id] == nil then return nil end
+  return H.component_cache_by_win_id[win_id][tostring(bare_component.provider)]
 end
 
 ---@param bare_component BareComponent
 ---@param bare_component_built ComponentValue
-function H.store_std_component_cache(bare_component, bare_component_built)
+function H.store_bare_component_cache(bare_component, bare_component_built)
   local win_id = vim.fn.win_getid()
-  if H.component_cache_by_window_id[win_id] == nil then
-    H.component_cache_by_window_id[win_id] = {}
+  if H.component_cache_by_win_id[win_id] == nil then
+    H.component_cache_by_win_id[win_id] = {}
   end
-  H.component_cache_by_window_id[win_id][tostring(bare_component.provider)] =
+  H.component_cache_by_win_id[win_id][tostring(bare_component.provider)] =
     { provider = bare_component_built }
 end
 
@@ -478,7 +477,7 @@ function H.build_user_supplied_component(component)
 
   local built_component = H.build_bare_component(bare_component)
   if opts.format then built_component = opts.format(built_component) end
-  H.store_std_component_cache(bare_component, built_component)
+  H.store_bare_component_cache(bare_component, built_component)
 
   return built_component
 end
@@ -491,7 +490,7 @@ H.component_separator = "  "
 --- At least one component is expected to be built into a non-nil value.
 ---@param section table Statusline section, as may be provided by a user.
 ---@return string
-local function build_section(section)
+function H.build_section(section)
   local built_components = {}
   for _, component in ipairs(section) do
     table.insert(built_components, H.build_user_supplied_component(component))
@@ -512,7 +511,7 @@ end
 function Bareline.build_statusline(sections)
   local built_sections = {}
   for _, section in ipairs(sections) do
-    table.insert(built_sections, build_section(section))
+    table.insert(built_sections, H.build_section(section))
   end
   return string.format(" %s ", table.concat(built_sections, "%="))
 end
@@ -544,7 +543,7 @@ vim.api.nvim_create_autocmd({ "WinClosed" }, {
   group = H.draw_helpers_augroup,
   callback = function(event)
     local window = event.match
-    H.component_cache_by_window_id[window] = nil
+    H.component_cache_by_win_id[window] = nil
   end,
 })
 
