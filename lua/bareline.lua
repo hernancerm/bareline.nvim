@@ -1,5 +1,24 @@
 --: MODULE DEFINITION
 
+--- *bareline* Draw your simple statusline.
+--- *Bareline*
+---
+--- MIT License Copyright (c) 2024 Hernán Cervera
+---
+--- ==============================================================================
+---
+--- Use distinct statuslines for active, inactive and plugin windows. Uses
+--- |bareline.draw_methods.draw_active_inactive_plugin|. This preset is inspired
+--- by Helix's default statusline. See: https://github.com/helix-editor/helix
+--- Mockups:
+---
+--- Active window:
+---  • | NOR  lua/bareline.lua     [lua_ls]  H:2,W:4  spaces-2  (main)  42,21/50 |
+--- Inactive window:
+---  • |      lua/bareline.lua             [lua_ls]  H:2,W:4  spaces-2  42,21/50 |
+--- Plugin window:
+---  • | [Nvim Tree]                                                    28,09/33 |
+
 local Bareline = {}
 local H = {}
 
@@ -9,19 +28,6 @@ function Bareline.setup(config)
   Bareline.config.draw_method(Bareline.config.statusline)
 end
 
---- Use distinct statuslines for active, inactive and plugin windows. Uses
---- |bareline.draw_methods.draw_active_inactive_plugin|. This preset is inspired
---- by Helix's default statusline. See: https://github.com/helix-editor/helix
---- Mockups:
----
---- Active window:
----  • | NOR  lua/bareline.lua   [lua_ls]  H:2,W:4  spaces-2  (main)  42,21/50 |
---- Inactive window:
----  • |      lua/bareline.lua           [lua_ls]  H:2,W:4  spaces-2  42,21/50 |
---- Plugin window:
----  • | [Nvim Tree]                                                  28,09/33 |
--- TODO: Properly use this @usage.
--- ---@usage `require("bareline").presets.bare()`
 local function apply_default_config()
   Bareline.default_config = {
     draw_method = Bareline.draw_methods.draw_active_inactive_plugin,
@@ -70,10 +76,10 @@ end
 
 Bareline.providers = {}
 
---- Returns the first char of the current Vim mode (see |mode()|). For
---- block modes, two characters are returned, a "b" followed by the mode;
---- currently, only `bv` for "block visual mode" and `bs` for "block select
---- mode". The returned string has only lower case letters.
+--- Returns the first char of the current Vim mode (see |mode()|). For block
+--- modes, two characters are returned, a "b" followed by the mode; currently,
+--- only `bv` for "block visual mode" and `bs` for "block select mode". The
+--- returned string has only lower case letters.
 ---@return string
 function Bareline.providers.get_vim_mode()
   local function standardize_mode(character)
@@ -84,10 +90,9 @@ function Bareline.providers.get_vim_mode()
   return standardize_mode(vim.fn.mode())
 end
 
---- Returns the Git HEAD. The file `.git/HEAD` is read and its first line
---- is returned. If the current directory does not have a `.git` dir, an
---- upwards search is performed. If the dir isn't found, then nil is
---- returned.
+--- Returns the Git HEAD. The file `.git/HEAD` is read and its first line is
+--- returned. If the current directory does not have a `.git` dir, an upwards
+--- search is performed. If the dir isn't found, then nil is returned.
 ---@return string|nil
 function Bareline.providers.get_git_head()
   local git_dir = vim.fn.finddir(".git", ".;")
@@ -106,10 +111,9 @@ function Bareline.providers.lsp_server_names()
   )
 end
 
---- Returns the diagnostics count of the current buffer by severity, where
---- a lower index is a higher severity. Use numeric indices or the the
---- keys in |vim.diagnostic.severity| to get the diagnostic count per
---- severity.
+--- Returns the diagnostics count of the current buffer by severity, where a lower
+--- index is a higher severity. Use numeric indices or the the keys in
+--- |vim.diagnostic.severity| to get the diagnostic count per severity.
 --- Example output: `{ 4, 1, 0, 1 }`
 ---@return table|nil
 -- ---@usage [[
@@ -127,10 +131,10 @@ function Bareline.providers.get_diagnostics()
   return diagnostics_per_severity
 end
 
---- Returns the file path of the current buffer relative to the current
---- working directory (|:pwd|). If the file opened is not in this dir, then
---- the absolute path is returned. This is meant to be used instead of the
---- field `%f` (see 'statusline') for a more consistent experience.
+--- Returns the file path of the current buffer relative to the current working
+--- directory (|:pwd|). If the file opened is not in this dir, then the absolute
+--- path is returned. This is meant to be used instead of the field `%f` (see
+--- 'statusline') for a more consistent experience.
 ---@return string
 function Bareline.providers.get_file_path_relative_to_cwd()
   local buf_name = vim.api.nvim_buf_get_name(0)
@@ -303,10 +307,10 @@ Bareline.components.position = Bareline.BareComponent:new("%02l,%02c/%02L")
 
 Bareline.draw_methods = {}
 
---- Use distinct statuslines for active, inactive and plugin windows. The
---- provided statuslines are handled in this order by table index: (1) drawn
---- on the active window, (2) drawn on the inactive window and (3) drawn on
---- the plugin window, having precedence over the active window statusline.
+--- Use distinct statuslines for active, inactive and plugin windows. The provided
+--- statuslines are handled in this order by table index: (1) drawn on the active
+--- window, (2) drawn on the inactive window and (3) drawn on the plugin window,
+--- having precedence over the active window statusline.
 ---@param statuslines BareStatusline[]
 function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   ---@type BareStatusline
@@ -353,8 +357,8 @@ function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     }
   )
 
-  -- Redraw statusline of active window to update components hard to watch,
-  -- for example the attached LSP servers.
+  -- Redraw statusline of active window to update components hard to watch, for
+  -- example the attached LSP servers.
   vim.fn.timer_start(
     500,
     function()
@@ -366,9 +370,9 @@ function Bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     { ["repeat"] = -1 }
   )
 
-  -- Draw a different statusline for inactive windows. For inactive plugin
-  -- windows (e.g. nvim-tree), use a special statusline, the same one as for
-  -- active plugin windows.
+  -- Draw a different statusline for inactive windows. For inactive plugin windows
+  -- (e.g. nvim-tree), use a special statusline, the same one as for active plugin
+  -- windows.
   vim.api.nvim_create_autocmd("WinLeave", {
     group = H.draw_methods_augroup,
     callback = function()
@@ -529,8 +533,6 @@ function H.is_plugin_window(buffer)
   return vim.tbl_contains(plugin_file_types, vim.bo[buffer].filetype:lower())
 end
 
---- Assign the built statusline with |bareline.build_statusline| to the
---- current window's 'statusline'.
 ---@param statusline BareStatusline
 function H.draw_window_statusline(statusline)
   vim.wo.statusline = Bareline.build_statusline(statusline)
@@ -564,8 +566,8 @@ function H.get_config_with_fallback(config)
   return config
 end
 
---- Given a string, escape the Lua magic pattern characters so that the string
---- can be used for an exact match, e.g. as the pattern supplied to string.gsub.
+--- Given a string, escape the Lua magic pattern characters so that the string can
+--- be used for an exact match, e.g. as the pattern supplied to 'string.gsub'.
 --- See: https://www.lua.org/manual/5.1/manual.html#5.4.1
 ---@param string string
 ---@return string
