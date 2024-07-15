@@ -512,7 +512,7 @@ end
 --- See |bareline.draw_methods|.
 ---@param sections table
 ---@return string _ String assignable to 'statusline'.
-function Bareline.build_statusline(sections)
+function H.build_statusline(sections)
   local built_sections = {}
   for _, section in ipairs(sections) do
     table.insert(built_sections, H.build_section(section))
@@ -535,7 +535,7 @@ end
 
 ---@param statusline BareStatusline
 function H.draw_window_statusline(statusline)
-  vim.wo.statusline = Bareline.build_statusline(statusline)
+  vim.wo.statusline = H.build_statusline(statusline)
 end
 
 H.draw_helpers_augroup = vim.api.nvim_create_augroup("BarelineDrawHelpers", {})
