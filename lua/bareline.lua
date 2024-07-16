@@ -7,9 +7,9 @@
 ---
 --- Key design ideas ~
 ---
---- • Simplicity, for the user and in the code.
+--- * Simplicity, for the user and in the code.
 ---
---- • Can be used as a library for a few but common statusline data providers, in
+--- * Can be used as a library for a few but common statusline data providers, in
 ---   case the user wants to set their own statusline in a more custom fashion.
 ---
 --- Setup ~
@@ -43,11 +43,11 @@ local H = require("helpers")
 --- Mockups:
 ---
 --- Active window:
----  • | NOR  lua/bareline.lua  [lua_ls]     H:2,W:4  spaces-2  (main)  42,21/50 |
+--- * | NOR  lua/bareline.lua  [lua_ls]      H:2,W:4  spaces-2  (main)  42,21/50 |
 --- Inactive window:
----  • |      lua/bareline.lua  [lua_ls]             H:2,W:4  spaces-2  42,21/50 |
+--- * |      lua/bareline.lua  [lua_ls]              H:2,W:4  spaces-2  42,21/50 |
 --- Plugin window:
----  • | [Nvim Tree]                                                    28,09/33 |
+--- * | [Nvim Tree]                                                     28,09/33 |
 
 -- Module setup.
 function Bareline.setup(config)
