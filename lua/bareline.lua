@@ -1,21 +1,33 @@
---- *bareline* Draw your simple statusline.
+--- *bareline* Configure simple statuslines.
 --- *Bareline*
 ---
 --- MIT License Copyright (c) 2024 Hernán Cervera
 ---
 --- ==============================================================================
 ---
---- Use distinct statuslines for active, inactive and plugin windows. Uses
---- |bareline.draw_methods.draw_active_inactive_plugin|. This preset is inspired
---- by Helix's default statusline. See: https://github.com/helix-editor/helix
---- Mockups:
+--- Key design ideas ~
 ---
---- Active window:
----  • | NOR  lua/bareline.lua     [lua_ls]  H:2,W:4  spaces-2  (main)  42,21/50 |
---- Inactive window:
----  • |      lua/bareline.lua             [lua_ls]  H:2,W:4  spaces-2  42,21/50 |
---- Plugin window:
----  • | [Nvim Tree]                                                    28,09/33 |
+--- • Simplicity, for the user and in the code.
+---
+--- • Can be used as a library for a few but common statusline data providers, in
+---   case the user wants to set their own statusline in a more custom fashion.
+---
+--- Setup ~
+---
+--- To leverage the plugin to build and draw a statusline, you need to call the
+--- setup function and optionally provide your configuration:
+--- >lua
+---     require("bareline").setup()
+--- <
+--- I recommend disabling 'showmode', so only Bareline shows the Vim mode.
+---
+--- If you want to use this plugin just for the data providers (e.g., Vim mode or
+--- Git branch) to build yourself a statusine which fancies your pixelated heart,
+--- then take a look at |Bareline.providers|. There is no need to call the setup
+--- function in this case, just do:
+--- >lua
+---     local providers = require("bareline").providers`
+--- <
 
 -- MODULE CONFIG
 
@@ -24,6 +36,18 @@
 
 local Bareline = {}
 local H = require("helpers")
+
+--- Use distinct statuslines for active, inactive and plugin windows. Uses
+--- |bareline.draw_methods.draw_active_inactive_plugin|. This preset is inspired
+--- by Helix's default statusline. See: https://github.com/helix-editor/helix
+--- Mockups:
+---
+--- Active window:
+---  • | NOR  lua/bareline.lua  [lua_ls]     H:2,W:4  spaces-2  (main)  42,21/50 |
+--- Inactive window:
+---  • |      lua/bareline.lua  [lua_ls]             H:2,W:4  spaces-2  42,21/50 |
+--- Plugin window:
+---  • | [Nvim Tree]                                                    28,09/33 |
 
 -- Module setup.
 function Bareline.setup(config)
