@@ -29,6 +29,14 @@ hooks.write_pre = function(lines)
     return line
   end, lines)
 
+  -- If code block has no language, set Lua.
+  lines = vim.tbl_map(function(line)
+    if string.find(line, "^>$") then
+      return ">lua"
+    end
+    return line
+  end, lines)
+
   return lines
 end
 

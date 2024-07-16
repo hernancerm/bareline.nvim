@@ -48,6 +48,8 @@ local H = require("helpers")
 ---  • |      lua/bareline.lua  [lua_ls]             H:2,W:4  spaces-2  42,21/50 |
 --- Plugin window:
 ---  • | [Nvim Tree]                                                    28,09/33 |
+---
+--- Here it is:
 
 -- Module setup.
 function Bareline.setup(config)
