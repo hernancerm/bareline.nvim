@@ -7,13 +7,30 @@
 ---
 --- Key design ideas ~
 ---
---- * Simplicity, for the user and in the code.
+--- 1. Simplicity, for the user and in the code.
 ---
---- * Can be used as a library for common statusline data providers, in case the
+--- 2. Can be used as a library for common statusline data providers, in case the
 ---   user wants to set their statusline in a more custom way.
 ---
 --- Concepts ~
---- TODO: Write this section.
+---
+--- Bareline conceptualizes a statusline in this way:
+--- * A statusline is a list of sections.
+--- * Each section is a list of components (|Bareline.components|).
+---
+--- Visualized example:
+---
+--- ··············································································
+--- : NOR  lua/bareline.lua                           H:2,W:4  (main)  22,74/454 :
+--- ··············································································
+--- ^                       ^                       ^                            ^
+--- : Components:           :                       : Components:                :
+--- : * Vim mode.           :                       : * Diagnostics by severity. :
+--- : * Relative file path. :                       : * Git HEAD.                :
+--- :                       :                       : * Location.                :
+--- +······ Section 1 ······+                       +········· Section 2 ········+
+---
+--- Each component gets its data from a provider (|Bareline.providers|).
 
 -- MODULE CONFIG
 
@@ -38,8 +55,8 @@ local H = require("helpers")
 ---
 ---@param config table|nil Module config table. |Bareline.config| defines the
 --- default configuration. If config is nil, then the default config is used. If a
---- config table is provided, it's merged with the default config and the user's
---- config takes precedence.
+--- config table is provided, it's merged with the default config and the keys in
+--- the user's config take precedence.
 function Bareline.setup(config)
   Bareline.config = H.get_config_with_fallback(config, Bareline.config)
   Bareline.config.draw_method(Bareline.config.statusline)
@@ -57,7 +74,7 @@ end
 --- * |      lua/bareline.lua  [lua_ls]              H:2,W:4  spaces-2  42,21/50 |
 --- Plugin window:
 --- * | [Nvim Tree]                                                     28,09/33 |
----                    https://github.com/helix-editor/helix
+---                      https://github.com/helix-editor/helix
 ---
 ---
 --- Bareline's default configuration below. No need to copy/paste this in your
@@ -115,11 +132,22 @@ end
 
 -- PROVIDERS
 
+Bareline.providers = {}
+
 --- #delimiter
 --- #tag Bareline.providers
 
-Bareline.providers = {}
+--- If you want to use the providers directly, most likely you do not want to use
+--- the setup function (|Bareline.setup|). Providers give data in a parse-friendly
+--- format, which can be used so you build your own statusline without using any
+--- other functionality provided in Bareline. Example:
+--- >lua
+---   local providers = require("bareline").providers
+---   providers.lsp_server_names()
+---   -- Returns: `{ "lua_ls" }`
+--- <
 
+--- Vim mode.
 --- Returns the first char of the current Vim mode (see |mode()|). For block
 --- modes, two characters are returned, a "b" followed by the mode; currently,
 --- only `bv` for "block visual mode" and `bs` for "block select mode". The
@@ -134,6 +162,7 @@ function Bareline.providers.get_vim_mode()
   return standardize_mode(vim.fn.mode())
 end
 
+--- Git HEAD.
 --- Returns the Git HEAD. The file `.git/HEAD` is read and its first line is
 --- returned. If the current directory does not have a `.git` dir, an upwards
 --- search is performed. If the dir isn't found, then nil is returned.
@@ -143,6 +172,7 @@ function Bareline.providers.get_git_head()
   return (git_dir ~= "" and vim.fn.readfile(git_dir .. "/HEAD")[1]) or nil
 end
 
+--- LSP attached servers.
 --- Returns the names of the LSP servers attached to the current buffer.
 --- Example output: `{ "luals" }`
 ---@return table
@@ -155,6 +185,7 @@ function Bareline.providers.lsp_server_names()
   )
 end
 
+--- Diagnostics.
 --- Returns the diagnostics count of the current buffer by severity, where a lower
 --- index is a higher severity. Use numeric indices or the the keys in
 --- |vim.diagnostic.severity| to get the diagnostic count per severity.
@@ -175,6 +206,7 @@ function Bareline.providers.get_diagnostics()
   return diagnostics_per_severity
 end
 
+--- Stable `%f`.
 --- Returns the file path of the current buffer relative to the current working
 --- directory (|:pwd|). If the file opened is not in this dir, then the absolute
 --- path is returned. This is meant to be used instead of the field `%f` (see

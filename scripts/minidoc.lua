@@ -39,7 +39,7 @@ hooks.write_pre = function(lines)
 
   -- Use pretty UTF-8 bullet char for asterisk lists.
   lines = vim.tbl_map(function(line)
-    if string.find(line, "^%s*[*] %S+") then
+    if string.find(line, "^[%s%W]*[*] %S+") then
       local pretty_line, _ = line:gsub("*", "•")
       return pretty_line
     end
