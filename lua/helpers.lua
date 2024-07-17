@@ -165,7 +165,7 @@ vim.api.nvim_create_autocmd({ "WinClosed" }, {
 --- Merge user-supplied config with the plugin's default config. For every key
 --- which is not supplied by the user, the value in the default config will be
 --- used. The user's config has precedence; the default config is the fallback.
----@param config table User supplied config.
+---@param config table|nil User supplied config.
 ---@param default_config table Bareline's default config.
 ---@return table
 function H.get_config_with_fallback(config, default_config)

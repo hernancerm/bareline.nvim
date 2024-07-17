@@ -1,7 +1,7 @@
 --- *bareline* Configure simple statuslines.
 --- *Bareline*
 ---
---- MIT License Copyright (c) 2024 Hernán Cervera
+--- MIT License Copyright (c) 2024 Hernán Cervera.
 ---
 --- ==============================================================================
 ---
@@ -9,38 +9,47 @@
 ---
 --- * Simplicity, for the user and in the code.
 ---
---- * Can be used as a library for a few but common statusline data providers, in
----   case the user wants to set their own statusline in a more custom fashion.
+--- * Can be used as a library for common statusline data providers, in case the
+---   user wants to set their statusline in a more custom way.
 ---
---- Setup ~
+--- Concepts ~
+--- TODO: Write this section.
+
+-- MODULE CONFIG
+
+local Bareline = {}
+local H = require("helpers")
+
+--- #delimiter
+
+--- Module setup.
 ---
 --- To leverage the plugin to build and draw a statusline, you need to call the
 --- setup function and optionally provide your configuration:
 --- >lua
----     require("bareline").setup()
+---   local Bareline = require("bareline")
+---   Bareline.setup() -- Or provide a table as an argument for the config.
 --- <
 --- I recommend disabling 'showmode', so only Bareline shows the Vim mode.
 ---
 --- If you want to use this plugin just for the data providers (e.g., Vim mode or
 --- Git branch) to build yourself a statusine which fancies your pixelated heart,
---- then take a look at |Bareline.providers|. There is no need to call the setup
---- function in this case, just do:
---- >lua
----     local providers = require("bareline").providers`
---- <
-
--- MODULE CONFIG
+--- then take a look at |Bareline.providers|.
+---
+---@param config table|nil Module config table. |Bareline.config| defines the
+--- default configuration. If config is nil, then the default config is used. If a
+--- config table is provided, it's merged with the default config and the user's
+--- config takes precedence.
+function Bareline.setup(config)
+  Bareline.config = H.get_config_with_fallback(config, Bareline.config)
+  Bareline.config.draw_method(Bareline.config.statusline)
+end
 
 --- #delimiter
 --- #tag Bareline.config
 
-local Bareline = {}
-local H = require("helpers")
-
---- Use distinct statuslines for active, inactive and plugin windows. Uses
---- |bareline.draw_methods.draw_active_inactive_plugin|. This preset is inspired
---- by Helix's default statusline. See: https://github.com/helix-editor/helix
---- Mockups:
+--- The default configuration uses distinct statuslines for active, inactive and
+--- plugin windows. The resulting style is inspired by Helix's default statusline:
 ---
 --- Active window:
 --- * | NOR  lua/bareline.lua  [lua_ls]      H:2,W:4  spaces-2  (main)  42,21/50 |
@@ -48,12 +57,11 @@ local H = require("helpers")
 --- * |      lua/bareline.lua  [lua_ls]              H:2,W:4  spaces-2  42,21/50 |
 --- Plugin window:
 --- * | [Nvim Tree]                                                     28,09/33 |
-
--- Module setup.
-function Bareline.setup(config)
-  Bareline.config = H.get_config_with_fallback(config, Bareline.config)
-  Bareline.config.draw_method(Bareline.config.statusline)
-end
+---                    https://github.com/helix-editor/helix
+---
+---
+--- Bareline's default configuration below. No need to copy/paste this in your
+--- config, unless you want to use it as a starting point for your own tweaks.
 
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
 --minidoc_replace_start

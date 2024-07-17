@@ -37,16 +37,6 @@ hooks.write_pre = function(lines)
     return line
   end, lines)
 
-  -- Remove immediate empty lines padding code blocks.
-  for index, line in ipairs(lines) do
-    if string.find(line, "^>[a-z]+$") and lines[index + 1] == "" then
-      table.remove(lines, index + 1)
-    end
-    if string.find(line, "^<$") and lines[index - 1] == "" then
-      table.remove(lines, index - 1)
-    end
-  end
-
   -- Use pretty UTF-8 bullet char for asterisk lists.
   lines = vim.tbl_map(function(line)
     if string.find(line, "^%s*[*] %S+") then
@@ -55,6 +45,21 @@ hooks.write_pre = function(lines)
     end
     return line
   end, lines)
+
+  -- Other processing.
+  for index, line in ipairs(lines) do
+    -- Remove immediate empty lines padding code blocks.
+    if string.find(line, "^>[a-z]+$") and lines[index + 1] == "" then
+      table.remove(lines, index + 1)
+    end
+    if string.find(line, "^<$") and lines[index - 1] == "" then
+      table.remove(lines, index - 1)
+    end
+    -- Remove immediate empty line after delimiter.
+    if string.find(line, "^[-]+$") and lines[index + 1] == "" then
+      table.remove(lines, index + 1)
+    end
+  end
 
   return lines
 end
