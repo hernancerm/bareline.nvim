@@ -83,7 +83,8 @@ end
 --- * Function: Must return either a string or nil. The returned string is
 ---   what gets placed in the statusline. When nil is returned, the component
 ---   is skipped, leaving no gap.
---- * |bareline.BareComponent|: Object which allows component configuration.
+--- * |bareline.BareComponent|: Object which allows component configuration. The
+---   bundled components follow this structure (|bareline.components|).
 ---@alias UserSuppliedComponent string|function|BareComponent
 
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
@@ -93,15 +94,14 @@ local function assign_default_config()
   bareline.default_config = {
     draw_method = bareline.draw_methods.draw_active_inactive_plugin,
     statusline = {
-      -- Active.
-      {
-        {
+      { -- Active window statusline.
+        { -- Section 1.
           bareline.components.vim_mode,
           bareline.components.get_file_path_relative_to_cwd,
           bareline.components.lsp_servers,
           "%m", "%h", "%r",
         },
-        {
+        { -- Section 2.
           bareline.components.diagnostics,
           bareline.components.indent_style,
           bareline.components.end_of_line,
@@ -109,25 +109,29 @@ local function assign_default_config()
           bareline.components.position,
         },
       },
-      -- Inactive.
-      {
-        {
+
+      { -- Inactive window statusline.
+        { -- Section 1.
           bareline.components.vim_mode:mask(" "),
           bareline.components.get_file_path_relative_to_cwd,
           bareline.components.lsp_servers,
           "%m", "%h", "%r",
         },
-        {
+        { -- Section 2.
           bareline.components.diagnostics,
           bareline.components.indent_style,
           bareline.components.end_of_line,
           bareline.components.position,
         },
       },
-      -- Plugin.
-      {
-        { bareline.components.plugin_name },
-        { bareline.components.position },
+
+      { -- Plugin window statusline.
+        { -- Section 1.
+          bareline.components.plugin_name
+        },
+        { -- Section 2.
+          bareline.components.position
+        },
       },
     }
   }
@@ -135,6 +139,26 @@ local function assign_default_config()
 end
 --minidoc_replace_end
 --minidoc_afterlines_end
+
+--- Tips on overriding the default config ~
+---
+--- Tip 1. If the changes you want to make are few, then your config can be
+--- concise by doing a deep copy of the defaults and then inserting your
+--- components, for example:
+--- >lua
+---   local bareline = require("bareline")
+---   -- Custom component.
+---   local component_prose_mode = function ()
+---     if string.find(vim.bo.formatoptions, "a") then return "PROSE" end
+---     return nil
+---   end
+---   -- Overrides to default config.
+---   local config = vim.deepcopy(bareline.default_config)
+---   table.insert(config.statusline[1][1], 2, component_prose_mode)
+---   table.insert(config.statusline[2][1], 2, component_prose_mode)
+---   -- Draw statusline.
+---   bareline.setup(config)
+--- <
 
 -- PROVIDERS
 
