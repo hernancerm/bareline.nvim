@@ -133,6 +133,9 @@ Bareline.providers = {}
 --- #delimiter
 --- #tag Bareline.providers
 
+--- A provider is a function which takes no arguments and returns a single value
+--- of any type or nil.
+---
 --- If you want to use the providers directly, most likely you do not want to use
 --- the setup function (|Bareline.setup|). Providers give data in a parse-friendly
 --- format, which can be used so you build your own statusline without using any
@@ -229,20 +232,26 @@ Bareline.components = {}
 --- components, you can use this class or, more simply, follow the alternate
 --- approaches described in |Bareline.components|.
 ---@class BareComponent
----@field provider function|string|nil Provides the value displayed in the
---- statusline, like the Vim mode. When a function, should return string or nil.
----@field opts BareComponentOpts|nil
+---@field provider function|string Provides the value displayed in the statusline,
+--- like the Vim mode. When a function, should return a single value of any type.
+--- When a string, that itself is used.
+---@field opts BareComponentOpts Options.
 Bareline.BareComponent = {}
 Bareline.BareComponent["__index"] = Bareline.BareComponent
 
---- Options to configure the building of a standard component. The option
----{ cache_on_vim_modes} expects a list of Vim modes as per the first
---- letter returned by |mode()|.
 ---@class BareComponentOpts
----@field format function|nil As a function, return string|nil.
----@field cache_on_vim_modes table|nil Use cache in these Vim modes.
+---@field format function Takes a single argument, whatever the `provider` value
+--- is, and maps it to a string or nil. If nil, then the component is disregarded
+--- from the statusline.
+---@field cache_on_vim_modes string[] Use cache in these Vim modes. Each Vim
+--- mode is expected as the first char returned by |mode()|.
 
---- Hello
+--- Constructor.
+--- Parameters ~
+--- {provider} `function` See |Bareline.providers|.
+--- {opts} BareComponentOpts Options.
+--- Return ~
+--- Bareline.BareComponent
 function Bareline.BareComponent:new(provider, opts)
   local bare_component = {}
   setmetatable(bare_component, self)
@@ -251,12 +260,19 @@ function Bareline.BareComponent:new(provider, opts)
   return bare_component
 end
 
+--- Mask with char.
+--- Replace each character of the component with the provided character.
+--- Parameters ~
+--- {char} `(string)` Single character.
+--- Return ~
+--- `(function)` When called returns the masked value.
 function Bareline.BareComponent:mask(char)
   local this = self
+  local character = string.sub(char, 1, 1)
   return function()
     local component_value = H.build_user_supplied_component(this)
     if component_value == nil then return nil end
-    return component_value:gsub(".", char)
+    return component_value:gsub(".", character)
   end
 end
 
@@ -523,7 +539,7 @@ end
 
 ---@param bare_component BareComponent
 ---@return any
-function H.build_bare_component(bare_component)
+function H.get_bare_component_provider_value(bare_component)
   local provider = bare_component.provider
   if type(provider) == "string" then return provider end
   if type(provider) == "function" then return provider() end
@@ -566,11 +582,11 @@ function H.build_user_supplied_component(component)
     if is_cache_vim_mode then return component_cache.value end
   end
 
-  local built_component = H.build_bare_component(bare_component)
-  if opts.format then built_component = opts.format(built_component) end
-  H.store_bare_component_cache(bare_component, built_component)
+  local provider_value = H.get_bare_component_provider_value(bare_component)
+  if opts.format then provider_value = opts.format(provider_value) end
+  H.store_bare_component_cache(bare_component, provider_value)
 
-  return built_component
+  return provider_value
 end
 
 H.component_separator = "  "
@@ -641,7 +657,7 @@ vim.api.nvim_create_autocmd({ "WinClosed" }, {
 --- Merge user-supplied config with the plugin's default config. For every key
 --- which is not supplied by the user, the value in the default config will be
 --- used. The user's config has precedence; the default config is the fallback.
----@param config table|nil User supplied config.
+---@param config? table User supplied config.
 ---@param default_config table Bareline's default config.
 ---@return table
 function H.get_config_with_fallback(config, default_config)
