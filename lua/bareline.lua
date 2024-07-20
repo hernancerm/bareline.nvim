@@ -54,12 +54,12 @@ local h = {}
 --- config table is provided, it's merged with the default config and the keys in
 --- the user's config take precedence.
 function bareline.setup(config)
-  bareline.config = h.get_config_with_fallback(config, bareline.config)
+  bareline.config = h.get_config_with_fallback(config, bareline.default_config)
   bareline.config.draw_method(bareline.config.statusline)
 end
 
 --- #delimiter
---- #tag bareline.config
+--- #tag bareline.default_config
 
 --- The default `config` used for |Bareline.setup()| uses distinct statuslines for
 --- active, inactive and plugin windows. The resulting style is inspired by
@@ -88,9 +88,9 @@ end
 
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
 --minidoc_replace_start
-local function apply_default_config()
+local function assign_default_config()
 --minidoc_replace_end
-  bareline.config = {
+  bareline.default_config = {
     draw_method = bareline.draw_methods.draw_active_inactive_plugin,
     statusline = {
       -- Active.
@@ -520,7 +520,7 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
 end
 
 -- Set module default config.
-apply_default_config()
+assign_default_config()
 
 -- -----
 --- #end
