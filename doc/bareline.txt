@@ -1,5 +1,4 @@
 *bareline* Configure simple statuslines.
-*Bareline*
 
 MIT License Copyright (c) 2024 Hernán Cervera.
 
@@ -25,7 +24,7 @@ Statusline: | NOR  lua/bareline.lua                        (main)  22,74/454 |
                   ├── Vim mode                                 ├── Git HEAD
                   └── Relative file path                       └── Location
 
-The bundled components get their data from a provider (|Bareline.providers|).
+The bundled components get their data from a provider (|bareline.providers|).
 
 ------------------------------------------------------------------------------
                                                               *bareline.setup()*
@@ -42,20 +41,20 @@ I recommend disabling 'showmode', so only Bareline shows the Vim mode.
 
 If you want to use this plugin just for the data providers (e.g., Vim mode or
 Git branch) to build yourself a statusine which fancies your pixelated heart,
-then take a look at |Bareline.providers|.
+then take a look at |bareline.providers|.
 
 Parameters ~
-{config} `(table|nil)` Module config table. |Bareline.config| defines the
-default configuration. If config is nil, then the default config is used. If a
-config table is provided, it's merged with the default config and the keys in
-the user's config take precedence.
+{config} `(table|nil)` Module config table. |bareline.default_config| defines
+the default configuration. If the `config` arg is nil, then the default config
+is used. If a config table is provided, it's merged with the default config
+and the keys in the user's config take precedence.
 
 ------------------------------------------------------------------------------
                                                        *bareline.default_config*
 
 Behavior ~
 
-The default `config` used for |Bareline.setup()| uses distinct statuslines for
+The default `config` used for |bareline.setup()| uses distinct statuslines for
 active, inactive and plugin windows. The resulting style is inspired by
 Helix's default statusline:
 
@@ -159,9 +158,9 @@ A provider is a function which takes no arguments and returns a single value
 of any type or nil.
 
 If you want to use the providers directly, most likely you do not want to use
-the setup function (|Bareline.setup|). Providers give data in a parse-friendly
-format, which can be used so you build your own statusline without using any
-other functionality provided in Bareline. Example:
+the setup function (|bareline.setup()|). Providers give data in a convenient
+format for parsing, which can be used so you build your own statusline
+without using any other functionality provided in Bareline. Example:
 >lua
   local providers = require("bareline").providers
   providers.lsp_server_names()
@@ -178,8 +177,8 @@ returned string has only lower case letters.
 Return ~
 `(string)`
 
-                                             *bareline.providers.get_git_head()*
-                      `bareline.providers.get_git_head`()
+                                              *barelineproviders.get_git_head()*
+                       `barelineproviders.get_git_head`()
 Git HEAD.
 Returns the Git HEAD. The file `.git/HEAD` is read and its first line is
 returned. If the current directory does not have a `.git` dir, an upwards
@@ -187,8 +186,8 @@ search is performed. If the dir isn't found, then nil is returned.
 Return ~
 `(string|nil)`
 
-                                         *bareline.providers.lsp_server_names()*
-                    `bareline.providers.lsp_server_names`()
+                                          *barelineproviders.lsp_server_names()*
+                     `barelineproviders.lsp_server_names`()
 LSP attached servers.
 Returns the names of the LSP servers attached to the current buffer.
 Example output: `{ "lua_ls" }`
@@ -219,7 +218,7 @@ Return ~
 Standardized component.
 All bundled components are structured like this. To create your own
 components, you can use this class or, more simply, follow the alternate
-component types described in |Bareline.default_config|.
+component types described in |bareline.default_config|.
 Class ~
 {BareComponent}
 Fields ~
@@ -241,7 +240,7 @@ mode is expected as the first char returned by |mode()|.
                 `bareline.BareComponent:new`({provider}, {opts})
 Constructor.
 Parameters ~
-{provider} `function` See |Bareline.providers|.
+{provider} `function` See |bareline.providers|.
 {opts} BareComponentOpts Options.
 Return ~
 Bareline.BareComponent
@@ -258,8 +257,8 @@ Return ~
 ------------------------------------------------------------------------------
                                                            *bareline.components*
 
-Bundled components, meant to be used for the function |Bareline.setup()|.
-These are all structured as a |Bareline.BareComponent|.
+Bundled components, meant to be used for the function |bareline.setup()|.
+These are all structured as a |bareline.BareComponent|.
 
 User supplied components can have a simpler structure. Read the section
 'Overriding the defaults' from |bareline.default_config|.

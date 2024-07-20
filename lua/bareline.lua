@@ -1,5 +1,4 @@
 --- *bareline* Configure simple statuslines.
---- *Bareline*
 ---
 --- MIT License Copyright (c) 2024 Hernán Cervera.
 ---
@@ -25,7 +24,7 @@
 ---                   ├── Vim mode                                 ├── Git HEAD
 ---                   └── Relative file path                       └── Location
 ---
---- The bundled components get their data from a provider (|Bareline.providers|).
+--- The bundled components get their data from a provider (|bareline.providers|).
 
 -- MODULE SETUP
 
@@ -46,12 +45,12 @@ local h = {}
 ---
 --- If you want to use this plugin just for the data providers (e.g., Vim mode or
 --- Git branch) to build yourself a statusine which fancies your pixelated heart,
---- then take a look at |Bareline.providers|.
+--- then take a look at |bareline.providers|.
 ---
----@param config table|nil Module config table. |Bareline.config| defines the
---- default configuration. If config is nil, then the default config is used. If a
---- config table is provided, it's merged with the default config and the keys in
---- the user's config take precedence.
+---@param config table|nil Module config table. |bareline.default_config| defines
+--- the default configuration. If the `config` arg is nil, then the default config
+--- is used. If a config table is provided, it's merged with the default config
+--- and the keys in the user's config take precedence.
 function bareline.setup(config)
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
   bareline.config.draw_method(bareline.config.statusline)
@@ -62,7 +61,7 @@ end
 
 --- Behavior ~
 ---
---- The default `config` used for |Bareline.setup()| uses distinct statuslines for
+--- The default `config` used for |bareline.setup()| uses distinct statuslines for
 --- active, inactive and plugin windows. The resulting style is inspired by
 --- Helix's default statusline:
 ---
@@ -177,9 +176,9 @@ bareline.providers = {}
 --- of any type or nil.
 ---
 --- If you want to use the providers directly, most likely you do not want to use
---- the setup function (|Bareline.setup|). Providers give data in a parse-friendly
---- format, which can be used so you build your own statusline without using any
---- other functionality provided in Bareline. Example:
+--- the setup function (|bareline.setup()|). Providers give data in a convenient
+--- format for parsing, which can be used so you build your own statusline
+--- without using any other functionality provided in Bareline. Example:
 --- >lua
 ---   local providers = require("bareline").providers
 ---   providers.lsp_server_names()
@@ -270,7 +269,7 @@ bareline.components = {}
 --- Standardized component.
 --- All bundled components are structured like this. To create your own
 --- components, you can use this class or, more simply, follow the alternate
---- component types described in |Bareline.default_config|.
+--- component types described in |bareline.default_config|.
 ---@class BareComponent
 ---@field provider string|function Provides the value displayed in the statusline,
 --- like the Vim mode. When a function, should return a single value of any type.
@@ -288,7 +287,7 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 
 --- Constructor.
 --- Parameters ~
---- {provider} `function` See |Bareline.providers|.
+--- {provider} `function` See |bareline.providers|.
 --- {opts} BareComponentOpts Options.
 --- Return ~
 --- Bareline.BareComponent
@@ -319,8 +318,8 @@ end
 --- #delimiter
 --- #tag bareline.components
 
---- Bundled components, meant to be used for the function |Bareline.setup()|.
---- These are all structured as a |Bareline.BareComponent|.
+--- Bundled components, meant to be used for the function |bareline.setup()|.
+--- These are all structured as a |bareline.BareComponent|.
 ---
 --- User supplied components can have a simpler structure. Read the section
 --- 'Overriding the defaults' from |bareline.default_config|.
