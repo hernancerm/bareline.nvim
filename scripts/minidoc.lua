@@ -69,6 +69,7 @@ hooks.write_pre = function(lines)
     if string.find(line, "^#end$") then
       lines = vim.list_slice(lines, 0, index - 1)
       table.insert(lines, " vim:tw=78:ts=8:noet:ft=help:norl:")
+      break
     end
   end
 
