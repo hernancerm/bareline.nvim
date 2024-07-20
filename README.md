@@ -29,7 +29,6 @@ be drawn. Lazy.nvim does this automatically using the snippet above.
 
 Bareline comes with sensible defaults to provide a batteries included experience. Demo:
 
-TODO: Update the screenshots.
 <table>
   <tr>
     <th>Window state</th>
@@ -37,15 +36,15 @@ TODO: Update the screenshots.
   </tr>
   <tr>
     <td>Active</td>
-    <td><img src="./media/bare_active.png" alt="Active statusline"></th>
+    <td><img src="./media/demo_active.png" alt="Active statusline"></th>
   </tr>
   <tr>
     <td>Inactive</td>
-    <td><img src="./media/bare_inactive.png" alt="Active statusline"></th>
+    <td><img src="./media/demo_inactive.png" alt="Inactive statusline"></th>
   </tr>
   <tr>
     <td>Plugin</td>
-    <td><img src="./media/bare_plugin.png" alt="Active statusline"></th>
+    <td><img src="./media/demo_plugin.png" alt="Plugin statusline"></th>
   </tr>
 </table>
 
