@@ -8,6 +8,12 @@ Configure your statusline with ease.
 - Batteries included experience.
 - Data providers to use this plugin as a library, if you so wish.
 
+## Limitations
+
+- Reliance on a timer (and some autocmds), so updates of some components have a brief delay.
+- No fancy colors. The colors of the entire statusline itself depend on your color scheme.
+- No fancy separators.
+
 ## Requirements
 
 - Works on Neovim 0.10.0. Not tested on other versions.
@@ -48,7 +54,15 @@ Bareline comes with sensible defaults to provide a batteries included experience
   </tr>
 </table>
 
-Defaults config table:
+<div align=center>
+  <p>
+    Color scheme for the demo: <code>github_light</code>, from
+    <a href="https://github.com/projekt0n/github-nvim-theme">projekt0n/github-nvim-theme</a>
+  </p>
+</div>
+
+
+Defaults:
 
 ```lua
 {
