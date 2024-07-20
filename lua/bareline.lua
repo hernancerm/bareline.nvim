@@ -264,7 +264,7 @@ bareline.components = {}
 --- Standardized component.
 --- All bundled components are structured like this. To create your own
 --- components, you can use this class or, more simply, follow the alternate
---- approaches described in |Bareline.components|.
+--- component types described in |Bareline.default_config|.
 ---@class BareComponent
 ---@field provider string|function Provides the value displayed in the statusline,
 --- like the Vim mode. When a function, should return a single value of any type.
@@ -458,6 +458,7 @@ bareline.components.position = bareline.BareComponent:new("%02l,%02c/%02L")
 --- #delimiter
 --- #tag bareline.draw_methods
 
+--- TODO: Write this section.
 --- Draw methods rely on |autocmd|s and a |timer| to properly draw the provided
 --- statusline on all windows. Use |bareline.draw_methods.stop_all| to stop the
 --- drawing.
