@@ -61,6 +61,8 @@ end
 --- #delimiter
 --- #tag bareline.default_config
 
+--- Behavior ~
+---
 --- The default `config` used for |Bareline.setup()| uses distinct statuslines for
 --- active, inactive and plugin windows. The resulting style is inspired by
 --- Helix's default statusline:
@@ -73,35 +75,27 @@ end
 --- * | [Nvim Tree]                                                     28,09/33 |
 ---                      https://github.com/helix-editor/helix
 ---
----
---- Bareline's default configuration below. No need to copy/paste this in your
---- config, unless you want to use it as a starting point for your own tweaks.
----
---- But, how to tweak? What you need to know is what can be passed as a component:
---- * String: Useful for very simple components, for example, statusline items
----   like `%r` ('statusline') or options like 'fileformat'.
---- * Function: Must return either a string or nil. The returned string is
----   what gets placed in the statusline. When nil is returned, the component
----   is skipped, leaving no gap.
---- * |bareline.BareComponent|: Object which allows component configuration. The
----   bundled components follow this structure (|bareline.components|).
----@alias UserSuppliedComponent string|function|BareComponent
-
+--- Default config ~
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
 --minidoc_replace_start
 local function assign_default_config()
 --minidoc_replace_end
   bareline.default_config = {
+
+    -- Function which takes a single argument, the `statusline` table. Based
+    -- on the draw method, `statusline` might need to contain more than one
+    -- statusline definition. With the default, 3 statuslines are expected.
     draw_method = bareline.draw_methods.draw_active_inactive_plugin,
+
     statusline = {
-      { -- Active window statusline.
-        { -- Section 1.
+      { -- Statusline 1: Active window.
+        { -- Section 1: Left.
           bareline.components.vim_mode,
           bareline.components.get_file_path_relative_to_cwd,
           bareline.components.lsp_servers,
           "%m", "%h", "%r",
         },
-        { -- Section 2.
+        { -- Section 2: Right.
           bareline.components.diagnostics,
           bareline.components.indent_style,
           bareline.components.end_of_line,
@@ -110,14 +104,14 @@ local function assign_default_config()
         },
       },
 
-      { -- Inactive window statusline.
-        { -- Section 1.
+      { -- Statusline 2: Inactive window.
+        { -- Section 1: Left.
           bareline.components.vim_mode:mask(" "),
           bareline.components.get_file_path_relative_to_cwd,
           bareline.components.lsp_servers,
           "%m", "%h", "%r",
         },
-        { -- Section 2.
+        { -- Section 2: Right.
           bareline.components.diagnostics,
           bareline.components.indent_style,
           bareline.components.end_of_line,
@@ -125,11 +119,11 @@ local function assign_default_config()
         },
       },
 
-      { -- Plugin window statusline.
-        { -- Section 1.
+      { -- Statusline 3: Plugin window.
+        { -- Section 1: Left.
           bareline.components.plugin_name
         },
-        { -- Section 2.
+        { -- Section 2: Right.
           bareline.components.position
         },
       },
@@ -140,11 +134,24 @@ end
 --minidoc_replace_end
 --minidoc_afterlines_end
 
---- Tips on overriding the default config ~
+--- Overriding the defaults ~
 ---
---- Tip 1. If the changes you want to make are few, then your config can be
---- concise by doing a deep copy of the defaults and then inserting your
---- components, for example:
+--- To override the defaults, copy/paste the default config as a starting point to
+--- use for the function |bareline.setup()|.
+---
+--- Custom components: These are the allowed types for `user supplied components`:
+---
+--- * String: Useful for very simple components, for example, statusline items
+---   like `%r` ('statusline') or options like 'fileformat'.
+--- * Function: Must return either a string or nil. The returned string is
+---   what gets placed in the statusline. When nil is returned, the component
+---   is skipped, leaving no gap.
+--- * |bareline.BareComponent|: Object which allows component configuration. The
+---   bundled components follow this structure (|bareline.components|).
+---@alias UserSuppliedComponent string|function|BareComponent
+
+--- If the changes you want to make are few, then your config can be concise by
+--- doing a deep copy of the defaults and then inserting your components, e.g.:
 --- >lua
 ---   local bareline = require("bareline")
 ---   -- Custom component.
@@ -315,6 +322,9 @@ end
 
 --- Bundled components, meant to be used for the function |Bareline.setup()|.
 --- These are all structured as a |Bareline.BareComponent|.
+---
+--- User supplied components can have a simpler structure. Read the section
+--- 'Overriding the defaults' from |bareline.default_config|.
 
 --- Vim mode.
 --- The Vim mode in 3 characters.
@@ -458,17 +468,20 @@ bareline.components.position = bareline.BareComponent:new("%02l,%02c/%02L")
 --- #delimiter
 --- #tag bareline.draw_methods
 
---- TODO: Write this section.
---- Draw methods rely on |autocmd|s and a |timer| to properly draw the provided
---- statusline on all windows. Use |bareline.draw_methods.stop_all| to stop the
---- drawing.
+--- Draw methods are functions which take a single argument, a table holding one
+--- or more statuslines, and implement how the statusline(s) is(are) drawn.
+---
+--- A statusline is a list of sections, and a section is a list of components, as
+--- per the `user supplied components` documented in the section 'Overriding the
+--- defaults' from |bareline.default_config|.
 
 bareline.draw_methods = {}
 
 --- Draw distinct statuslines for active, inactive and plugin windows.
---- The provided statuslines are handled in this order by table index: [1] drawn
---- on the active window, [2] drawn on the inactive window and [3] drawn on the
---- plugin window (having precedence over the active window statusline).
+--- Rely on |autocmd|s and a |timer| (not everything is watched). The provided
+--- statuslines are handled in this order by table index: [1] drawn on the active
+--- window, [2] drawn on the inactive window and [3] drawn on the plugin window
+--- (having precedence over the active window statusline).
 ---@param statuslines BareStatusline[]
 function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   ---@type BareStatusline
