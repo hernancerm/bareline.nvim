@@ -177,8 +177,8 @@ returned string has only lower case letters.
 Return ~
 `(string)`
 
-                                              *barelineproviders.get_git_head()*
-                       `barelineproviders.get_git_head`()
+                                             *bareline.providers.get_git_head()*
+                      `bareline.providers.get_git_head`()
 Git HEAD.
 Returns the Git HEAD. The file `.git/HEAD` is read and its first line is
 returned. If the current directory does not have a `.git` dir, an upwards
@@ -186,8 +186,8 @@ search is performed. If the dir isn't found, then nil is returned.
 Return ~
 `(string|nil)`
 
-                                          *barelineproviders.lsp_server_names()*
-                     `barelineproviders.lsp_server_names`()
+                                         *bareline.providers.lsp_server_names()*
+                    `bareline.providers.lsp_server_names`()
 LSP attached servers.
 Returns the names of the LSP servers attached to the current buffer.
 Example output: `{ "lua_ls" }`
