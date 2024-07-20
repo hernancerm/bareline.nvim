@@ -33,3 +33,9 @@ command:
 ```
 
 Each part of the code is separated by comments with all caps, e.g., `-- COMPONENTS`.
+
+## Code conventions
+
+Lua:
+- Every identifier is named in snake_case, except classes which use PascalCase.
+- The identifier `h` holds helper functions and values, not meant to be made public.
