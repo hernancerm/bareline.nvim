@@ -7,10 +7,9 @@
 ---
 --- Key design ideas ~
 ---
---- 1. Simplicity, for the user and in the code.
+--- 1. Ease of configuration.
 ---
---- 2. Can be used as a library for common statusline data providers, in case the
----   user wants to set their statusline in a more custom way.
+--- 2. Can be used as a library for common statusline data providers.
 ---
 --- Concepts ~
 ---
@@ -26,7 +25,7 @@
 ---                   ├── Vim mode                                 ├── Git HEAD
 ---                   └── Relative file path                       └── Location
 ---
---- Each component gets its data from a provider (|Bareline.providers|).
+--- The bundled components get their data from a provider (|Bareline.providers|).
 
 -- MODULE SETUP
 
@@ -325,6 +324,7 @@ end
 ---
 --- User supplied components can have a simpler structure. Read the section
 --- 'Overriding the defaults' from |bareline.default_config|.
+---
 
 --- Vim mode.
 --- The Vim mode in 3 characters.
@@ -474,6 +474,7 @@ bareline.components.position = bareline.BareComponent:new("%02l,%02c/%02L")
 --- A statusline is a list of sections, and a section is a list of components, as
 --- per the `user supplied components` documented in the section 'Overriding the
 --- defaults' from |bareline.default_config|.
+---
 
 bareline.draw_methods = {}
 
