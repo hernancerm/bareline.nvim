@@ -1,44 +1,39 @@
 # bareline.nvim
 
-Library to facilitate building simple statuslines.
+Configure your statusline with ease.
 
 ## Features
 
-- Preset statusline for a batteries included experience.
-- Basic data providers and components for building your own statusline.
-- Simple.
+- Simple configuration.
+- Batteries included experience.
+- Data providers to use this plugin as a library, if you so wish.
 
-Not implemented:
+## Requirements
 
-- Colors. The colors depend on your color scheme.
-- Mouse events.
+- Works on Neovim 0.10.0. Not tested on other versions.
 
 ## Installation
 
-Use your favorite package manager. For example, [lazy.nvim](https://github.com/folke/lazy.nvim):
+Use your favorite package manager. For example, [Lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
- {
-   "HerCerM/bareline.nvim",
-    -- Use the batteries included statusline:
-    config = function () require("bareline").presets.bare() end
- }
+{
+  "hernancerm/bareline.nvim"
+},
 ```
 
-## Usage
+The function `require("barelilne").setup({config})` needs to be called for the default statusline to
+be drawn. Lazy.nvim does this automatically using the snippet above.
 
-Bareline comes with a preset to start using a pre-configured statusline right away. When using this
-preset as per the snippet below, the information shown in the statusline is different according to
-the window state.
+## Default config
 
-```lua
-require("bareline").presets.bare()
-```
+Bareline comes with sensible defaults to provide a batteries included experience. Demo:
 
+TODO: Update the screenshots.
 <table>
   <tr>
     <th>Window state</th>
-    <th>Demo</th>
+    <th>Appearance</th>
   </tr>
   <tr>
     <td>Active</td>
@@ -54,65 +49,82 @@ require("bareline").presets.bare()
   </tr>
 </table>
 
-To change the information the preset displays, use the code below as a template. If the template
-below is used, then there is no need to call `require("bareline").presets.bare()`.
+Defaults config table:
 
 ```lua
-local bareline = require("bareline")
+{
+  -- Function which takes a single argument, the `statusline` table. Based
+  -- on the draw method, `statusline` might need to contain more than one
+  -- statusline definition. With the default, 3 statuslines are expected.
+  draw_method = bareline.draw_methods.draw_active_inactive_plugin,
 
-vim.o.showmode = false
-bareline.draw_methods.draw_active_inactive_plugin {
-  -- Active.
-  {
-    {
-      bareline.components.vim_mode,
-      bareline.providers.get_file_path_relative_to_cwd,
-      "%m",
-      "%h",
-      "%r",
-    },
-    {
-      bareline.components.diagnostics,
-      vim.bo.fileformat,
-      bareline.components.indent_style,
-      bareline.components.end_of_line,
-      bareline.components.git_branch,
-      bareline.components.position,
-    },
-  },
-  -- Inactive.
-  {
-    {
-      {
-        value = bareline.components.vim_mode.value,
-        opts = {
-          format = bareline.formatters.mask(
-              bareline.components.vim_mode.opts.format, " ")
-        },
+  statusline = {
+    { -- Statusline 1: Active window.
+      { -- Section 1: Left.
+        bareline.components.vim_mode,
+        bareline.components.get_file_path_relative_to_cwd,
+        bareline.components.lsp_servers,
+        "%m", "%h", "%r",
       },
-      bareline.providers.get_file_path_relative_to_cwd,
-      "%m",
-      "%h",
-      "%r",
+      { -- Section 2: Right.
+        bareline.components.diagnostics,
+        bareline.components.indent_style,
+        bareline.components.end_of_line,
+        bareline.components.git_branch,
+        bareline.components.position,
+      },
     },
-    {
-      bareline.components.diagnostics,
-      vim.bo.fileformat,
-      bareline.components.indent_style,
-      bareline.components.end_of_line,
-      bareline.components.position,
+
+    { -- Statusline 2: Inactive window.
+      { -- Section 1: Left.
+        bareline.components.vim_mode:mask(" "),
+        bareline.components.get_file_path_relative_to_cwd,
+        bareline.components.lsp_servers,
+        "%m", "%h", "%r",
+      },
+      { -- Section 2: Right.
+        bareline.components.diagnostics,
+        bareline.components.indent_style,
+        bareline.components.end_of_line,
+        bareline.components.position,
+      },
     },
-  },
-  -- Plugin.
-  {
-    { bareline.components.plugin_name },
-    { bareline.components.position },
-  },
+
+    { -- Statusline 3: Plugin window.
+      { -- Section 1: Left.
+        bareline.components.plugin_name
+      },
+      { -- Section 2: Right.
+        bareline.components.position
+      },
+    },
+  }
 }
 ```
 
-To learn more, please read the help page [bareline.txt](./doc/bareline.txt). I put effort on writing
-that, hopefully it's understandable.
+## Overriding the defaults
+
+Copy/paste the default config table ([Default config](#default-config)) or modify a deep copy of it,
+and pass that to `require("bareline").setup({config})`. Example of the latter approach:
+
+```lua
+local bareline = require("bareline")
+-- Custom component.
+local component_prose_mode = function ()
+  if string.find(vim.bo.formatoptions, "a") then return "PROSE" end
+  return nil
+end
+-- Overrides to default config.
+local config = vim.deepcopy(bareline.default_config)
+table.insert(config.statusline[1][1], 2, component_prose_mode)
+table.insert(config.statusline[2][1], 2, component_prose_mode)
+-- Draw statusline.
+bareline.setup(config)
+```
+
+## Complete documentation
+
+Please refer to the help file: [bareline.txt](./doc/bareline.txt).
 
 ## Similar plugins
 
@@ -135,3 +147,11 @@ that, hopefully it's understandable.
 > (2010).
 
 No reason.
+
+## License
+
+[MIT](./LICENSE)
+
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. [...]
