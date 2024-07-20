@@ -20,15 +20,11 @@
 ---
 --- Visualized example:
 ---
---- ··············································································
---- : NOR  lua/bareline.lua                           H:2,W:4  (main)  22,74/454 :
---- ··············································································
---- ^                       ^                       ^                            ^
---- : Components:           :                       : Components:                :
---- : * Vim mode.           :                       : * Diagnostics by severity. :
---- : * Relative file path. :                       : * Git HEAD.                :
---- :                       :                       : * Location.                :
---- +······ Section 1 ······+                       +········· Section 2 ········+
+--- Statusline: | NOR  lua/bareline.lua                        (main)  22,74/454 |
+---               Section 1                                    Section 2
+---               └── Components                               └── Components
+---                   ├── Vim mode                                 ├── Git HEAD
+---                   └── Relative file path                       └── Location
 ---
 --- Each component gets its data from a provider (|Bareline.providers|).
 
