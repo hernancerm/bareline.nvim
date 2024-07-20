@@ -16,7 +16,7 @@
 ---
 --- Bareline conceptualizes a statusline in this way:
 --- * A statusline is a list of sections.
---- * Each section is a list of components (|Bareline.components|).
+--- * Each section is a list of components.
 ---
 --- Visualized example:
 ---
@@ -76,6 +76,15 @@ end
 ---
 --- Bareline's default configuration below. No need to copy/paste this in your
 --- config, unless you want to use it as a starting point for your own tweaks.
+---
+--- But, how to tweak? What you need to know is what can be passed as a component:
+--- * String: Useful for very simple components, for example, statusline items
+---   like `%r` ('statusline') or options like 'fileformat'.
+--- * Function: Must return either a string or nil. The returned string is
+---   what gets placed in the statusline. When nil is returned, the component
+---   is skipped, leaving no gap.
+--- * |bareline.BareComponent|: Object which allows component configuration.
+---@alias UserSuppliedComponent string|function|BareComponent
 
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
 --minidoc_replace_start
@@ -233,7 +242,7 @@ bareline.components = {}
 --- components, you can use this class or, more simply, follow the alternate
 --- approaches described in |Bareline.components|.
 ---@class BareComponent
----@field provider function|string Provides the value displayed in the statusline,
+---@field provider string|function Provides the value displayed in the statusline,
 --- like the Vim mode. When a function, should return a single value of any type.
 --- When a string, that itself is used.
 ---@field opts BareComponentOpts Options.
@@ -431,10 +440,10 @@ bareline.components.position = bareline.BareComponent:new("%02l,%02c/%02L")
 
 bareline.draw_methods = {}
 
---- Use distinct statuslines for active, inactive and plugin windows. The provided
---- statuslines are handled in this order by table index: (1) drawn on the active
---- window, (2) drawn on the inactive window and (3) drawn on the plugin window,
---- having precedence over the active window statusline.
+--- Draw distinct statuslines for active, inactive and plugin windows.
+--- The provided statuslines are handled in this order by table index: [1] drawn
+--- on the active window, [2] drawn on the inactive window and [3] drawn on the
+--- plugin window (having precedence over the active window statusline).
 ---@param statuslines BareStatusline[]
 function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   ---@type BareStatusline
@@ -517,15 +526,6 @@ apply_default_config()
 --- #end
 
 -- BUILD
-
---- - Function: Must return either a string or nil. The returned string is
----   what gets placed in the statusline. When nil is returned, the component
----   is skipped, leaving no gap.
---- - String: The string is considered as if a function component had already
----   been executed and its output is the provided string. Handy for placing
----   statusline fields, for example `%f`.
---- - |StdComponent|: Table which allows component configuration.
----@alias UserSuppliedComponent function|string|BareComponent
 
 --- The standard component built into a string or nil.
 ---@alias ComponentValue string|nil
