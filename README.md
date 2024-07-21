@@ -24,12 +24,13 @@ Use your favorite package manager. For example, [Lazy.nvim](https://github.com/f
 
 ```lua
 {
-  "hernancerm/bareline.nvim"
+  "hernancerm/bareline.nvim",
+  opts = {}
 },
 ```
 
-The function `require("barelilne").setup({config})` needs to be called for the default statusline to
-be drawn. Lazy.nvim does this automatically using the snippet above.
+The function `require("barelilne").setup({config})` needs to be called for Bareline to draw the
+statusline. Lazy.nvim does this automatically using the snippet above.
 
 ## Default config
 
