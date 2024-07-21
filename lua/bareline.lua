@@ -553,8 +553,6 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
         )
     end,
   })
-
-  h.draw_window_statusline(active_window_statusline)
 end
 
 -- Set module default config.
