@@ -119,7 +119,8 @@ local function assign_default_config()
 
       { -- Statusline 3: Plugin window.
         { -- Section 1: Left.
-          bareline.components.plugin_name
+          bareline.components.plugin_name,
+          "%m"
         },
         { -- Section 2: Right.
           bareline.components.position
@@ -362,6 +363,7 @@ bareline.components.plugin_name = bareline.BareComponent:new(
 ---@type BareComponent
 bareline.components.indent_style = bareline.BareComponent:new(
   function()
+    if not vim.bo.modifiable then return nil end
     local whitespace_type = "tabs"
     if vim.bo.expandtab then whitespace_type = "spaces" end
     return whitespace_type .. "-" .. vim.bo.tabstop
@@ -498,7 +500,7 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   -- Redraw statusline immediately to update specific components, e.g. the Vim
   -- mode. For plugin windows (e.g. nvim-tree), use a special statusline.
   vim.api.nvim_create_autocmd(
-    { "ModeChanged", "DiagnosticChanged", "BufEnter" },
+    { "ModeChanged", "DiagnosticChanged", "BufEnter", "BufWinEnter" },
     {
       group = h.draw_methods_augroup,
       callback = function()
@@ -509,7 +511,6 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
       end,
     }
   )
-
   vim.api.nvim_create_autocmd("OptionSet", {
       group = h.draw_methods_augroup,
       pattern = "expandtab,tabstop,endofline,fileformat,formatoptions",
