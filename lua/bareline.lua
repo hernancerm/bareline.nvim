@@ -70,7 +70,7 @@ end
 --- Inactive window:
 --- * |      lua/bareline.lua  [lua_ls]              H:2,W:4  spaces-2  42,21/50 |
 --- Plugin window:
---- * | [Nvim Tree]                                                     28,09/33 |
+--- * | [nvimtree]                                                      28,09/33 |
 ---                      https://github.com/helix-editor/helix
 ---
 --- Default config ~
@@ -345,19 +345,13 @@ bareline.components.vim_mode = bareline.BareComponent:new(
 
 --- Plugin name.
 --- When on a plugin window, the formatted name of the plugin window.
---- Mockup: `[Nvim Tree]`
+--- Mockup: `[nvimtree]`
 ---@type BareComponent
 bareline.components.plugin_name = bareline.BareComponent:new(
   function() return vim.bo.filetype end,
   {
     format = function(file_type)
-      local plugin_file_type = {
-        nvimtree = "Nvim Tree",
-      }
-      if plugin_file_type[file_type:lower()] then
-        return string.format("[%s]", plugin_file_type[file_type:lower()])
-      end
-      return nil
+      return string.format("[%s]", file_type:lower():gsub("%s", ""))
     end
   }
 )
@@ -680,13 +674,12 @@ end
 
 h.draw_methods_augroup = vim.api.nvim_create_augroup("BarelineDrawMethods", {})
 
----@param buffer integer The window number, as returned by |bufnr()|.
+---@param buffer integer The buffer number, as returned by |bufnr()|.
 ---@return boolean
 function h.is_plugin_window(buffer)
-  local plugin_file_types = {
-    "nvimtree"
-  }
-  return vim.tbl_contains(plugin_file_types, vim.bo[buffer].filetype:lower())
+  local filetype = vim.bo[buffer].filetype
+  local matched_filetype, _ = vim.filetype.match({ buf = buffer })
+  return matched_filetype == nil and not vim.tbl_contains({ nil, "" }, filetype)
 end
 
 ---@param statusline BareStatusline

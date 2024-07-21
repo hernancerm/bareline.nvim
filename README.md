@@ -36,6 +36,7 @@ statusline. Lazy.nvim does this automatically using the snippet above.
 
 Bareline comes with sensible defaults to provide a batteries included experience. Demo:
 
+TODO: Update screenshot for plugin window.
 <table>
   <tr>
     <th>Window state</th>
