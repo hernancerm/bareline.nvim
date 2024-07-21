@@ -718,7 +718,7 @@ vim.api.nvim_create_autocmd({ "WinClosed" }, {
 function h.get_config_with_fallback(config, default_config)
   vim.validate { config = { config, "table", true } }
   config = vim.tbl_deep_extend(
-    "force", vim.deepcopy(default_config), config)
+    "force", vim.deepcopy(default_config), config or {})
   vim.validate {
     draw_method = { config.draw_method, "function" },
     statusline = { config.statusline, "table" }
