@@ -513,8 +513,12 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   )
   vim.api.nvim_create_autocmd("OptionSet", {
       group = h.draw_methods_augroup,
-      pattern = "expandtab,tabstop,endofline,fileformat,formatoptions",
-      callback = function()
+      callback = function(event)
+        local options_blacklist = {
+          "statusline", "laststatus", "eventignore",
+          "winblend", "winhighlight"
+        }
+        if vim.tbl_contains(options_blacklist, event.match) then return end
         draw_statusline_if_plugin_window(
           plugin_window_statusline,
           active_window_statusline
