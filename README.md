@@ -1,5 +1,7 @@
 # bareline.nvim
 
+TODO: Update anything not up to date (screenshots, default config, etc.)
+
 Configure your statusline with ease.
 
 ## Features
@@ -36,7 +38,6 @@ statusline. Lazy.nvim does this automatically using the snippet above.
 
 Bareline comes with sensible defaults to provide a batteries included experience. Demo:
 
-TODO: Update screenshot for plugin window.
 <table>
   <tr>
     <th>Window state</th>
