@@ -487,16 +487,6 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   ---@type BareStatusline
   local plugin_window_statusline = statuslines[3]
 
-  ---@param statusline_1 BareStatusline Statusline for a plugin window.
-  ---@param statusline_2 BareStatusline Statusline drawn otherwise.
-  local function draw_statusline_if_plugin_window(statusline_1, statusline_2)
-    if h.is_plugin_window(vim.fn.bufnr()) then
-      h.draw_window_statusline(statusline_1)
-    else
-      h.draw_window_statusline(statusline_2)
-    end
-  end
-
   -- Redraw statusline immediately to update specific components, e.g. the Vim
   -- mode. For plugin windows (e.g. nvim-tree), use a special statusline.
   vim.api.nvim_create_autocmd(
@@ -504,7 +494,7 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     {
       group = h.draw_methods_augroup,
       callback = function()
-        draw_statusline_if_plugin_window(
+        h.draw_statusline_if_plugin_window(
           plugin_window_statusline,
           active_window_statusline
         )
@@ -519,25 +509,12 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
           "winblend", "winhighlight"
         }
         if vim.tbl_contains(options_blacklist, event.match) then return end
-        draw_statusline_if_plugin_window(
+        h.draw_statusline_if_plugin_window(
           plugin_window_statusline,
           active_window_statusline
         )
       end,
     }
-  )
-
-  -- Redraw statusline of active window to update components hard to watch, for
-  -- example the attached LSP servers.
-  vim.fn.timer_start(
-    500,
-    function()
-      draw_statusline_if_plugin_window(
-        plugin_window_statusline,
-        active_window_statusline
-      )
-    end,
-    { ["repeat"] = -1 }
   )
 
   -- Draw a different statusline for inactive windows. For inactive plugin windows
@@ -546,12 +523,25 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   vim.api.nvim_create_autocmd("WinLeave", {
     group = h.draw_methods_augroup,
     callback = function()
-      draw_statusline_if_plugin_window(
+      h.draw_statusline_if_plugin_window(
           plugin_window_statusline,
           inactive_window_statusline
         )
     end,
   })
+
+  -- Redraw statusline of active window to update components hard to watch, for
+  -- example the attached LSP servers.
+  vim.fn.timer_start(
+    500,
+    function()
+      h.draw_statusline_if_plugin_window(
+        plugin_window_statusline,
+        active_window_statusline
+      )
+    end,
+    { ["repeat"] = -1 }
+  )
 end
 
 -- Set module default config.
@@ -692,6 +682,16 @@ end
 ---@param statusline BareStatusline
 function h.draw_window_statusline(statusline)
   vim.wo.statusline = h.build_statusline(statusline)
+end
+
+---@param statusline_1 BareStatusline Statusline for a plugin window.
+---@param statusline_2 BareStatusline Statusline drawn otherwise.
+function h.draw_statusline_if_plugin_window(statusline_1, statusline_2)
+  if h.is_plugin_window(vim.fn.bufnr()) then
+    h.draw_window_statusline(statusline_1)
+  else
+    h.draw_window_statusline(statusline_2)
+  end
 end
 
 h.draw_helpers_augroup = vim.api.nvim_create_augroup("BarelineDrawHelpers", {})
