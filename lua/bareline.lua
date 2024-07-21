@@ -70,7 +70,7 @@ end
 --- Inactive window:
 --- * |      lua/bareline.lua  [lua_ls]              H:2,W:4  spaces-2  42,21/50 |
 --- Plugin window:
---- * | [nvimtree]                                                      28,09/33 |
+--- * | [nvimtree]  [-]                                                 28,09/33 |
 ---                      https://github.com/helix-editor/helix
 ---
 --- Default config ~

@@ -63,7 +63,7 @@ Active window:
 Inactive window:
 • |      lua/bareline.lua  [lua_ls]              H:2,W:4  spaces-2  42,21/50 |
 Plugin window:
-• | [Nvim Tree]                                                     28,09/33 |
+• | [nvimtree]  [-]                                                 28,09/33 |
                      https://github.com/helix-editor/helix
 
 Default config ~
@@ -87,7 +87,7 @@ Default config ~
           bareline.components.diagnostics,
           bareline.components.indent_style,
           bareline.components.end_of_line,
-          bareline.components.git_branch,
+          bareline.components.git_head,
           bareline.components.position,
         },
       },
@@ -109,7 +109,8 @@ Default config ~
 
       { -- Statusline 3: Plugin window.
         { -- Section 1: Left.
-          bareline.components.plugin_name
+          bareline.components.plugin_name,
+          "%m"
         },
         { -- Section 2: Right.
           bareline.components.position
@@ -276,7 +277,7 @@ BareComponent
                        `bareline.components.plugin_name`
 Plugin name.
 When on a plugin window, the formatted name of the plugin window.
-Mockup: `[Nvim Tree]`
+Mockup: `[nvimtree]`
 Type ~
 BareComponent
 
@@ -296,10 +297,10 @@ in this case, nil otherwise. This uses the option 'eol'.
 Type ~
 BareComponent
 
-                                                *bareline.components.git_branch*
-                        `bareline.components.git_branch`
+                                                  *bareline.components.git_head*
+                         `bareline.components.git_head`
 Git HEAD.
-Properly displays the Git branch and commit hashes.
+Displays the Git HEAD, useful to show the Git branch.
 Mockup: `(main)`
 Type ~
 BareComponent
