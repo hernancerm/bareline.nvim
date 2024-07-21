@@ -97,7 +97,7 @@ local function assign_default_config()
           bareline.components.diagnostics,
           bareline.components.indent_style,
           bareline.components.end_of_line,
-          bareline.components.git_branch,
+          bareline.components.git_head,
           bareline.components.position,
         },
       },
@@ -380,10 +380,10 @@ bareline.components.end_of_line = bareline.BareComponent:new(
 )
 
 --- Git HEAD.
---- Properly displays the Git branch and commit hashes.
+--- Displays the Git HEAD, useful to show the Git branch.
 --- Mockup: `(main)`
 ---@type BareComponent
-bareline.components.git_branch = bareline.BareComponent:new(
+bareline.components.git_head = bareline.BareComponent:new(
   bareline.providers.get_git_head,
   {
     format = function(git_head)
@@ -674,12 +674,14 @@ end
 
 h.draw_methods_augroup = vim.api.nvim_create_augroup("BarelineDrawMethods", {})
 
----@param buffer integer The buffer number, as returned by |bufnr()|.
+---@param bufnr integer The buffer number, as returned by |bufnr()|.
 ---@return boolean
-function h.is_plugin_window(buffer)
-  local filetype = vim.bo[buffer].filetype
-  local matched_filetype, _ = vim.filetype.match({ buf = buffer })
-  return matched_filetype == nil and not vim.tbl_contains({ nil, "" }, filetype)
+function h.is_plugin_window(bufnr)
+  local filetype = vim.bo[bufnr].filetype
+  local special_non_plugin_filetypes = { nil, "", "help", "qf" }
+  local matched_filetype, _ = vim.filetype.match({ buf = bufnr })
+  return matched_filetype == nil
+    and not vim.tbl_contains(special_non_plugin_filetypes, filetype)
 end
 
 ---@param statusline BareStatusline
