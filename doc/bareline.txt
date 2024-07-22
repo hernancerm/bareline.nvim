@@ -284,7 +284,8 @@ BareComponent
                                               *bareline.components.indent_style*
                        `bareline.components.indent_style`
 Indent style.
-The indent style on insert mode. Relies on 'expandtab' and 'tabstop'.
+The indent style. Relies on 'expandtab' and 'tabstop'. This component is
+omitted when the buffer has 'modifiable' disabled.
 Mockups: `spaces-2`, `tabs-4`
 Type ~
 BareComponent
