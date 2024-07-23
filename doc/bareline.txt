@@ -75,6 +75,12 @@ Default config ~
     -- statusline definition. With the default, 3 statuslines are expected.
     draw_method = bareline.draw_methods.draw_active_inactive_plugin,
 
+    -- Enable the timer in case you have a component which is tricky to watch,
+    -- or just don't want to bother with identifying how to watch it. Accepts
+    -- a boolean (false = disabled, true = 500ms), or a number indicating ms
+    -- in between statusline re-draws.
+    timer = false,
+
     statusline = {
       { -- Statusline 1: Active window.
         { -- Section 1: Left.
@@ -226,7 +232,17 @@ Fields ~
 {provider} `(string|function)` Provides the value displayed in the statusline,
 like the Vim mode. When a function, should return a single value of any type.
 When a string, that itself is used.
+{watcher} BareComponentWatcher Watcher. Triggers a statusline redraw.
 {opts} BareComponentOpts Options.
+
+Class ~
+{BareComponentWatcher}
+Fields ~
+{autocmd} `(table)` Expects a table with the keys `event` and `opts`. These
+values are passed as is to |vim.api.nvim_create_autocmd()|.
+{filepath} `(function|string|table)` Filepath or list of filepaths to watch.
+Alternatively, a function which expects zero args can be provided to compute
+the filepath. Strings and functions can be mixed if the type is table.
 
 Class ~
 {BareComponentOpts}
@@ -286,7 +302,7 @@ BareComponent
 Indent style.
 The indent style. Relies on 'expandtab' and 'tabstop'. This component is
 omitted when the buffer has 'modifiable' disabled.
-Mockups: `spaces-2`, `tabs-4`
+Mockups: `spaces:2`, `tabs:4`
 Type ~
 BareComponent
 

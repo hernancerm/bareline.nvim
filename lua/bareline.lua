@@ -85,9 +85,9 @@ local function assign_default_config()
     -- statusline definition. With the default, 3 statuslines are expected.
     draw_method = bareline.draw_methods.draw_active_inactive_plugin,
 
-    -- Enable the timer in case you have a component which is tricky to watch, or
-    -- just don't want to bother with identifying how to watch it. Accepts a
-    -- boolean (false = disabled, true = 500ms), or a number indicating ms
+    -- Enable the timer in case you have a component which is tricky to watch,
+    -- or just don't want to bother with identifying how to watch it. Accepts
+    -- a boolean (false = disabled, true = 500ms), or a number indicating ms
     -- in between statusline re-draws.
     timer = false,
 
@@ -288,7 +288,7 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 
 ---@class BareComponentWatcher
 ---@field autocmd table Expects a table with the keys `event` and `opts`. These
---- values are passed as is to `vim.api.nvim_create_autocmd()`.
+--- values are passed as is to |vim.api.nvim_create_autocmd()|.
 ---@field filepath function|string|table Filepath or list of filepaths to watch.
 --- Alternatively, a function which expects zero args can be provided to compute
 --- the filepath. Strings and functions can be mixed if the type is table.
@@ -379,14 +379,14 @@ bareline.components.plugin_name = bareline.BareComponent:new(
 --- Indent style.
 --- The indent style. Relies on 'expandtab' and 'tabstop'. This component is
 --- omitted when the buffer has 'modifiable' disabled.
---- Mockups: `spaces-2`, `tabs-4`
+--- Mockups: `spaces:2`, `tabs:4`
 ---@type BareComponent
 bareline.components.indent_style = bareline.BareComponent:new(
   function()
     if not vim.bo.modifiable then return nil end
     local whitespace_type = "tabs"
     if vim.bo.expandtab then whitespace_type = "spaces" end
-    return whitespace_type .. "-" .. vim.bo.tabstop
+    return whitespace_type .. ":" .. vim.bo.tabstop
   end
 )
 
