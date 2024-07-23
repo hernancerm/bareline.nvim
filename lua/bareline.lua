@@ -289,7 +289,9 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 ---@class BareComponentWatcher
 ---@field autocmd table Expects a table with the keys `event` and `opts`. These
 --- values are passed as is to `vim.api.nvim_create_autocmd()`.
----@field filepath string|string[] Filepath or list of filepaths to watch.
+---@field filepath function|string|table Filepath or list of filepaths to watch.
+--- Alternatively, a function which expects zero args can be provided to compute
+--- the filepath. Strings and functions can be mixed if the type is table.
 
 ---@class BareComponentOpts
 ---@field format function Takes a single argument, whatever the `provider` value
@@ -406,6 +408,13 @@ bareline.components.end_of_line = bareline.BareComponent:new(
 bareline.components.git_head = bareline.BareComponent:new(
   bareline.providers.get_git_head,
   {
+    watcher = {
+      filepath = function()
+        local git_dir = vim.fn.finddir(".git", ".;")
+        if git_dir ~= "" then return git_dir .. "/HEAD" end
+        return nil
+      end
+    },
     format = function(git_head)
       if git_head == nil then return nil end
       local function format(head)
@@ -542,8 +551,17 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
       end,
     }
   )
+
   -- Create component-specific autocmds.
   h.create_bare_component_autocmds(statuslines, 2, function()
+    h.draw_statusline_if_plugin_window(
+      plugin_window_statusline,
+      active_window_statusline
+    )
+  end)
+
+  -- Create file watchers.
+  h.create_bare_component_file_watchers(statuslines, 2, function()
     h.draw_statusline_if_plugin_window(
       plugin_window_statusline,
       active_window_statusline
@@ -753,6 +771,55 @@ function h.create_bare_component_autocmds(nested_components_list, depth, callbac
       autocmd.opts.callback = callback
       autocmd.opts.group = h.draw_methods_augroup
       vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
+    end)
+end
+
+function h.create_bare_component_file_watchers(
+    nested_components_list, depth, callback)
+
+  local uv_fs_event = vim.uv.new_fs_event()
+  local uv_helpers = {}
+
+  function uv_helpers.on_change(error, filename)
+    if error then
+      vim.notify(
+        string.format("Error on watch for file: %s", filename),
+        vim.log.levels.ERROR)
+    end
+    callback()
+    ---@diagnostic disable-next-line: need-check-nil
+    uv_fs_event:stop()
+    uv_helpers.watch_file(filename)
+  end
+
+  function uv_helpers.watch_file(filepath)
+    ---@diagnostic disable-next-line: need-check-nil
+    uv_fs_event:start(
+      vim.fn.fnamemodify(filepath, ":p"),
+      {},
+      vim.schedule_wrap(function(...)
+        uv_helpers.on_change(...)
+      end))
+  end
+
+  vim.iter(nested_components_list)
+    :flatten(depth)
+    :map(function (bare_component)
+      local bc = bare_component
+      if type(bc) ~= "table" then return nil end
+      local filepath = bc.opts and bc.opts.watcher and bc.opts.watcher.filepath
+      if filepath == nil then return end
+      vim.validate({ filepath = {
+        filepath, { "function", "string", "table" } }
+      })
+      return filepath
+    end)
+    :flatten()
+    :each(function (filepath)
+      -- TODO: If functions, then have some logic to re-create watchers and remove
+      -- duplicates everytime the paths are computed.
+      if type(filepath) == "function" then filepath = filepath() end
+      if filepath ~= nil then uv_helpers.watch_file(filepath) end
     end)
 end
 
