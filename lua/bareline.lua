@@ -543,29 +543,12 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     }
   )
   -- Create component-specific autocmds.
-  local watchers_autocmds = vim.iter(statuslines)
-    :flatten(2)
-    :map(function (bare_component)
-      local bc = bare_component
-      if type(bc) ~= "table" then return nil end
-      local autocmd = bc.opts and bc.opts.watcher and bc.opts.watcher.autocmd
-      if autocmd == nil then return end
-      vim.validate({ ["autocmd.event"] = {
-        autocmd.event, { "string", "table" } }
-      })
-      if autocmd.opts == nil then autocmd.opts = {} end
-      return autocmd
-    end)
-    :each(function (autocmd)
-      autocmd.opts.group = h.draw_methods_augroup
-      autocmd.opts.callback = function()
-        h.draw_statusline_if_plugin_window(
-          plugin_window_statusline,
-          active_window_statusline
-        )
-      end
-      vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
-    end)
+  h.create_bare_component_autocmds(statuslines, 2, function()
+    h.draw_statusline_if_plugin_window(
+      plugin_window_statusline,
+      active_window_statusline
+    )
+  end)
 
   -- Draw a different statusline for inactive windows. For inactive plugin
   -- windows, use a special statusline, the same one as for active plugin windows.
@@ -749,11 +732,33 @@ function h.draw_statusline_if_plugin_window(statusline_1, statusline_2)
   end
 end
 
-h.draw_helpers_augroup = vim.api.nvim_create_augroup("BarelineDrawHelpers", {})
+---@param nested_components_list BareComponent[] Statusline(s) definition(s).
+---@param depth number Depth at which the components exist in the list.
+---@param callback function Autocmd callback function.
+function h.create_bare_component_autocmds(nested_components_list, depth, callback)
+  vim.iter(nested_components_list)
+    :flatten(depth)
+    :map(function (bare_component)
+      local bc = bare_component
+      if type(bc) ~= "table" then return nil end
+      local autocmd = bc.opts and bc.opts.watcher and bc.opts.watcher.autocmd
+      if autocmd == nil then return end
+      vim.validate({ ["autocmd.event"] = {
+        autocmd.event, { "string", "table" } }
+      })
+      if autocmd.opts == nil then autocmd.opts = {} end
+      return autocmd
+    end)
+    :each(function (autocmd)
+      autocmd.opts.callback = callback
+      autocmd.opts.group = h.draw_methods_augroup
+      vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
+    end)
+end
 
 -- Cleanup components cache.
 vim.api.nvim_create_autocmd({ "WinClosed" }, {
-  group = h.draw_helpers_augroup,
+  group = h.draw_methods_augroup,
   callback = function(event)
     local window = event.match
     h.component_cache_by_win_id[window] = nil
