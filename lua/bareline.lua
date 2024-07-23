@@ -85,6 +85,12 @@ local function assign_default_config()
     -- statusline definition. With the default, 3 statuslines are expected.
     draw_method = bareline.draw_methods.draw_active_inactive_plugin,
 
+    -- Enable the timer in case you have a component which is tricky to watch, or
+    -- just don't want to bother with identifying how to watch it. Accepts a
+    -- boolean (false = disabled, true = 500ms), or a number indicating ms
+    -- in between statusline re-draws.
+    timer = false,
+
     statusline = {
       { -- Statusline 1: Active window.
         { -- Section 1: Left.
@@ -491,7 +497,9 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   -- Redraw statusline immediately to update specific components, e.g. the Vim
   -- mode. For plugin windows (e.g. nvim-tree), use a special statusline.
   vim.api.nvim_create_autocmd(
-    { "ModeChanged", "DiagnosticChanged", "BufEnter", "BufWinEnter" },
+    {
+      "ModeChanged", "DiagnosticChanged", "BufEnter", "BufWinEnter", "VimResume"
+    },
     {
       group = h.draw_methods_augroup,
       callback = function()
@@ -531,18 +539,22 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     end,
   })
 
-  -- Redraw statusline of active window to update components hard to watch, for
-  -- example the attached LSP servers.
-  vim.fn.timer_start(
-    500,
-    function()
-      h.draw_statusline_if_plugin_window(
-        plugin_window_statusline,
-        active_window_statusline
-      )
-    end,
-    { ["repeat"] = -1 }
-  )
+  if bareline.config.timer then
+    local time = bareline.config.timer
+    if type(bareline.config.timer) == "boolean" then
+      time = h.timer_default_time
+    end
+    vim.fn.timer_start(
+      time,
+      function()
+        h.draw_statusline_if_plugin_window(
+          plugin_window_statusline,
+          active_window_statusline
+        )
+      end,
+      { ["repeat"] = -1 }
+    )
+  end
 end
 
 -- Set module default config.
@@ -668,6 +680,7 @@ end
 
 -- DRAW
 
+h.timer_default_time = 500
 h.draw_methods_augroup = vim.api.nvim_create_augroup("BarelineDrawMethods", {})
 
 ---@param bufnr integer The buffer number, as returned by |bufnr()|.
