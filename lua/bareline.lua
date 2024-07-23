@@ -494,12 +494,8 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   ---@type BareStatusline
   local plugin_window_statusline = statuslines[3]
 
-  -- Redraw statusline immediately to update specific components, e.g. the Vim
-  -- mode. For plugin windows (e.g. nvim-tree), use a special statusline.
-  vim.api.nvim_create_autocmd(
-    {
-      "ModeChanged", "DiagnosticChanged", "BufEnter", "BufWinEnter", "VimResume"
-    },
+  -- Redraw statusline immediately on common events.
+  vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter", "VimResume" },
     {
       group = h.draw_methods_augroup,
       callback = function()
@@ -526,9 +522,8 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     }
   )
 
-  -- Draw a different statusline for inactive windows. For inactive plugin windows
-  -- (e.g. nvim-tree), use a special statusline, the same one as for active plugin
-  -- windows.
+  -- Draw a different statusline for inactive windows. For inactive plugin
+  -- windows, use a special statusline, the same one as for active plugin windows.
   vim.api.nvim_create_autocmd("WinLeave", {
     group = h.draw_methods_augroup,
     callback = function()
@@ -539,6 +534,7 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     end,
   })
 
+  -- Optionally set a timer.
   if bareline.config.timer then
     local time = bareline.config.timer
     if type(bareline.config.timer) == "boolean" then
