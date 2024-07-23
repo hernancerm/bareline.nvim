@@ -281,9 +281,15 @@ bareline.components = {}
 ---@field provider string|function Provides the value displayed in the statusline,
 --- like the Vim mode. When a function, should return a single value of any type.
 --- When a string, that itself is used.
+---@field watcher BareComponentWatcher Watcher. Triggers a statusline redraw.
 ---@field opts BareComponentOpts Options.
 bareline.BareComponent = {}
 bareline.BareComponent["__index"] = bareline.BareComponent
+
+---@class BareComponentWatcher
+---@field autocmd table Expects a table with the keys `event` and `opts`. These
+--- values are passed as is to `vim.api.nvim_create_autocmd()`.
+---@field filepath string|string[] Filepath or list of filepaths to watch.
 
 ---@class BareComponentOpts
 ---@field format function Takes a single argument, whatever the `provider` value
@@ -339,6 +345,11 @@ end
 bareline.components.vim_mode = bareline.BareComponent:new(
   bareline.providers.get_vim_mode,
   {
+    watcher = {
+      autocmd = {
+        event = "ModeChanged"
+      }
+    },
     format = function (vim_mode)
       local mode_labels = {
         n = "nor", i = "ins", v = "vis", s = "sel",
@@ -418,6 +429,11 @@ bareline.components.git_head = bareline.BareComponent:new(
 bareline.components.lsp_servers = bareline.BareComponent:new(
   bareline.providers.get_lsp_server_names,
   {
+    watcher = {
+      autocmd = {
+        event = { "LspAttach", "LspDetach" }
+      }
+    },
     format = function(lsp_servers)
       if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then return nil end
       return "[" .. vim.fn.join(lsp_servers, ",") .. "]"
@@ -440,6 +456,11 @@ bareline.components.get_file_path_relative_to_cwd = bareline.BareComponent:new(
 bareline.components.diagnostics = bareline.BareComponent:new(
   bareline.providers.get_diagnostics,
   {
+    watcher = {
+      autocmd = {
+        event = "DiagnosticChanged"
+      }
+    },
     cache_on_vim_modes = { "i" },
     format = function(diagnostics_per_severity)
       if diagnostics_per_severity == nil then return nil end
@@ -494,7 +515,7 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   ---@type BareStatusline
   local plugin_window_statusline = statuslines[3]
 
-  -- Redraw statusline immediately on common events.
+  -- Create base autocmds.
   vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter", "VimResume" },
     {
       group = h.draw_methods_augroup,
@@ -521,6 +542,30 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
       end,
     }
   )
+  -- Create component-specific autocmds.
+  local watchers_autocmds = vim.iter(statuslines)
+    :flatten(2)
+    :map(function (bare_component)
+      local bc = bare_component
+      if type(bc) ~= "table" then return nil end
+      local autocmd = bc.opts and bc.opts.watcher and bc.opts.watcher.autocmd
+      if autocmd == nil then return end
+      vim.validate({ ["autocmd.event"] = {
+        autocmd.event, { "string", "table" } }
+      })
+      if autocmd.opts == nil then autocmd.opts = {} end
+      return autocmd
+    end)
+    :each(function (autocmd)
+      autocmd.opts.group = h.draw_methods_augroup
+      autocmd.opts.callback = function()
+        h.draw_statusline_if_plugin_window(
+          plugin_window_statusline,
+          active_window_statusline
+        )
+      end
+      vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
+    end)
 
   -- Draw a different statusline for inactive windows. For inactive plugin
   -- windows, use a special statusline, the same one as for active plugin windows.
