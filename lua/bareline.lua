@@ -215,7 +215,7 @@ end
 --- Returns the names of the LSP servers attached to the current buffer.
 --- Example output: `{ "lua_ls" }`
 ---@return table
-function bareline.providers.lsp_server_names()
+function bareline.providers.get_lsp_server_names()
   return vim.tbl_map(
     function (client)
       return client.name
@@ -410,7 +410,7 @@ bareline.components.git_head = bareline.BareComponent:new(
 --- Mockup: `[lua_ls]`
 ---@type BareComponent
 bareline.components.lsp_servers = bareline.BareComponent:new(
-  bareline.providers.lsp_server_names,
+  bareline.providers.get_lsp_server_names,
   {
     format = function(lsp_servers)
       if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then return nil end

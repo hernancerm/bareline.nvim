@@ -187,8 +187,8 @@ search is performed. If the dir isn't found, then nil is returned.
 Return ~
 `(string|nil)`
 
-                                         *bareline.providers.lsp_server_names()*
-                    `bareline.providers.lsp_server_names`()
+                                     *bareline.providers.get_lsp_server_names()*
+                  `bareline.providers.get_lsp_server_names`()
 LSP attached servers.
 Returns the names of the LSP servers attached to the current buffer.
 Example output: `{ "lua_ls" }`
