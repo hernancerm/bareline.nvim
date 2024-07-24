@@ -775,6 +775,9 @@ function h.create_bare_component_autocmds(nested_components_list, depth, callbac
     end)
 end
 
+---@param nested_components_list BareComponent[] Statusline(s) definition(s).
+---@param depth number Depth at which the components exist in the list.
+---@param callback function Luv callback function.
 function h.create_bare_component_file_watchers(
     nested_components_list, depth, callback)
 
