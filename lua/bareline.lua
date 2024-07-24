@@ -615,19 +615,19 @@ function h.get_component_cache(bare_component)
 end
 
 ---@param bare_component BareComponent
----@param bare_component_built ComponentValue
-function h.store_bare_component_cache(bare_component, bare_component_built)
+---@param bare_component_value ComponentValue
+function h.store_bare_component_cache(bare_component, bare_component_value)
   local win_id = vim.fn.win_getid()
   if h.component_cache_by_win_id[win_id] == nil then
     h.component_cache_by_win_id[win_id] = {}
   end
   h.component_cache_by_win_id[win_id][tostring(bare_component.value)] =
-    { value = bare_component_built }
+    { value = bare_component_value }
 end
 
 ---@param bare_component BareComponent
 ---@return any
-function h.get_bare_component_value(bare_component)
+function h.compute_bare_component_value(bare_component)
   local value = bare_component.value
   if type(value) == "string" then return value end
   if type(value) == "function" then return value() end
@@ -661,16 +661,16 @@ function h.build_user_supplied_component(component)
   local opts = bare_component.opts
 
   if opts.cache_on_vim_modes and component_cache then
-    local is_cache_vim_mode = vim.fn.mode():lower():match(
-      string.format("[%s]", table.concat(opts.cache_on_vim_modes, ""))
-    )
-    if is_cache_vim_mode then return component_cache.value end
+    local short_current_vim_mode = vim.fn.mode():lower():sub(1, 1)
+    if vim.tbl_contains(opts.cache_on_vim_modes, short_current_vim_mode) then
+      return component_cache.value
+    end
   end
 
-  local value = h.get_bare_component_value(bare_component)
-  h.store_bare_component_cache(bare_component, value)
+  local computed_value = h.compute_bare_component_value(bare_component)
+  h.store_bare_component_cache(bare_component, computed_value)
 
-  return value
+  return computed_value
 end
 
 h.component_separator = "  "
