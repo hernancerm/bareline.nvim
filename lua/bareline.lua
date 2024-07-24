@@ -411,7 +411,7 @@ bareline.components.git_head = bareline.BareComponent:new(
     watcher = {
       filepath = function()
         local git_dir = vim.fn.finddir(".git", ".;")
-        if git_dir ~= "" then return git_dir .. "/HEAD" end
+        if git_dir ~= "" then return git_dir end
         return nil
       end
     },
@@ -525,7 +525,8 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   local plugin_window_statusline = statuslines[3]
 
   -- Create base autocmds.
-  vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter", "VimResume" },
+  vim.api.nvim_create_autocmd({
+    "BufEnter", "BufWinEnter", "VimResume", "FocusGained" },
     {
       group = h.draw_methods_augroup,
       callback = function()
@@ -778,27 +779,14 @@ function h.create_bare_component_file_watchers(
     nested_components_list, depth, callback)
 
   local uv_fs_event = vim.uv.new_fs_event()
-  local uv_helpers = {}
 
-  function uv_helpers.on_change(error, filename)
-    if error then
-      vim.notify(
-        string.format("Error on watch for file: %s", filename),
-        vim.log.levels.ERROR)
-    end
-    callback()
-    ---@diagnostic disable-next-line: need-check-nil
-    uv_fs_event:stop()
-    uv_helpers.watch_file(filename)
-  end
-
-  function uv_helpers.watch_file(filepath)
+  local function watch_file(filepath_absolute)
     ---@diagnostic disable-next-line: need-check-nil
     uv_fs_event:start(
-      vim.fn.fnamemodify(filepath, ":p"),
+      filepath_absolute,
       {},
-      vim.schedule_wrap(function(...)
-        uv_helpers.on_change(...)
+      vim.schedule_wrap(function()
+        callback()
       end))
   end
 
@@ -819,7 +807,8 @@ function h.create_bare_component_file_watchers(
       -- TODO: If functions, then have some logic to re-create watchers and remove
       -- duplicates everytime the paths are computed.
       if type(filepath) == "function" then filepath = filepath() end
-      if filepath ~= nil then uv_helpers.watch_file(filepath) end
+      local filepath_absolute = vim.fn.fnamemodify(filepath, ":p")
+      watch_file(filepath_absolute)
     end)
 end
 
