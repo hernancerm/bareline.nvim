@@ -201,6 +201,8 @@ Example output: `{ "lua_ls" }`
 Return ~
 `(table)`
 
+                                          *bareline.providers.get_diagnostics()*
+                     `bareline.providers.get_diagnostics`()
 Diagnostics.
 Returns the diagnostics count of the current buffer by severity, where a lower
 index is a higher severity. Use numeric indices or the the keys in
@@ -229,7 +231,7 @@ component types described in |bareline.default_config|.
 Class ~
 {BareComponent}
 Fields ~
-{provider} `(string|function)` Provides the value displayed in the statusline,
+{value} `(string|function)` Provides the value displayed in the statusline,
 like the Vim mode. When a function, should return a single value of any type.
 When a string, that itself is used.
 {watcher} BareComponentWatcher Watcher. Triggers a statusline redraw.
@@ -247,17 +249,15 @@ the filepath. Strings and functions can be mixed if the type is table.
 Class ~
 {BareComponentOpts}
 Fields ~
-{format} `(function)` Takes a single argument, whatever the `provider` value
-is, and maps it to a string or nil. If nil, then the component is disregarded
-from the statusline.
 {cache_on_vim_modes} `(string[])` Use cache in these Vim modes. Each Vim
 mode is expected as the first char returned by |mode()|.
 
                                                   *bareline.BareComponent:new()*
-                `bareline.BareComponent:new`({provider}, {opts})
+                 `bareline.BareComponent:new`({value}, {opts})
 Constructor.
 Parameters ~
-{provider} `function` See |bareline.providers|.
+{value} `function|string` As a function, it expects no args and returns a
+single value of any type. As a string, is used as is.
 {opts} BareComponentOpts Options.
 Return ~
 Bareline.BareComponent
