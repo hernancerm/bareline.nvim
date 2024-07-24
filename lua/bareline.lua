@@ -741,7 +741,7 @@ end
 ---@param depth number Depth at which the components exist in the list.
 ---@param callback function Autocmd callback function.
 function h.create_bare_component_autocmds(nested_components_list, depth, callback)
-  vim.iter(nested_components_list)
+  local autocmds = vim.iter(nested_components_list)
     :flatten(depth)
     :map(function (bare_component)
       local bc = bare_component
@@ -752,13 +752,23 @@ function h.create_bare_component_autocmds(nested_components_list, depth, callbac
         autocmd.event, { "string", "table" } }
       })
       if autocmd.opts == nil then autocmd.opts = {} end
+      autocmd.opts.group = h.draw_methods_augroup
+      autocmd.opts.callback = callback
       return autocmd
     end)
-    :each(function (autocmd)
-      autocmd.opts.callback = callback
-      autocmd.opts.group = h.draw_methods_augroup
-      vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
+    -- Remove duplicate autocmds.
+    :fold({}, function (acc, v)
+      local is_duplicate_autocmd = vim.tbl_contains(
+        acc, function(accv)
+          return vim.deep_equal(accv, v)
+        end, { predicate = true })
+      if not is_duplicate_autocmd then table.insert(acc, v) end
+      return acc
     end)
+    -- Create autocmds.
+    for _, autocmd in ipairs(autocmds) do
+      vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
+    end
 end
 
 ---@param nested_components_list BareComponent[] Statusline(s) definition(s).
@@ -766,9 +776,7 @@ end
 ---@param callback function Luv callback function.
 function h.create_bare_component_file_watchers(
     nested_components_list, depth, callback)
-
   local uv_fs_event = vim.uv.new_fs_event()
-
   local function watch_file(absolute_filepath)
     ---@diagnostic disable-next-line: need-check-nil
     uv_fs_event:start(
@@ -802,7 +810,6 @@ function h.create_bare_component_file_watchers(
       if not vim.tbl_contains(acc, v) then table.insert(acc, v) end
       return acc
     end)
-
     -- Start file watchers.
     for _, absolute_filepath in ipairs(absolute_filepaths) do
       watch_file(absolute_filepath)
