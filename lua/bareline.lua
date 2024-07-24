@@ -236,11 +236,6 @@ end
 --- |vim.diagnostic.severity| to get the diagnostic count per severity.
 --- Example output: `{ 4, 1, 0, 1 }`
 ---@return table|nil
--- ---@usage [[
--- ---local bareline = require("bareline")
--- ---local errors = bareline.components.providers.get_diagnostics()[1]
--- ---print(errors) -- Output: 4
--- ---@usage ]]
 function bareline.providers.get_diagnostics()
   if vim.fn.empty(vim.diagnostic.get(0)) == 1 then return nil end
   local diagnostics_per_severity = { 0, 0, 0, 0 }
@@ -278,7 +273,7 @@ bareline.components = {}
 --- components, you can use this class or, more simply, follow the alternate
 --- component types described in |bareline.default_config|.
 ---@class BareComponent
----@field provider string|function Provides the value displayed in the statusline,
+---@field value string|function Provides the value displayed in the statusline,
 --- like the Vim mode. When a function, should return a single value of any type.
 --- When a string, that itself is used.
 ---@field watcher BareComponentWatcher Watcher. Triggers a statusline redraw.
@@ -294,22 +289,20 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- the filepath. Strings and functions can be mixed if the type is table.
 
 ---@class BareComponentOpts
----@field format function Takes a single argument, whatever the `provider` value
---- is, and maps it to a string or nil. If nil, then the component is disregarded
---- from the statusline.
 ---@field cache_on_vim_modes string[] Use cache in these Vim modes. Each Vim
 --- mode is expected as the first char returned by |mode()|.
 
 --- Constructor.
 --- Parameters ~
---- {provider} `function` See |bareline.providers|.
+--- {value} `function|string` As a function, it expects no args and returns a
+--- single value of any type. As a string, is used as is.
 --- {opts} BareComponentOpts Options.
 --- Return ~
 --- Bareline.BareComponent
-function bareline.BareComponent:new(provider, opts)
+function bareline.BareComponent:new(value, opts)
   local bare_component = {}
   setmetatable(bare_component, self)
-  bare_component.provider = provider
+  bare_component.value = value
   bare_component.opts = opts
   return bare_component
 end
@@ -345,21 +338,21 @@ end
 --- Mockups: `NOR`, `VIS`
 ---@type BareComponent
 bareline.components.vim_mode = bareline.BareComponent:new(
-  bareline.providers.get_vim_mode,
+  function()
+    local vim_mode = bareline.providers.get_vim_mode()
+    local mode_labels = {
+      n = "nor", i = "ins", v = "vis", s = "sel",
+      t = "ter", c = "cmd", r = "rep", bv = "vis",
+      bs = "sel", ["!"] = "ext",
+    }
+    return mode_labels[vim_mode]:upper()
+  end,
   {
     watcher = {
       autocmd = {
         event = "ModeChanged"
       }
-    },
-    format = function (vim_mode)
-      local mode_labels = {
-        n = "nor", i = "ins", v = "vis", s = "sel",
-        t = "ter", c = "cmd", r = "rep", bv = "vis",
-        bs = "sel", ["!"] = "ext",
-      }
-      return mode_labels[vim_mode]:upper()
-    end
+    }
   }
 )
 
@@ -368,12 +361,9 @@ bareline.components.vim_mode = bareline.BareComponent:new(
 --- Mockup: `[nvimtree]`
 ---@type BareComponent
 bareline.components.plugin_name = bareline.BareComponent:new(
-  function() return vim.bo.filetype end,
-  {
-    format = function(file_type)
-      return string.format("[%s]", file_type:lower():gsub("%s", ""))
-    end
-  }
+  function()
+    return string.format("[%s]", vim.bo.filetype:lower():gsub("%s", ""))
+  end
 )
 
 --- Indent style.
@@ -384,8 +374,7 @@ bareline.components.plugin_name = bareline.BareComponent:new(
 bareline.components.indent_style = bareline.BareComponent:new(
   function()
     if not vim.bo.modifiable then return nil end
-    local whitespace_type = "tabs"
-    if vim.bo.expandtab then whitespace_type = "spaces" end
+    local whitespace_type = (vim.bo.expandtab and "spaces") or "tabs"
     return whitespace_type .. ":" .. vim.bo.tabstop
   end
 )
@@ -406,7 +395,20 @@ bareline.components.end_of_line = bareline.BareComponent:new(
 --- Mockup: `(main)`
 ---@type BareComponent
 bareline.components.git_head = bareline.BareComponent:new(
-  bareline.providers.get_git_head,
+  function()
+    local git_head = bareline.providers.get_git_head()
+    if git_head == nil then return nil end
+    local function format(head)
+      local formatted_head
+      if head:match "^ref: " then
+        formatted_head = head:gsub("^ref: refs/%w+/", "")
+      else
+        formatted_head = head:sub(1, 7)
+      end
+      return formatted_head
+    end
+    return string.format("(%s)", format(git_head))
+  end,
   {
     watcher = {
       filepath = function()
@@ -414,20 +416,7 @@ bareline.components.git_head = bareline.BareComponent:new(
         if git_dir ~= "" then return git_dir end
         return nil
       end
-    },
-    format = function(git_head)
-      if git_head == nil then return nil end
-      local function format(head)
-        local formatted_head
-        if head:match "^ref: " then
-          formatted_head = head:gsub("^ref: refs/%w+/", "")
-        else
-          formatted_head = head:sub(1, 7)
-        end
-        return formatted_head
-      end
-      return string.format("(%s)", format(git_head))
-    end
+    }
   }
 )
 
@@ -436,17 +425,17 @@ bareline.components.git_head = bareline.BareComponent:new(
 --- Mockup: `[lua_ls]`
 ---@type BareComponent
 bareline.components.lsp_servers = bareline.BareComponent:new(
-  bareline.providers.get_lsp_server_names,
+  function()
+    local lsp_servers = bareline.providers.get_lsp_server_names()
+    if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then return nil end
+    return "[" .. vim.fn.join(lsp_servers, ",") .. "]"
+  end,
   {
     watcher = {
       autocmd = {
         event = { "LspAttach", "LspDetach" }
       }
-    },
-    format = function(lsp_servers)
-      if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then return nil end
-      return "[" .. vim.fn.join(lsp_servers, ",") .. "]"
-    end
+    }
   }
 )
 
@@ -463,29 +452,30 @@ bareline.components.get_file_path_relative_to_cwd = bareline.BareComponent:new(
 --- Mockup: `E:2,W:1`
 ---@type BareComponent
 bareline.components.diagnostics = bareline.BareComponent:new(
-  bareline.providers.get_diagnostics,
+  function()
+    -- Diagnostics per severity.
+    local diagnostics = bareline.providers.get_diagnostics()
+    if diagnostics == nil then return nil end
+    local formatted_diagnostics = ""
+    local diagnostics_severity_label = { "E", "W", "I", "H" }
+    local separator = ""
+    for index, count in ipairs(diagnostics) do
+      if count > 0 then
+        formatted_diagnostics = formatted_diagnostics
+        .. string.format(
+        "%s%s:%s", separator, diagnostics_severity_label[index], count)
+        separator = ","
+      end
+    end
+    return formatted_diagnostics
+  end,
   {
     watcher = {
       autocmd = {
         event = "DiagnosticChanged"
       }
     },
-    cache_on_vim_modes = { "i" },
-    format = function(diagnostics_per_severity)
-      if diagnostics_per_severity == nil then return nil end
-      local formatted_diagnostics = ""
-      local diagnostics_severity_label = { "E", "W", "I", "H" }
-      local separator = ""
-      for index, count in ipairs(diagnostics_per_severity) do
-        if count > 0 then
-          formatted_diagnostics = formatted_diagnostics
-            .. string.format(
-                "%s%s:%s", separator, diagnostics_severity_label[index], count)
-          separator = ","
-        end
-      end
-      return formatted_diagnostics
-    end
+    cache_on_vim_modes = { "i" }
   }
 )
 
@@ -621,7 +611,7 @@ h.component_cache_by_win_id = {}
 function h.get_component_cache(bare_component)
   local win_id = vim.fn.win_getid()
   if h.component_cache_by_win_id[win_id] == nil then return nil end
-  return h.component_cache_by_win_id[win_id][tostring(bare_component.provider)]
+  return h.component_cache_by_win_id[win_id][tostring(bare_component.value)]
 end
 
 ---@param bare_component BareComponent
@@ -631,35 +621,32 @@ function h.store_bare_component_cache(bare_component, bare_component_built)
   if h.component_cache_by_win_id[win_id] == nil then
     h.component_cache_by_win_id[win_id] = {}
   end
-  h.component_cache_by_win_id[win_id][tostring(bare_component.provider)] =
-    { provider = bare_component_built }
+  h.component_cache_by_win_id[win_id][tostring(bare_component.value)] =
+    { value = bare_component_built }
 end
 
 ---@param bare_component BareComponent
 ---@return any
-function h.get_bare_component_provider_value(bare_component)
-  local provider = bare_component.provider
-  if type(provider) == "string" then return provider end
-  if type(provider) == "function" then return provider() end
+function h.get_bare_component_value(bare_component)
+  local value = bare_component.value
+  if type(value) == "string" then return value end
+  if type(value) == "function" then return value() end
   return nil
 end
 
 ---@param component UserSuppliedComponent
 ---@return BareComponent
 function h.standardize_component(component)
-  if type(component) == "function" or type(component) == "string" then
-    return { provider = component, opts = {} }
+  vim.validate({
+    component = { component, { "string", "function", "table" }, true }
+  })
+  if type(component) == "string" or type(component) == "function" then
+    return { value = component, opts = {} }
   end
   if type(component) == "table" then
     component.opts = component.opts or {}
     return component
   end
-  vim.api.nvim_echo({
-    {
-      "Provided statusline component is not a string, function or table.",
-      "Error"
-    },
-  }, true, {})
   return {}
 end
 
@@ -680,11 +667,10 @@ function h.build_user_supplied_component(component)
     if is_cache_vim_mode then return component_cache.value end
   end
 
-  local provider_value = h.get_bare_component_provider_value(bare_component)
-  if opts.format then provider_value = opts.format(provider_value) end
-  h.store_bare_component_cache(bare_component, provider_value)
+  local value = h.get_bare_component_value(bare_component)
+  h.store_bare_component_cache(bare_component, value)
 
-  return provider_value
+  return value
 end
 
 h.component_separator = "  "
