@@ -780,17 +780,16 @@ function h.create_bare_component_file_watchers(
 
   local uv_fs_event = vim.uv.new_fs_event()
 
-  local function watch_file(filepath_absolute)
+  local function watch_file(absolute_filepath)
     ---@diagnostic disable-next-line: need-check-nil
     uv_fs_event:start(
-      filepath_absolute,
-      {},
+      absolute_filepath, {},
       vim.schedule_wrap(function()
         callback()
       end))
   end
 
-  vim.iter(nested_components_list)
+  local absolute_filepaths = vim.iter(nested_components_list)
     :flatten(depth)
     :map(function (bare_component)
       local bc = bare_component
@@ -803,13 +802,22 @@ function h.create_bare_component_file_watchers(
       return filepath
     end)
     :flatten()
-    :each(function (filepath)
-      -- TODO: If functions, then have some logic to re-create watchers and remove
-      -- duplicates everytime the paths are computed.
+    -- Map to absolute file paths.
+    :map(function (filepath)
+      if filepath == nil then return nil end
       if type(filepath) == "function" then filepath = filepath() end
-      local filepath_absolute = vim.fn.fnamemodify(filepath, ":p")
-      watch_file(filepath_absolute)
+      return vim.fn.fnamemodify(filepath, ":p")
     end)
+    -- Remove duplicate filepaths.
+    :fold({}, function(acc, v)
+      if not vim.tbl_contains(acc, v) then table.insert(acc, v) end
+      return acc
+    end)
+
+    -- Start file watchers.
+    for _, absolute_filepath in ipairs(absolute_filepaths) do
+      watch_file(absolute_filepath)
+    end
 end
 
 -- Cleanup components cache.
