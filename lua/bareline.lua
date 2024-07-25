@@ -718,7 +718,7 @@ function h.is_plugin_window(bufnr)
   local filetype = vim.bo[bufnr].filetype
   local special_non_plugin_filetypes = { nil, "", "help", "man", "qf" }
   local matched_filetype, _ = vim.filetype.match({ buf = bufnr })
-  return matched_filetype == nil
+  return matched_filetype == nil and not vim.bo.buflisted
     and not vim.tbl_contains(special_non_plugin_filetypes, filetype)
 end
 
