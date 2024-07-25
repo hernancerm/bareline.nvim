@@ -515,8 +515,10 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   local plugin_window_statusline = statuslines[3]
 
   -- Create base autocmds.
-  vim.api.nvim_create_autocmd({
-    "BufEnter", "BufWinEnter", "VimResume", "FocusGained" },
+  vim.api.nvim_create_autocmd(
+    {
+      "BufNew", "BufEnter", "BufWinEnter", "VimResume", "FocusGained"
+    },
     {
       group = h.draw_methods_augroup,
       callback = function()
