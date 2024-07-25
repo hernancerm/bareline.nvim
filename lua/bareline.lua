@@ -455,19 +455,14 @@ bareline.components.diagnostics = bareline.BareComponent:new(
   function()
     -- Diagnostics per severity.
     local diagnostics = bareline.providers.get_diagnostics()
-    if diagnostics == nil then return nil end
-    local formatted_diagnostics = ""
-    local diagnostics_severity_label = { "E", "W", "I", "H" }
-    local separator = ""
-    for index, count in ipairs(diagnostics) do
-      if count > 0 then
-        formatted_diagnostics = formatted_diagnostics
-        .. string.format(
-        "%s%s:%s", separator, diagnostics_severity_label[index], count)
-        separator = ","
-      end
-    end
-    return formatted_diagnostics
+    if diagnostics == nil then return diagnostics end
+    local severity_labels = { "e", "w", "i", "h" }
+    return vim.iter(diagnostics)
+      :map(function (count)
+        if count == 0 then return nil end
+        return table.remove(severity_labels, 1) .. ":" .. count
+      end)
+      :join(",")
   end,
   {
     watcher = {
