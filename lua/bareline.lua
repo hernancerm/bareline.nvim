@@ -66,9 +66,9 @@ end
 --- Helix's default statusline:
 ---
 --- Active window:
---- * | NOR  lua/bareline.lua  [lua_ls]      H:2,W:4  spaces-2  (main)  42,21/50 |
+--- * | NOR  lua/bareline.lua  [lua_ls]      e:2,w:1  spaces-2  (main)  42,21/50 |
 --- Inactive window:
---- * |      lua/bareline.lua  [lua_ls]              H:2,W:4  spaces-2  42,21/50 |
+--- * |      lua/bareline.lua  [lua_ls]              e:2,w:1  spaces-2  42,21/50 |
 --- Plugin window:
 --- * | [nvimtree]  [-]                                                 28,09/33 |
 ---                      https://github.com/helix-editor/helix
@@ -228,22 +228,6 @@ function bareline.providers.get_lsp_server_names()
     end,
     vim.lsp.get_clients({ bufnr = 0 })
   )
-end
-
---- Diagnostics.
---- Returns the diagnostics count of the current buffer by severity, where a lower
---- index is a higher severity. Use numeric indices or the the keys in
---- |vim.diagnostic.severity| to get the diagnostic count per severity.
---- Example output: `{ 4, 1, 0, 1 }`
----@return table|nil
-function bareline.providers.get_diagnostics()
-  if vim.fn.empty(vim.diagnostic.get(0)) == 1 then return nil end
-  local diagnostics_per_severity = { 0, 0, 0, 0 }
-  for _, diagnostic in ipairs(vim.diagnostic.get(0)) do
-    diagnostics_per_severity[diagnostic.severity] =
-        diagnostics_per_severity[diagnostic.severity] + 1
-  end
-  return diagnostics_per_severity
 end
 
 --- Stable `%f`.
@@ -449,20 +433,20 @@ bareline.components.get_file_path_relative_to_cwd = bareline.BareComponent:new(
 
 --- Diagnostics.
 --- The diagnostics of the current buffer.
---- Mockup: `E:2,W:1`
+--- Mockup: `e:2,w:1`
 ---@type BareComponent
 bareline.components.diagnostics = bareline.BareComponent:new(
   function()
-    -- Diagnostics per severity.
-    local diagnostics = bareline.providers.get_diagnostics()
-    if diagnostics == nil then return diagnostics end
+    local output = ""
     local severity_labels = { "e", "w", "i", "h" }
-    return vim.iter(diagnostics)
-      :map(function (count)
-        if count == 0 then return nil end
-        return table.remove(severity_labels, 1) .. ":" .. count
-      end)
-      :join(",")
+    local diagnostic_count = vim.diagnostic.count()
+    for i = 1, 4 do
+      local count = diagnostic_count[i]
+      if count ~= nil then
+        output = output .. severity_labels[i] .. ":" .. count .. ","
+      end
+    end
+    return string.sub(output, 1, #output - 1)
   end,
   {
     watcher = {
