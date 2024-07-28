@@ -8,7 +8,7 @@ Key design ideas ~
 
 1. Ease of configuration.
 
-2. Can be used as a library for common statusline data providers.
+2. Update immediately as changes happen. No timer required.
 
 Concepts ~
 
@@ -24,8 +24,6 @@ Statusline: | NOR  lua/bareline.lua                        (main)  22,74/454 |
                   ├── Vim mode                                 ├── Git HEAD
                   └── Relative file path                       └── Location
 
-The bundled components get their data from a provider (|bareline.providers|).
-
 ------------------------------------------------------------------------------
                                                               *bareline.setup()*
                            `bareline.setup`({config})
@@ -38,10 +36,6 @@ setup function and optionally provide your configuration:
   bareline.setup({}) -- Or provide a table as an argument for the config.
 <
 I recommend disabling 'showmode', so only Bareline shows the Vim mode.
-
-If you want to use this plugin just for the data providers (e.g., Vim mode or
-Git branch) to build yourself a statusine which fancies your pixelated heart,
-then take a look at |bareline.providers|.
 
 Parameters ~
 {config} `(table|nil)` Module config table. |bareline.default_config| defines
@@ -59,9 +53,9 @@ active, inactive and plugin windows. The resulting style is inspired by
 Helix's default statusline:
 
 Active window:
-• | NOR  lua/bareline.lua  [lua_ls]      H:2,W:4  spaces-2  (main)  42,21/50 |
+• | NOR  lua/bareline.lua  [lua_ls]      e:2,w:1  spaces-2  (main)  42,21/50 |
 Inactive window:
-• |      lua/bareline.lua  [lua_ls]              H:2,W:4  spaces-2  42,21/50 |
+• |      lua/bareline.lua  [lua_ls]              e:2,w:1  spaces-2  42,21/50 |
 Plugin window:
 • | [nvimtree]  [-]                                                 28,09/33 |
                      https://github.com/helix-editor/helix
@@ -159,69 +153,6 @@ doing a deep copy of the defaults and then inserting your components, e.g.:
 <
 
 ------------------------------------------------------------------------------
-                                                            *bareline.providers*
-
-A provider is a function which takes no arguments and returns a single value
-of any type or nil.
-
-If you want to use the providers directly, most likely you do not want to use
-the setup function (|bareline.setup()|). Providers give data in a convenient
-format for parsing, which can be used so you build your own statusline
-without using any other functionality provided in Bareline. Example:
->lua
-  local providers = require("bareline").providers
-  providers.lsp_server_names()
-  -- Returns: `{ "lua_ls" }`
-<
-
-                                             *bareline.providers.get_vim_mode()*
-                      `bareline.providers.get_vim_mode`()
-Vim mode.
-Returns the first char of the current Vim mode (see |mode()|). For block
-modes, two characters are returned, a "b" followed by the mode; currently,
-only `bv` for "block visual mode" and `bs` for "block select mode". The
-returned string has only lower case letters.
-Return ~
-`(string)`
-
-                                             *bareline.providers.get_git_head()*
-                      `bareline.providers.get_git_head`()
-Git HEAD.
-Returns the Git HEAD. The file `.git/HEAD` is read and its first line is
-returned. If the current directory does not have a `.git` dir, an upwards
-search is performed. If the dir isn't found, then nil is returned.
-Return ~
-`(string|nil)`
-
-                                     *bareline.providers.get_lsp_server_names()*
-                  `bareline.providers.get_lsp_server_names`()
-LSP attached servers.
-Returns the names of the LSP servers attached to the current buffer.
-Example output: `{ "lua_ls" }`
-Return ~
-`(table)`
-
-                                          *bareline.providers.get_diagnostics()*
-                     `bareline.providers.get_diagnostics`()
-Diagnostics.
-Returns the diagnostics count of the current buffer by severity, where a lower
-index is a higher severity. Use numeric indices or the the keys in
-|vim.diagnostic.severity| to get the diagnostic count per severity.
-Example output: `{ 4, 1, 0, 1 }`
-Return ~
-`(table|nil)`
-
-                            *bareline.providers.get_file_path_relative_to_cwd()*
-              `bareline.providers.get_file_path_relative_to_cwd`()
-Stable `%f`.
-Returns the file path of the current buffer relative to the current working
-directory (|:pwd|). If the file opened is not in this dir, then the absolute
-path is returned. This is meant to be used instead of the field `%f` (see
-'statusline') for a more consistent experience.
-Return ~
-`(string)`
-
-------------------------------------------------------------------------------
                                                         *bareline.BareComponent*
                             `bareline.BareComponent`
 Standardized component.
@@ -249,8 +180,9 @@ the filepath. Strings and functions can be mixed if the type is table.
 Class ~
 {BareComponentOpts}
 Fields ~
-{cache_on_vim_modes} `(string[])` Use cache in these Vim modes. Each Vim
-mode is expected as the first char returned by |mode()|.
+{cache_on_vim_modes} `(function|string[])` Use cache in these Vim modes. Each
+Vim mode is expected as the first char returned by |mode()|. When a function,
+it expects no args and should return a list with the Vim modes.
 
                                                   *bareline.BareComponent:new()*
                  `bareline.BareComponent:new`({value}, {opts})
@@ -342,7 +274,7 @@ BareComponent
                        `bareline.components.diagnostics`
 Diagnostics.
 The diagnostics of the current buffer.
-Mockup: `E:2,W:1`
+Mockup: `e:2,w:1`
 Type ~
 BareComponent
 

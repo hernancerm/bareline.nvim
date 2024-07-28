@@ -8,7 +8,7 @@
 ---
 --- 1. Ease of configuration.
 ---
---- 2. Can be used as a library for common statusline data providers.
+--- 2. Update immediately as changes happen. No timer required.
 ---
 --- Concepts ~
 ---
@@ -23,8 +23,6 @@
 ---               └── Components                               └── Components
 ---                   ├── Vim mode                                 ├── Git HEAD
 ---                   └── Relative file path                       └── Location
----
---- The bundled components get their data from a provider (|bareline.providers|).
 
 -- MODULE SETUP
 
@@ -42,10 +40,6 @@ local h = {}
 ---   bareline.setup({}) -- Or provide a table as an argument for the config.
 --- <
 --- I recommend disabling 'showmode', so only Bareline shows the Vim mode.
----
---- If you want to use this plugin just for the data providers (e.g., Vim mode or
---- Git branch) to build yourself a statusine which fancies your pixelated heart,
---- then take a look at |bareline.providers|.
 ---
 ---@param config table|nil Module config table. |bareline.default_config| defines
 --- the default configuration. If the `config` arg is nil, then the default config
@@ -172,80 +166,6 @@ end
 ---   bareline.setup(config)
 --- <
 
--- PROVIDERS
-
-bareline.providers = {}
-
---- #delimiter
---- #tag bareline.providers
-
---- A provider is a function which takes no arguments and returns a single value
---- of any type or nil.
----
---- If you want to use the providers directly, most likely you do not want to use
---- the setup function (|bareline.setup()|). Providers give data in a convenient
---- format for parsing, which can be used so you build your own statusline
---- without using any other functionality provided in Bareline. Example:
---- >lua
----   local providers = require("bareline").providers
----   providers.lsp_server_names()
----   -- Returns: `{ "lua_ls" }`
---- <
-
---- Vim mode.
---- Returns the first char of the current Vim mode (see |mode()|). For block
---- modes, two characters are returned, a "b" followed by the mode; currently,
---- only `bv` for "block visual mode" and `bs` for "block select mode". The
---- returned string has only lower case letters.
----@return string
-function bareline.providers.get_vim_mode()
-  local function standardize_mode(character)
-    if character == "" then return "bv" end
-    if character == "" then return "bs" end
-    return character:lower()
-  end
-  return standardize_mode(vim.fn.mode())
-end
-
---- Git HEAD.
---- Returns the Git HEAD. The file `.git/HEAD` is read and its first line is
---- returned. If the current directory does not have a `.git` dir, an upwards
---- search is performed. If the dir isn't found, then nil is returned.
----@return string|nil
-function bareline.providers.get_git_head()
-  local git_dir = vim.fn.finddir(".git", ".;")
-  return (git_dir ~= "" and vim.fn.readfile(git_dir .. "/HEAD")[1]) or nil
-end
-
---- LSP attached servers.
---- Returns the names of the LSP servers attached to the current buffer.
---- Example output: `{ "lua_ls" }`
----@return table
-function bareline.providers.get_lsp_server_names()
-  return vim.tbl_map(
-    function (client)
-      return client.name
-    end,
-    vim.lsp.get_clients({ bufnr = 0 })
-  )
-end
-
---- Stable `%f`.
---- Returns the file path of the current buffer relative to the current working
---- directory (|:pwd|). If the file opened is not in this dir, then the absolute
---- path is returned. This is meant to be used instead of the field `%f` (see
---- 'statusline') for a more consistent experience.
----@return string
-function bareline.providers.get_file_path_relative_to_cwd()
-  local buf_name = vim.api.nvim_buf_get_name(0)
-  if buf_name == "" or vim.bo.filetype == "help" then return "%f" end
-  local replacement, _ = string.gsub(
-      vim.api.nvim_buf_get_name(0),
-      h.escape_lua_pattern(vim.fn.getcwd()) .. "/",
-      "")
-  return replacement
-end
-
 -- COMPONENTS
 
 bareline.components = {}
@@ -324,7 +244,7 @@ end
 ---@type BareComponent
 bareline.components.vim_mode = bareline.BareComponent:new(
   function()
-    local vim_mode = bareline.providers.get_vim_mode()
+    local vim_mode = h.provide_vim_mode()
     local mode_labels = {
       n = "nor", i = "ins", v = "vis", s = "sel",
       t = "ter", c = "cmd", r = "rep", bv = "vis",
@@ -381,7 +301,7 @@ bareline.components.end_of_line = bareline.BareComponent:new(
 ---@type BareComponent
 bareline.components.git_head = bareline.BareComponent:new(
   function()
-    local git_head = bareline.providers.get_git_head()
+    local git_head = h.provide_git_head()
     if git_head == nil then return nil end
     local function format(head)
       local formatted_head
@@ -411,7 +331,7 @@ bareline.components.git_head = bareline.BareComponent:new(
 ---@type BareComponent
 bareline.components.lsp_servers = bareline.BareComponent:new(
   function()
-    local lsp_servers = bareline.providers.get_lsp_server_names()
+    local lsp_servers = h.provide_lsp_server_names()
     if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then return nil end
     return "[" .. vim.fn.join(lsp_servers, ",") .. "]"
   end,
@@ -429,7 +349,7 @@ bareline.components.lsp_servers = bareline.BareComponent:new(
 --- Mockup: `lua/bareline.lua`
 ---@type BareComponent
 bareline.components.get_file_path_relative_to_cwd = bareline.BareComponent:new(
-  bareline.providers.get_file_path_relative_to_cwd
+  h.provide_file_path_relative_to_cwd
 )
 
 --- Diagnostics.
@@ -580,6 +500,64 @@ assign_default_config()
 
 -- -----
 --- #end
+
+-- PROVIDERS
+
+-- A provider is a function which provides the base data to implement a component.
+
+--- Vim mode.
+--- Returns the first char of the current Vim mode (see |mode()|). For block
+--- modes, two characters are returned, a "b" followed by the mode; currently,
+--- only `bv` for "block visual mode" and `bs` for "block select mode". The
+--- returned string has only lower case letters.
+---@return string
+function h.provide_vim_mode()
+  local function standardize_mode(character)
+    if character == "" then return "bv" end
+    if character == "" then return "bs" end
+    return character:lower()
+  end
+  return standardize_mode(vim.fn.mode())
+end
+
+--- Git HEAD.
+--- Returns the Git HEAD. The file `.git/HEAD` is read and its first line is
+--- returned. If the current directory does not have a `.git` dir, an upwards
+--- search is performed. If the dir isn't found, then nil is returned.
+---@return string|nil
+function h.provide_git_head()
+  local git_dir = vim.fn.finddir(".git", ".;")
+  return (git_dir ~= "" and vim.fn.readfile(git_dir .. "/HEAD")[1]) or nil
+end
+
+--- LSP attached servers.
+--- Returns the names of the LSP servers attached to the current buffer.
+--- Example output: `{ "lua_ls" }`
+---@return table
+function h.provide_lsp_server_names()
+  return vim.tbl_map(
+    function (client)
+      return client.name
+    end,
+    vim.lsp.get_clients({ bufnr = 0 })
+  )
+end
+
+--- Stable `%f`.
+--- Returns the file path of the current buffer relative to the current working
+--- directory (|:pwd|). If the file opened is not in this dir, then the absolute
+--- path is returned. This is meant to be used instead of the field `%f` (see
+--- 'statusline') for a more consistent experience.
+---@return string
+function h.provide_file_path_relative_to_cwd()
+  local buf_name = vim.api.nvim_buf_get_name(0)
+  if buf_name == "" or vim.bo.filetype == "help" then return "%f" end
+  local replacement, _ = string.gsub(
+      vim.api.nvim_buf_get_name(0),
+      h.escape_lua_pattern(vim.fn.getcwd()) .. "/",
+      "")
+  return replacement
+end
 
 -- BUILD
 
