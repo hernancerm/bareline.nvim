@@ -334,7 +334,7 @@ bareline.components.vim_mode = bareline.BareComponent:new(
   {
     watcher = {
       autocmd = {
-        event = "ModeChanged"
+        event = { "ModeChanged", "InsertLeave" }
       }
     }
   }
