@@ -273,8 +273,9 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- the filepath. Strings and functions can be mixed if the type is table.
 
 ---@class BareComponentOpts
----@field cache_on_vim_modes string[] Use cache in these Vim modes. Each Vim
---- mode is expected as the first char returned by |mode()|.
+---@field cache_on_vim_modes function|string[] Use cache in these Vim modes. Each
+--- Vim mode is expected as the first char returned by |mode()|. When a function,
+--- it expects no args and should return a list with the Vim modes.
 
 --- Constructor.
 --- Parameters ~
@@ -454,7 +455,10 @@ bareline.components.diagnostics = bareline.BareComponent:new(
         event = "DiagnosticChanged"
       }
     },
-    cache_on_vim_modes = { "i" }
+    cache_on_vim_modes = function()
+      if vim.diagnostic.config().update_in_insert then return {} end
+      return { "i" }
+    end
   }
 )
 
@@ -608,11 +612,19 @@ end
 
 ---@param bare_component BareComponent
 ---@return any
-function h.compute_bare_component_value(bare_component)
+function h.get_bare_component_value(bare_component)
   local value = bare_component.value
   if type(value) == "string" then return value end
   if type(value) == "function" then return value() end
   return nil
+end
+
+---@param cache_on_vim_modes function|string[]
+---@return string[]
+function h.get_vim_modes_for_cache(cache_on_vim_modes)
+  if type(cache_on_vim_modes) == "function" then return cache_on_vim_modes() end
+  if type(cache_on_vim_modes) == "table" then return cache_on_vim_modes end
+  return {}
 end
 
 ---@param component UserSuppliedComponent
@@ -643,12 +655,13 @@ function h.build_user_supplied_component(component)
 
   if opts.cache_on_vim_modes and component_cache then
     local short_current_vim_mode = vim.fn.mode():lower():sub(1, 1)
-    if vim.tbl_contains(opts.cache_on_vim_modes, short_current_vim_mode) then
+    local vim_modes_for_cache = h.get_vim_modes_for_cache(opts.cache_on_vim_modes)
+    if vim.tbl_contains(vim_modes_for_cache, short_current_vim_mode) then
       return component_cache.value
     end
   end
 
-  local computed_value = h.compute_bare_component_value(bare_component)
+  local computed_value = h.get_bare_component_value(bare_component)
   h.store_bare_component_cache(bare_component, computed_value)
 
   return computed_value
