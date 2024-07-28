@@ -10,6 +10,8 @@
 ---
 --- 2. Update immediately as changes happen. No timer required.
 ---
+--- 3. Opinionated bundled components, for a batteries included experience.
+---
 --- Concepts ~
 ---
 --- Bareline conceptualizes a statusline in this way:
