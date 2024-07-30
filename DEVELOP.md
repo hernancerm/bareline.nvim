@@ -22,6 +22,9 @@ vim.o.formatoptions = "tcqjrn"
 vim.o.formatlistpat = [[^\s*\d\+[\]:.)}\t ]\s*\|\s*[-*•]\s*]]
 ```
 
+Throughout [bareline.lua](./lua/bareline.lua), comments beginning with `DOCS:` indicate something
+important to convey on user-facing documentation.
+
 ## Navigating bareline.lua
 
 The entire plugin is in the single file [bareline.lua](./lua/bareline.lua). This is so the help file

@@ -33,11 +33,10 @@ local h = {}
 
 --- Module setup.
 ---
---- To leverage the plugin to build and draw a statusline, you need to call the
---- setup function and optionally provide your configuration:
+--- To enable the plugin you need to call the `setup()` function. Usage:
 --- >lua
 ---   local bareline = require("bareline")
----   bareline.setup({}) -- Or provide a table as an argument for the config.
+---   bareline.setup() -- You may provide a table for your configuration.
 --- <
 --- I recommend disabling 'showmode', so only Bareline shows the Vim mode.
 ---
@@ -141,12 +140,16 @@ end
 --- Custom components: These are the allowed types for `user supplied components`:
 ---
 --- * String: Useful for very simple components, for example, statusline items
----   like `%r` ('statusline') or options like 'fileformat'.
+---   like `%r` (see 'statusline') or options like 'fileformat'.
 --- * Function: Must return either a string or nil. The returned string is
 ---   what gets placed in the statusline. When nil is returned, the component
 ---   is skipped, leaving no gap.
 --- * |bareline.BareComponent|: Object which allows component configuration. The
----   bundled components follow this structure (|bareline.components|).
+---   bundled components follow this structure (|bareline.components|). You might
+---   need to use this component type to provide a watching config, to avoid the
+---   need for a timer. In some cases, watching can work even with no watching
+---   configuration, see |bareline.BareComponentWatcher|, in those cases you can
+---   simply use a string or function component.
 ---@alias UserSuppliedComponent string|function|BareComponent
 
 --- If the changes you want to make are few, then your config can be concise by
@@ -185,6 +188,17 @@ bareline.components = {}
 bareline.BareComponent = {}
 bareline.BareComponent["__index"] = bareline.BareComponent
 
+--- #tag bareline.BareComponentWatcher
+--- Defines the structure of watcher configuration for components.
+--- With Bareline, you don't need a timer to have the statusline update when you
+--- expect it to. Since there is no fixed redraw, the plugin needs a way to know
+--- when to do a redraw. That knowledge is provided to Bareline in a per component
+--- basis through the watcher configuration.
+--- When adding new components, you don't have to worry about watchers if the base
+--- autocmds are enough. Here are the base autocmds per draw method:
+--- * |bareline.draw_methods.draw_active_inactive_plugin|:
+---   * |BufNew|, |BufEnter|, |BufWinEnter|, |VimResume|, |FocusGained|, |OptionSet|.
+---   * In other words, pretty much only option changes are watched as a base.
 ---@class BareComponentWatcher
 ---@field autocmd table Expects a table with the keys `event` and `opts`. These
 --- values are passed as is to |vim.api.nvim_create_autocmd()|.
@@ -192,6 +206,7 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- Alternatively, a function which expects zero args can be provided to compute
 --- the filepath. Strings and functions can be mixed if the type is table.
 
+--- #tag bareline.BareComponentOpts
 ---@class BareComponentOpts
 ---@field cache_on_vim_modes function|string[] Use cache in these Vim modes. Each
 --- Vim mode is expected as the first char returned by |mode()|. When a function,
@@ -353,7 +368,8 @@ bareline.components.get_file_path_relative_to_cwd = bareline.BareComponent:new(
 )
 
 --- Diagnostics.
---- The diagnostics of the current buffer.
+--- The diagnostics of the current buffer. Respects the value of:
+--- `update_in_insert` from |vim.diagnostic.config()|.
 --- Mockup: `e:2,w:1`
 ---@type BareComponent
 bareline.components.diagnostics = bareline.BareComponent:new(
@@ -418,6 +434,7 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   local plugin_window_statusline = statuslines[3]
 
   -- Create base autocmds.
+  -- DOCS: Keep in sync with "bareline.BareComponentWatcher".
   vim.api.nvim_create_autocmd(
     {
       "BufNew", "BufEnter", "BufWinEnter", "VimResume", "FocusGained"
