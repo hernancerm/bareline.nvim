@@ -183,13 +183,19 @@ bareline.components = {}
 ---@field value string|function Provides the value displayed in the statusline,
 --- like the Vim mode. When a function, should return a single value of any type.
 --- When a string, that itself is used.
----@field watcher BareComponentWatcher Watcher. Triggers a statusline redraw.
 ---@field opts BareComponentOpts Options.
 bareline.BareComponent = {}
 bareline.BareComponent["__index"] = bareline.BareComponent
 
+--- #tag bareline.BareComponentOpts
+---@class BareComponentOpts
+---@field watcher BareComponentWatcher Watcher. Triggers a statusline redraw.
+---@field cache_on_vim_modes function|string[] Use cache in these Vim modes. Each
+--- Vim mode is expected as the first char returned by |mode()|. When a function,
+--- it expects no args and should return a list with the Vim modes.
+
 --- #tag bareline.BareComponentWatcher
---- Defines the structure of watcher configuration for components.
+--- Defines the structure of watcher configuration for a component.
 --- With Bareline, you don't need a timer to have the statusline update when you
 --- expect it to. Since there is no fixed redraw, the plugin needs a way to know
 --- when to do a redraw. That knowledge is provided to Bareline in a per component
@@ -205,12 +211,6 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 ---@field filepath function|string|table Filepath or list of filepaths to watch.
 --- Alternatively, a function which expects zero args can be provided to compute
 --- the filepath. Strings and functions can be mixed if the type is table.
-
---- #tag bareline.BareComponentOpts
----@class BareComponentOpts
----@field cache_on_vim_modes function|string[] Use cache in these Vim modes. Each
---- Vim mode is expected as the first char returned by |mode()|. When a function,
---- it expects no args and should return a list with the Vim modes.
 
 --- Constructor.
 --- Parameters ~
