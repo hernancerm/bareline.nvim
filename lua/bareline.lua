@@ -351,7 +351,7 @@ bareline.components.lsp_servers = bareline.BareComponent:new(
 --- Mockup: `lua/bareline.lua`
 ---@type BareComponent
 bareline.components.get_file_path_relative_to_cwd = bareline.BareComponent:new(
-  h.provide_file_path_relative_to_cwd
+  function () return h.provide_file_path_relative_to_cwd() end
 )
 
 --- Diagnostics.
