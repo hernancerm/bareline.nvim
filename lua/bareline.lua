@@ -486,11 +486,11 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     end
   })
 
-  -- -- Close file watchers (cleanup on dir change).
-  -- vim.api.nvim_create_autocmd({ "VimLeave", "DirChangedPre" }, {
-  --   group = h.draw_methods_augroup,
-  --   callback = function () h.close_uv_fs_events() end
-  -- })
+  -- Close file watchers (cleanup on dir change).
+  vim.api.nvim_create_autocmd({ "VimLeave", "DirChangedPre" }, {
+    group = h.draw_methods_augroup,
+    callback = function () h.close_uv_fs_events() end
+  })
 
   -- Draw a different statusline for inactive windows. For inactive plugin
   -- windows, use a special statusline, the same one as for active plugin windows.
@@ -819,6 +819,12 @@ function h.start_uv_fs_events(
     for _, absolute_filepath in ipairs(absolute_filepaths) do
       watch_file(absolute_filepath)
     end
+end
+
+-- Close all fs_event handles.
+function h.close_uv_fs_events()
+  for _, handle in ipairs(h.uv_fs_event_handles) do handle:close() end
+  h.uv_fs_event_handles = {}
 end
 
 -- Cleanup components cache.
