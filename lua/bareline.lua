@@ -208,9 +208,8 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 ---@class BareComponentWatcher
 ---@field autocmd table Expects a table with the keys `event` and `opts`. These
 --- values are passed as is to |vim.api.nvim_create_autocmd()|.
----@field filepath function|string|table Filepath or list of filepaths to watch.
---- Alternatively, a function which expects zero args can be provided to compute
---- the filepath. Strings and functions can be mixed if the type is table.
+---@field filepath string|function Filepath to watch. Alternatively, a function
+---which expects zero args can be provided to compute the filepath.
 
 --- Constructor.
 --- Parameters ~
@@ -474,12 +473,24 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   end)
 
   -- Create file watchers.
-  h.create_bare_component_file_watchers(statuslines, 2, function()
-    h.draw_statusline_if_plugin_window(
-      plugin_window_statusline,
-      active_window_statusline
-    )
-  end)
+  vim.api.nvim_create_autocmd({ "VimEnter", "DirChanged" }, {
+    group = h.draw_methods_augroup,
+    callback = function ()
+      h.start_uv_fs_events(statuslines, 2, function()
+        h.draw_statusline_if_plugin_window(
+          plugin_window_statusline,
+          active_window_statusline
+        )
+      end
+      )
+    end
+  })
+
+  -- -- Close file watchers (cleanup on dir change).
+  -- vim.api.nvim_create_autocmd({ "VimLeave", "DirChangedPre" }, {
+  --   group = h.draw_methods_augroup,
+  --   callback = function () h.close_uv_fs_events() end
+  -- })
 
   -- Draw a different statusline for inactive windows. For inactive plugin
   -- windows, use a special statusline, the same one as for active plugin windows.
@@ -760,19 +771,24 @@ function h.create_bare_component_autocmds(nested_components_list, depth, callbac
     end
 end
 
+h.uv_fs_event_handles = {}
+
 ---@param nested_components_list BareComponent[] Statusline(s) definition(s).
 ---@param depth number Depth at which the components exist in the list.
----@param callback function Luv callback function.
-function h.create_bare_component_file_watchers(
+---@param callback function Callback for |uv.fs_event_start()|.
+function h.start_uv_fs_events(
     nested_components_list, depth, callback)
-  local uv_fs_event = vim.uv.new_fs_event()
+
   local function watch_file(absolute_filepath)
-    ---@diagnostic disable-next-line: need-check-nil
-    uv_fs_event:start(
+    local uv_fs_event, error = vim.uv.new_fs_event()
+    assert(uv_fs_event, error)
+    local success, err_name = uv_fs_event:start(
       absolute_filepath, {},
       vim.schedule_wrap(function()
         callback()
       end))
+    assert(success, err_name)
+    table.insert(h.uv_fs_event_handles, uv_fs_event)
   end
 
   local absolute_filepaths = vim.iter(nested_components_list)
@@ -783,7 +799,7 @@ function h.create_bare_component_file_watchers(
       local filepath = bc.opts and bc.opts.watcher and bc.opts.watcher.filepath
       if filepath == nil then return end
       vim.validate({ filepath = {
-        filepath, { "function", "string", "table" } }
+        filepath, { "string", "function" } }
       })
       return filepath
     end)
