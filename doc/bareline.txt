@@ -188,16 +188,16 @@ basis through the watcher configuration.
 When adding new components, you don't have to worry about watchers if the base
 autocmds are enough. Here are the base autocmds per draw method:
 • |bareline.draw_methods.draw_active_inactive_plugin|:
-  • |BufNew|, |BufEnter|, |BufWinEnter|, |VimResume|, |FocusGained|, |OptionSet|.
+  • |BufNew|, |BufEnter|, |BufWinEnter|, |VimResume|,
+    |FocusGained|, |OptionSet|, |DirChanged|.
   • In other words, pretty much only option changes are watched as a base.
 Class ~
 {BareComponentWatcher}
 Fields ~
 {autocmd} `(table)` Expects a table with the keys `event` and `opts`. These
 values are passed as is to |vim.api.nvim_create_autocmd()|.
-{filepath} `(function|string|table)` Filepath or list of filepaths to watch.
-Alternatively, a function which expects zero args can be provided to compute
-the filepath. Strings and functions can be mixed if the type is table.
+{filepath} `(string|function)` Filepath to watch. Alternatively, a function
+expects zero args can be provided to compute the filepath.
 
                                                   *bareline.BareComponent:new()*
                  `bareline.BareComponent:new`({value}, {opts})

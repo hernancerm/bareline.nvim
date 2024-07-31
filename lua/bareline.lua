@@ -203,7 +203,8 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- When adding new components, you don't have to worry about watchers if the base
 --- autocmds are enough. Here are the base autocmds per draw method:
 --- * |bareline.draw_methods.draw_active_inactive_plugin|:
----   * |BufNew|, |BufEnter|, |BufWinEnter|, |VimResume|, |FocusGained|, |OptionSet|.
+---   * |BufNew|, |BufEnter|, |BufWinEnter|, |VimResume|,
+---     |FocusGained|, |OptionSet|, |DirChanged|.
 ---   * In other words, pretty much only option changes are watched as a base.
 ---@class BareComponentWatcher
 ---@field autocmd table Expects a table with the keys `event` and `opts`. These
@@ -436,7 +437,8 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   -- DOCS: Keep in sync with "bareline.BareComponentWatcher".
   vim.api.nvim_create_autocmd(
     {
-      "BufNew", "BufEnter", "BufWinEnter", "VimResume", "FocusGained"
+      "BufNew", "BufEnter", "BufWinEnter",
+      "VimResume", "FocusGained", "DirChanged"
     },
     {
       group = h.draw_methods_augroup,
