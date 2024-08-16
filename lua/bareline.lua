@@ -78,12 +78,6 @@ local function assign_default_config()
     -- statusline definition. With the default, 3 statuslines are expected.
     draw_method = bareline.draw_methods.draw_active_inactive_plugin,
 
-    -- Enable the timer in case you have a component which is tricky to watch,
-    -- or just don't want to bother with identifying how to watch it. Accepts
-    -- a boolean (false = disabled, true = 500ms), or a number indicating ms
-    -- in between statusline re-draws.
-    timer = false,
-
     statusline = {
       { -- Statusline 1: Active window.
         { -- Section 1: Left.
@@ -145,11 +139,11 @@ end
 ---   what gets placed in the statusline. When nil is returned, the component
 ---   is skipped, leaving no gap.
 --- * |bareline.BareComponent|: Object which allows component configuration. The
----   bundled components follow this structure (|bareline.components|). You might
----   need to use this component type to provide a watching config, to avoid the
----   need for a timer. In some cases, watching can work even with no watching
----   configuration, see |bareline.BareComponentWatcher|, in those cases you can
----   simply use a string or function component.
+---   bundled components follow this structure (|bareline.components|). This is
+---   used to provide a watching config, to avoid using a timer. In some cases,
+---   watching can work even without a user-supplied watching configuration, refer
+---   to |bareline.BareComponentWatcher|, in those cases you can simply use a
+---   string or function component.
 ---@alias UserSuppliedComponent string|function|BareComponent
 
 --- If the changes you want to make are few, then your config can be concise by
@@ -420,10 +414,10 @@ bareline.components.position = bareline.BareComponent:new("%02l,%02c/%02L")
 bareline.draw_methods = {}
 
 --- Draw distinct statuslines for active, inactive and plugin windows.
---- Rely on |autocmd|s and a |timer| (not everything is watched). The provided
---- statuslines are handled in this order by table index: [1] drawn on the active
---- window, [2] drawn on the inactive window and [3] drawn on the plugin window
---- (having precedence over the active window statusline).
+--- Relies on base |autocmd|s and user-supplied autocmds and file paths which are
+--- watched using |uv_fs_event_t|s. The provided statuslines are handled in this
+--- order by table index: [1] draw on the active window, [2] inactive window and
+--- [3] plugin window (having precedence over the active window statusline).
 ---@param statuslines BareStatusline[]
 function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   ---@type BareStatusline
@@ -505,24 +499,6 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
         )
     end,
   })
-
-  -- Optionally set a timer.
-  if bareline.config.timer then
-    local time = bareline.config.timer
-    if type(bareline.config.timer) == "boolean" then
-      time = h.timer_default_time
-    end
-    vim.fn.timer_start(
-      time,
-      function()
-        h.draw_statusline_if_plugin_window(
-          plugin_window_statusline,
-          active_window_statusline
-        )
-      end,
-      { ["repeat"] = -1 }
-    )
-  end
 end
 
 -- Set module default config.
@@ -711,7 +687,6 @@ end
 
 -- DRAW
 
-h.timer_default_time = 500
 h.draw_methods_augroup = vim.api.nvim_create_augroup("BarelineDrawMethods", {})
 
 ---@param bufnr integer The buffer number, as returned by |bufnr()|.
