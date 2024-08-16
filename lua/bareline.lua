@@ -809,12 +809,15 @@ function h.start_uv_fs_events(
     -- Map to absolute file paths.
     :map(function (filepath)
       if filepath == nil then return nil end
-      if type(filepath) == "function" then filepath = filepath() end
-      return vim.fn.fnamemodify(filepath, ":p")
+      if type(filepath) == "function" then
+        local filepath_found = filepath()
+        if filepath_found == nil then return nil end
+        return vim.fn.fnamemodify(filepath_found, ":p")
+      end
     end)
-    -- Remove duplicate filepaths.
+    -- Remove duplicate filepaths and nil.
     :fold({}, function(acc, v)
-      if not vim.tbl_contains(acc, v) then table.insert(acc, v) end
+      if v ~= nil and not vim.tbl_contains(acc, v) then table.insert(acc, v) end
       return acc
     end)
     -- Start file watchers.
