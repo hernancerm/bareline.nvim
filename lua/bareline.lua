@@ -305,7 +305,7 @@ bareline.components.end_of_line = bareline.BareComponent:new(
 )
 
 --- Git HEAD.
---- Displays the Git HEAD, useful to show the Git branch.
+--- Displays the Git HEAD based on the cwd (|pwd|). Useful to show the Git branch.
 --- Mockup: `(main)`
 ---@type BareComponent
 bareline.components.git_head = bareline.BareComponent:new(
@@ -326,7 +326,7 @@ bareline.components.git_head = bareline.BareComponent:new(
   {
     watcher = {
       filepath = function()
-        local git_dir = vim.fn.finddir(".git", ".;")
+        local git_dir = vim.fn.finddir(".git", (vim.uv.cwd() or "") .. ";")
         if git_dir ~= "" then return git_dir end
         return nil
       end
