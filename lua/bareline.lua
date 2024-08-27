@@ -370,7 +370,7 @@ bareline.components.diagnostics = bareline.BareComponent:new(
   function()
     local output = ""
     local severity_labels = { "e", "w", "i", "h" }
-    local diagnostic_count = vim.diagnostic.count()
+    local diagnostic_count = vim.diagnostic.count(0)
     for i = 1, 4 do
       local count = diagnostic_count[i]
       if count ~= nil then
