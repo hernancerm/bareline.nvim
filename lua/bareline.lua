@@ -237,6 +237,16 @@ function bareline.BareComponent:mask(char)
   end
 end
 
+--- Retrieve the value of the component.
+--- Return ~
+--- `(string|nil)` Component value.
+function bareline.BareComponent:get_value()
+  local value = self.value
+  if type(value) == "string" then return value end
+  if type(value) == "function" then return value() end
+  return nil
+end
+
 --- #delimiter
 --- #tag bareline.components
 
@@ -594,15 +604,6 @@ function h.store_bare_component_cache(bare_component, bare_component_value)
     { value = bare_component_value }
 end
 
----@param bare_component BareComponent
----@return any
-function h.get_bare_component_value(bare_component)
-  local value = bare_component.value
-  if type(value) == "string" then return value end
-  if type(value) == "function" then return value() end
-  return nil
-end
-
 ---@param cache_on_vim_modes function|string[]
 ---@return string[]
 function h.get_vim_modes_for_cache(cache_on_vim_modes)
@@ -618,13 +619,12 @@ function h.standardize_component(component)
     component = { component, { "string", "function", "table" }, true }
   })
   if type(component) == "string" or type(component) == "function" then
-    return { value = component, opts = {} }
+    return bareline.BareComponent:new(component, {})
   end
   if type(component) == "table" then
-    component.opts = component.opts or {}
-    return component
+    return bareline.BareComponent:new(component.value, (component.opts or {}))
   end
-  return {}
+  return bareline.BareComponent:new(nil, {})
 end
 
 ---@param component UserSuppliedComponent
@@ -645,7 +645,7 @@ function h.build_user_supplied_component(component)
     end
   end
 
-  local computed_value = h.get_bare_component_value(bare_component)
+  local computed_value = bare_component:get_value()
   h.store_bare_component_cache(bare_component, computed_value)
 
   return computed_value
