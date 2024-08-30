@@ -1,3 +1,5 @@
+---@diagnostic disable: undefined-field, undefined-global
+
 -- Ideas of what to test:
 -- - Default config, black box test the final assigned value of 'statusline'.
 --   - All window states:
@@ -12,13 +14,16 @@
 --     - Buffer is location list.
 -- How to write the tests: https://github.com/echasnovski/mini.nvim
 
+-- Basic tests, not thorough.
+
 -- See: https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md
+
+local root = vim.uv.cwd()
+local h = dofile("tests/helpers.lua")
 
 local new_set = MiniTest.new_set
 local eq = MiniTest.expect.equality
 local child = MiniTest.new_child_neovim()
-local h = dofile("tests/helpers.lua")
-local root_dir = vim.uv.cwd()
 
 local T = new_set({
   hooks = {
@@ -36,25 +41,33 @@ local T = new_set({
   },
 })
 
-T["components"] = new_set({
+T["smoke"] = new_set({
   hooks = {
     pre_case = function()
-      child.lua([[bareline.setup()]])
-      child.cmd("cd /tmp")
+      child.lua("bareline.setup()")
+      child.cmd("cd " .. root .. "/tests/resources/git_dir_branch/")
     end
   }
 })
 
 -- SMOKE
 
-T["components"]["smoke"] = function()
-  local expected = " NOR  %f  %m  %h  %r%=  tabs:8  %02l,%02c/%02L "
+T["smoke"]["success"] = function()
+  local expected = " NOR  %f  %m  %h  %r%=  tabs:8  (main)  %02l,%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
 -- COMPONENTS
 
 -- VIM_MODE
+
+T["components"] = new_set({
+  hooks = {
+    pre_case = function()
+      child.lua("bareline.setup()")
+    end
+  }
+})
 
 T["components"]["vim_mode"] = new_set({
   parametrize = {
@@ -70,7 +83,7 @@ T["components"]["vim_mode"] = new_set({
 
 T["components"]["vim_mode"]["success"] = function(keys, expected_vim_mode)
   child.type_keys(keys)
-  local vim_mode = string.match(child.wo.statusline, expected_vim_mode)
+  local vim_mode = child.lua_get("bareline.components.vim_mode:get_value()")
   eq(vim_mode, expected_vim_mode)
 end
 
@@ -78,19 +91,35 @@ end
 
 T["components"]["indent_style"] = new_set({
   parametrize = {
-    { "",   "",   "tabs:8"   }, -- Nvim defaults.
-    { false, 4,   "tabs:4"   },
-    { true,  2,   "spaces:2" },
-    { true,  4,   "spaces:4" },
+    { vim.NIL,  vim.NIL,  "tabs:8"   }, -- Nvim defaults.
+    { false,    4,        "tabs:4"   },
+    { true,     2,        "spaces:2" },
+    { true,     4,        "spaces:4" },
   }
 })
 
 T["components"]["indent_style"]["success"] = function(
     expandtab, tabstop, expected_indent_style)
-  if expandtab ~= "" then child.bo.expandtab = expandtab end
-  if tabstop ~= "" then child.bo.tabstop = tabstop end
-  local indent_style = string.match(child.wo.statusline, expected_indent_style)
+  if expandtab ~= vim.NIL then child.bo.expandtab = expandtab end
+  if tabstop ~= vim.NIL then child.bo.tabstop = tabstop end
+  local indent_style = child.lua_get(
+    "bareline.components.indent_style:get_value()")
   eq(indent_style, expected_indent_style)
+end
+
+-- END_OF_LINE
+
+T["components"]["end_of_line"] = new_set({
+  parametrize = {
+    { ":set eol<CR>", vim.NIL },
+    { ":set noeol<CR>", "noeol" }
+  }
+})
+
+T["components"]["end_of_line"]["success"] = function(keys, expected_eol_marker)
+  child.type_keys(keys)
+  local eol = child.lua_get("bareline.components.end_of_line:get_value()")
+  eq(eol, expected_eol_marker)
 end
 
 -- GIT_HEAD
@@ -104,9 +133,8 @@ T["components"]["git_head"] = new_set({
 })
 
 T["components"]["git_head"]["success"] = function(git_dir, expected_git_head)
-  child.cmd("cd " .. root_dir .. git_dir)
-  local git_head = string.match(
-    child.wo.statusline, h.escape_lua_pattern(expected_git_head))
+  child.cmd("cd " .. root .. git_dir)
+  local git_head = child.lua_get("bareline.components.git_head:get_value()")
   eq(git_head, expected_git_head)
 end
 
