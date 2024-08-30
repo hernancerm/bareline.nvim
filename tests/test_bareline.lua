@@ -138,4 +138,45 @@ T["components"]["git_head"]["success"] = function(git_dir, expected_git_head)
   eq(git_head, expected_git_head)
 end
 
+-- GET_FILE_PATH_RELATIVE_TO_CWD
+
+T["components"]["get_file_path_relative_to_cwd"] = new_set({
+  parametrize = {
+    { { cd = "~", edit = vim.NIL }, "%f" },
+    { { cd = "~", edit = "test_file.txt" }, "test_file.txt" },
+    {
+      {
+        cd = root .. "/tests/resources/dir_a",
+        edit = "dir_a_a/.gitkeep"
+      },
+      "dir_a_a/.gitkeep"
+    },
+    {
+      {
+        cd = root .. "/tests/resources/dir_b",
+        edit = root .. "/tests/resources/dir_a/dir_a_a/.gitkeep"
+      },
+      root .. "/tests/resources/dir_a/dir_a_a/.gitkeep"
+    },
+    -- Main test case. An absolute file path is used for `:e`, but the file path
+    -- displayed should be relative to the current working directory.
+    {
+      {
+        cd = root .. "/tests/resources/dir_a",
+        edit = root .. "/tests/resources/dir_a/dir_a_a/.gitkeep"
+      },
+      "dir_a_a/.gitkeep"
+    },
+  }
+})
+
+T["components"]["get_file_path_relative_to_cwd"]["success"] = function(
+    setup, expected_file_path)
+  child.cmd("cd " .. setup.cd)
+  if setup.edit ~= vim.NIL then child.cmd("edit " .. setup.edit) end
+  local file_path_relative_to_cwd = child.lua_get(
+    "bareline.components.get_file_path_relative_to_cwd:get_value()")
+  eq(file_path_relative_to_cwd, expected_file_path)
+end
+
 return T
