@@ -179,6 +179,54 @@ T["components"]["get_file_path_relative_to_cwd"]["success"] = function(
   eq(file_path_relative_to_cwd, expected_file_path)
 end
 
+-- DIAGNOSTICS
+
+T["components"]["diagnostics"] = new_set({
+  parametrize = {
+    {
+      {
+        {
+          lnum = 1, col = 1,
+          severity = vim.diagnostic.severity.WARN
+        }
+      },
+      "w:1"
+    },
+    {
+      {
+        {
+          lnum = 1, col = 1,
+          severity = vim.diagnostic.severity.ERROR
+        },
+        {
+          lnum = 1, col = 1,
+          severity = vim.diagnostic.severity.HINT
+        },
+        {
+          lnum = 1, col = 1,
+          severity = vim.diagnostic.severity.WARN
+        },
+        {
+          lnum = 1, col = 2,
+          severity = vim.diagnostic.severity.WARN
+        }
+      },
+      "e:1,w:2,h:1"
+    }
+  }
+})
+
+T["components"]["diagnostics"]["success"] = function(
+    diagnostics, expected_diagnostics)
+  child.api.nvim_create_namespace("test")
+  local test_ns = child.api.nvim_get_namespaces().test
+  child.diagnostic.set(test_ns, 0, diagnostics)
+  eq(
+    child.lua_get("bareline.components.diagnostics:get_value()"),
+    expected_diagnostics
+  )
+end
+
 -- POSITION
 
 T["components"]["position"] = new_set({})
