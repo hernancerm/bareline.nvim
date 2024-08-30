@@ -179,4 +179,15 @@ T["components"]["get_file_path_relative_to_cwd"]["success"] = function(
   eq(file_path_relative_to_cwd, expected_file_path)
 end
 
+-- POSITION
+
+T["components"]["position"] = new_set({})
+
+T["components"]["position"]["success"] = function()
+  eq(
+    child.lua_get("bareline.components.position:get_value()"),
+    "%02l,%02c/%02L"
+  )
+end
+
 return T
