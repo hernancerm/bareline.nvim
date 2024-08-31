@@ -14,6 +14,15 @@
 --     - Buffer is location list.
 -- How to write the tests: https://github.com/echasnovski/mini.nvim
 
+-- Injection tests:
+-- 1. %! for expression: set statusline=%!MyStatusLine()
+-- 2. %f, %m, etc., items.
+-- 3. {%} for expression.
+-- 4. %{%} for expression.
+-- 5. (%) for section.
+-- 6. Specials: %@%<%=%#%*.
+-- 7. Grand finale: dir_lua_special_chars_^$()%.[]*+-?
+
 -- Basic tests, not thorough.
 
 -- See: https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md
@@ -173,6 +182,21 @@ T["components"]["get_file_path_relative_to_cwd"] = new_set({
         edit = root .. "/tests/resources/dir_a/dir_a_a/.gitkeep"
       },
       root .. "/tests/resources/dir_a/dir_a_a/.gitkeep"
+    },
+    -- {
+    --   {
+    --     cd = root .. "/tests/resources",
+    --     edit = "dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
+    --   },
+    --   "dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
+    -- },
+    -- Injection test cases.
+    {
+      {
+        cd = root .. "/tests/resources",
+        edit = "dir_/.gitkeep"
+      },
+      "dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
     },
     -- Main test case. An absolute file path is used for `:e`, but the file path
     -- displayed should be relative to the current working directory.
