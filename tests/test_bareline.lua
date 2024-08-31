@@ -52,8 +52,24 @@ T["smoke"] = new_set({
 
 -- SMOKE
 
-T["smoke"]["success"] = function()
+T["smoke"]["active window success"] = function()
   local expected = " NOR  %f  %m  %h  %r%=  tabs:8  (main)  %02l,%02c/%02L "
+  eq(child.wo.statusline, expected)
+end
+
+T["smoke"]["inactive window success"] = function()
+  child.cmd("new")
+  local expected = "      %f  %m  %h  %r%=  tabs:8  %02l,%02c/%02L "
+  local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
+  local statusline_inactive_window =
+    child.lua_get("vim.wo[" .. window_ids[2] .. "].statusline")
+  eq(statusline_inactive_window, expected)
+end
+
+T["smoke"]["plugin window success"] = function()
+  child.bo.filetype = "test"
+  child.bo.buflisted = false
+  local expected = " [test]  %m%=%02l,%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
