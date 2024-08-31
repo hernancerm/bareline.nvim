@@ -238,4 +238,56 @@ T["components"]["position"]["success"] = function()
   )
 end
 
+-- SETUP
+
+T["setup"] = new_set({
+  hooks = {
+    pre_case = function()
+      child.lua([[
+        local statusline_active = {
+          { bareline.components.vim_mode },
+          { bareline.components.position }
+        }
+        local statusline_inactive = {
+          { bareline.components.vim_mode:mask(" ") },
+          { bareline.components.position }
+        }
+        local statusline_plugin = {
+          { bareline.components.plugin_name },
+          { bareline.components.position }
+        }
+        bareline.setup({
+          statusline = {
+            statusline_active,
+            statusline_inactive,
+            statusline_plugin
+          }
+        })
+      ]])
+      child.cmd("cd " .. root .. "/tests/resources")
+    end
+  }
+})
+
+T["setup"]["custom statusline active window success"] = function()
+  local expected = " NOR%=%02l,%02c/%02L "
+  eq(child.wo.statusline, expected)
+end
+
+T["setup"]["custom statusline inactive window success"] = function()
+  child.cmd("new")
+  local expected = "    %=%02l,%02c/%02L "
+  local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
+  local statusline_inactive_window =
+    child.lua_get("vim.wo[" .. window_ids[2] .. "].statusline")
+  eq(statusline_inactive_window, expected)
+end
+
+T["setup"]["custom statusline plugin window success"] = function()
+  child.bo.filetype = "test"
+  child.bo.buflisted = false
+  local expected = " [test]%=%02l,%02c/%02L "
+  eq(child.wo.statusline, expected)
+end
+
 return T
