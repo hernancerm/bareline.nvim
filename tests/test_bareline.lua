@@ -35,6 +35,7 @@
 -- See: https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md
 
 local root = vim.uv.cwd()
+local resources = root .. "/tests/resources"
 local h = dofile("tests/helpers.lua")
 
 local new_set = MiniTest.new_set
@@ -61,7 +62,7 @@ T["smoke"] = new_set({
   hooks = {
     pre_case = function()
       child.lua("bareline.setup()")
-      child.cmd("cd " .. root .. "/tests/resources/git_dir_branch/")
+      child.cmd("cd " .. resources .. "/git_dir_branch/")
     end
   }
 })
@@ -91,16 +92,17 @@ end
 
 -- COMPONENTS
 
--- VIM_MODE
-
-T["components"] = new_set({})
-
-T["components"]["vim_mode"] = new_set({
+T["components"] = new_set({
   hooks = {
     pre_case = function()
       child.lua("bareline.setup()")
     end
-  },
+  }
+})
+
+-- VIM_MODE
+
+T["components"]["vim_mode"] = new_set({
   parametrize = {
     { "",           "NOR" }, -- Normal.
     { "i",          "INS" }, -- Insert.
@@ -121,11 +123,6 @@ end
 -- INDENT_STYLE
 
 T["components"]["indent_style"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua("bareline.setup()")
-    end
-  },
   parametrize = {
     { vim.NIL,  vim.NIL,  "tabs:8"   }, -- Nvim defaults.
     { false,    4,        "tabs:4"   },
@@ -146,11 +143,6 @@ end
 -- END_OF_LINE
 
 T["components"]["end_of_line"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua("bareline.setup()")
-    end
-  },
   parametrize = {
     { ":set eol<CR>", vim.NIL },
     { ":set noeol<CR>", "noeol" }
@@ -166,13 +158,8 @@ end
 -- GIT_HEAD
 
 T["components"]["git_head"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua("bareline.setup()")
-    end
-  },
   parametrize = {
-    { "/tests/resources/git_dir_branch/", "(main)"    },
+    { "/tests/resources/git_dir_branch/", "(main)" },
     { "/tests/resources/git_dir_hash/",   "(b1a8f4a)" },
     { "/tests/resources/git_dir_tag/",    "(b1a8f4a)" },
   }
@@ -189,81 +176,32 @@ end
 T["components"]["file_path_relative_to_cwd"] = new_set({})
 
 T["components"]["file_path_relative_to_cwd"]["basic"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua("bareline.setup()")
-    end
-  },
   parametrize = {
     { { cd = "~", edit = vim.NIL }, "%f" },
     { { cd = "~", edit = "test_file.txt" }, "test_file.txt" },
     {
       {
-        cd = root .. "/tests/resources/dir_a",
+        cd = resources .. "/dir_a",
         edit = "dir_a_a/.gitkeep"
       },
       "dir_a_a/.gitkeep"
     },
     {
       {
-        cd = root .. "/tests/resources/dir_b",
-        edit = root .. "/tests/resources/dir_a/dir_a_a/.gitkeep"
+        cd = resources .. "/dir_b",
+        edit = resources .. "/dir_a/dir_a_a/.gitkeep"
       },
-      root .. "/tests/resources/dir_a/dir_a_a/.gitkeep"
+      resources .. "/dir_a/dir_a_a/.gitkeep"
     },
     -- Main test case. An absolute file path is used for `:e`, but the file path
     -- displayed should be relative to the current working directory.
     {
       {
-        cd = root .. "/tests/resources/dir_a",
-        edit = root .. "/tests/resources/dir_a/dir_a_a/.gitkeep"
+        cd = resources .. "/dir_a",
+        edit = resources .. "/dir_a/dir_a_a/.gitkeep"
       },
       "dir_a_a/.gitkeep"
-    },
-  }
-})
-
-T["components"]["file_path_relative_to_cwd"]["no injection"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua([[bareline.setup({
-        statusline = {
-          { { bareline.components.file_path_relative_to_cwd } },
-          { { bareline.components.file_path_relative_to_cwd } },
-          { { bareline.components.file_path_relative_to_cwd } }
-        }
-      })]])
-    end
-  },
-  parametrize = {
-    { -- Items like %f, %m, etc.
-      root .. "/tests/resources/injection/%f%m",
-      " %f%m "
-    },
-    -- Expressions.
-    {
-      root .. "/tests/resources/injection/%{0}",
-      " %{0} "
-    },
-    {
-        root .. "/tests/resources/injection/%{%0%}",
-      " %{%0%} "
-    },
-    { -- Sections.
-        root .. "/tests/resources/injection/%(0%)",
-      " %(0%) "
-    },
-    { -- Click handlers.
-        root .. "/tests/resources/injection/%10@SwitchBuffer@foo.c%X",
-      " %10@SwitchBuffer@foo.c%X "
-    },
-    -- {
-    --   {
-    --     cd = root .. "/tests/resources",
-    --     edit = "dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
-    --   },
-    --   "dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
-    -- }
+    }
   }
 })
 
@@ -276,22 +214,49 @@ T["components"]["file_path_relative_to_cwd"]["basic"]["success"] = function(
   eq(file_path_relative_to_cwd, expected_file_path)
 end
 
-T["components"]["file_path_relative_to_cwd"]["no injection"]["success"] =
-  function(file, expected_statusline)
+T["components"]["file_path_relative_to_cwd"]["sanitization"] = new_set({
+  parametrize = {
+    { resources .. "/injection/%", " %% ", " % " },
+    { resources .. "/injection/%%", " %%%% ", " %% " },
+    { resources .. "/injection/%f%m", " %%f%%m ", " %f%m " },
+    { resources .. "/injection/%{0}", " %%{0} ", " %{0} " },
+    { resources .. "/injection/%{%0%}", " %%{%%0%%} ", " %{%0%} " },
+    { resources .. "/injection/%(0%)", " %%(0%%) ", " %(0%) " },
+    { resources .. "/injection/%@B@c.c%X", " %%@B@c.c%%X ", " %@B@c.c%X " },
+    -- {
+    --   {
+    --     cd = test_resources .. "",
+    --     edit = "dir_lua_special_^$()%.[]*+-?/.gitkeep"
+    --   },
+    --   "dir_lua_special_^$()%.[]*+-?/.gitkeep"
+    -- }
+  }
+})
+
+T["components"]["file_path_relative_to_cwd"]["sanitization"]["success"] =
+  function(file, expected_statusline, expected_evaluated_statusline)
     child.stop()
     child.restart({ "-u", "scripts/minimal_init.lua", file })
-    child.cmd("cd " .. root .. "/tests/resources/injection")
+    child.lua([[
+    local bareline = require("bareline")
+    bareline.setup({
+      statusline = {
+        { { bareline.components.file_path_relative_to_cwd } },
+        { { bareline.components.file_path_relative_to_cwd } },
+        { { bareline.components.file_path_relative_to_cwd } }
+      }
+    })]])
+    child.cmd("cd " .. resources .. "/injection")
     eq(child.wo.statusline, expected_statusline)
+    eq(
+      vim.api.nvim_eval_statusline(child.wo.statusline, {}).str,
+      expected_evaluated_statusline
+    )
 end
 
 -- DIAGNOSTICS
 
 T["components"]["diagnostics"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua("bareline.setup()")
-    end
-  },
   parametrize = {
     {
       {
@@ -339,13 +304,7 @@ end
 
 -- POSITION
 
-T["components"]["position"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua("bareline.setup()")
-    end
-  },
-})
+T["components"]["position"] = new_set({})
 
 T["components"]["position"]["success"] = function()
   eq(
@@ -380,7 +339,7 @@ T["setup"] = new_set({
           }
         })
       ]])
-      child.cmd("cd " .. root .. "/tests/resources")
+      child.cmd("cd " .. resources)
     end
   }
 })
