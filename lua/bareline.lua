@@ -286,6 +286,9 @@ bareline.components.vim_mode = bareline.BareComponent:new(
 ---@type BareComponent
 bareline.components.plugin_name = bareline.BareComponent:new(
   function()
+    if vim.bo.filetype == "qf" then
+      return "%t%{exists('w:quickfix_title')? ' '.w:quickfix_title : ''}"
+    end
     return string.format("[%s]", vim.bo.filetype:lower():gsub("%s", ""))
   end
 )
@@ -567,7 +570,9 @@ end
 ---@return string
 function h.get_file_path_relative_to_cwd()
   local buf_name = vim.api.nvim_buf_get_name(0)
+  -- Expression file paths.
   if buf_name == "" or vim.bo.filetype == "help" then return "%f" end
+  -- Sanitized file paths.
   local path_relative_to_cwd, _ = string.gsub(
     buf_name, h.escape_lua_pattern(vim.fn.getcwd()) .. "/", "")
   local path_relative_to_cwd_sanitized =
@@ -693,8 +698,11 @@ h.draw_methods_augroup = vim.api.nvim_create_augroup("BarelineDrawMethods", {})
 ---@return boolean
 function h.is_plugin_window(bufnr)
   local filetype = vim.bo[bufnr].filetype
-  local special_non_plugin_filetypes = { nil, "", "help", "man", "qf" }
+  local special_non_plugin_filetypes = { nil, "", "help", "man" }
   local matched_filetype, _ = vim.filetype.match({ buf = bufnr })
+  -- Although the quickfix and location lists are not plugin windows, using the
+  -- plugin window format in these windows looks more sensible.
+  if vim.bo.filetype == "qf" then return true end
   return matched_filetype == nil and not vim.bo.buflisted
     and not vim.tbl_contains(special_non_plugin_filetypes, filetype)
 end

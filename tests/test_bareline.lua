@@ -120,6 +120,42 @@ T["components"]["vim_mode"]["success"] = function(keys, expected_vim_mode)
   eq(vim_mode, expected_vim_mode)
 end
 
+-- PLUGIN_NAME
+
+T["components"]["plugin_name"] = new_set({
+  hooks = {
+    pre_case = function()
+      child.lua([[
+        qf = "%t%{exists('w:quickfix_title')? ' '.w:quickfix_title : ''}"
+      ]])
+    end
+  }
+})
+
+T["components"]["plugin_name"]["quickfix list success"] = function()
+  child.cmd("copen")
+  local plugin_name =
+    child.lua_get("bareline.components.plugin_name:get_value()")
+  eq(plugin_name, child.lua_get("qf"))
+end
+
+T["components"]["plugin_name"]["location list success"] = function()
+  child.cmd("edit " .. resources .. "/foo.txt")
+  child.cmd("lvimgrep 'foo' %")
+  child.cmd("cd " .. resources)
+  child.cmd("lopen")
+  local plugin_name =
+    child.lua_get("bareline.components.plugin_name:get_value()")
+  eq(plugin_name, child.lua_get("qf"))
+end
+
+T["components"]["plugin_name"]["fallback success"] = function()
+  child.bo.filetype = "NvimTree"
+  local plugin_name =
+    child.lua_get("bareline.components.plugin_name:get_value()")
+  eq(plugin_name, "[nvimtree]")
+end
+
 -- INDENT_STYLE
 
 T["components"]["indent_style"] = new_set({
@@ -175,10 +211,26 @@ end
 
 T["components"]["file_path_relative_to_cwd"] = new_set({})
 
-T["components"]["file_path_relative_to_cwd"]["basic"] = new_set({
+T["components"]["file_path_relative_to_cwd"]["%f"] = new_set({})
+
+T["components"]["file_path_relative_to_cwd"]["%f"]["[No Name]"] = function()
+  child.cmd("cd " .. resources)
+  local file_path_relative_to_cwd = child.lua_get(
+    "bareline.components.file_path_relative_to_cwd:get_value()")
+  eq(file_path_relative_to_cwd, "%f")
+end
+
+T["components"]["file_path_relative_to_cwd"]["%f"]["help page"] = function()
+  child.cmd("cd " .. resources)
+  child.cmd("help")
+  local file_path_relative_to_cwd = child.lua_get(
+    "bareline.components.file_path_relative_to_cwd:get_value()")
+  eq(file_path_relative_to_cwd, "%f")
+end
+
+T["components"]["file_path_relative_to_cwd"]["trim cwd"] = new_set({
   parametrize = {
-    { { cd = "~", edit = vim.NIL }, "%f" },
-    { { cd = "~", edit = "test_file.txt" }, "test_file.txt" },
+    { { cd = resources, edit = "test_file.txt" }, "test_file.txt" },
     {
       {
         cd = resources .. "/dir_a",
@@ -205,10 +257,10 @@ T["components"]["file_path_relative_to_cwd"]["basic"] = new_set({
   }
 })
 
-T["components"]["file_path_relative_to_cwd"]["basic"]["success"] = function(
+T["components"]["file_path_relative_to_cwd"]["trim cwd"]["success"] = function(
     setup, expected_file_path)
   child.cmd("cd " .. setup.cd)
-  if setup.edit ~= vim.NIL then child.cmd("edit " .. setup.edit) end
+  child.cmd("edit " .. setup.edit)
   local file_path_relative_to_cwd = child.lua_get(
     "bareline.components.file_path_relative_to_cwd:get_value()")
   eq(file_path_relative_to_cwd, expected_file_path)
