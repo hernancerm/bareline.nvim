@@ -214,7 +214,7 @@ T["components"]["file_path_relative_to_cwd"]["basic"]["success"] = function(
   eq(file_path_relative_to_cwd, expected_file_path)
 end
 
-T["components"]["file_path_relative_to_cwd"]["sanitization"] = new_set({
+T["components"]["file_path_relative_to_cwd"]["sanitize"] = new_set({
   parametrize = {
     { resources .. "/injection/%", " %% ", " % " },
     { resources .. "/injection/%%", " %%%% ", " %% " },
@@ -223,6 +223,10 @@ T["components"]["file_path_relative_to_cwd"]["sanitization"] = new_set({
     { resources .. "/injection/%{%0%}", " %%{%%0%%} ", " %{%0%} " },
     { resources .. "/injection/%(0%)", " %%(0%%) ", " %(0%) " },
     { resources .. "/injection/%@B@c.c%X", " %%@B@c.c%%X ", " %@B@c.c%X " },
+    { resources .. "/injection/%<", " %%< ", " %< " },
+    { resources .. "/injection/%=", " %%= ", " %= " },
+    { resources .. "/injection/%#Normal#", " %%#Normal# ", " %#Normal# " },
+    { resources .. "/injection/%1*%*", " %%1*%%* ", " %1*%* " },
     -- {
     --   {
     --     cd = test_resources .. "",
@@ -233,7 +237,7 @@ T["components"]["file_path_relative_to_cwd"]["sanitization"] = new_set({
   }
 })
 
-T["components"]["file_path_relative_to_cwd"]["sanitization"]["success"] =
+T["components"]["file_path_relative_to_cwd"]["sanitize"]["success"] =
   function(file, expected_statusline, expected_evaluated_statusline)
     child.stop()
     child.restart({ "-u", "scripts/minimal_init.lua", file })
