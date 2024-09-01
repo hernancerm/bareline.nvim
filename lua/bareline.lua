@@ -569,7 +569,7 @@ function h.get_file_path_relative_to_cwd()
   local buf_name = vim.api.nvim_buf_get_name(0)
   if buf_name == "" or vim.bo.filetype == "help" then return "%f" end
   local path_relative_to_cwd, _ = string.gsub(
-      buf_name, h.escape_lua_pattern(vim.fn.getcwd()) .. "/", "")
+    buf_name, h.escape_lua_pattern(vim.fn.getcwd()) .. "/", "")
   local path_relative_to_cwd_sanitized =
     string.gsub(path_relative_to_cwd, "%%", "%%%0")
   return path_relative_to_cwd_sanitized

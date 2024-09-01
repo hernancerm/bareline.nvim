@@ -226,14 +226,7 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"] = new_set({
     { resources .. "/injection/%<", " %%< ", " %< " },
     { resources .. "/injection/%=", " %%= ", " %= " },
     { resources .. "/injection/%#Normal#", " %%#Normal# ", " %#Normal# " },
-    { resources .. "/injection/%1*%*", " %%1*%%* ", " %1*%* " },
-    -- {
-    --   {
-    --     cd = test_resources .. "",
-    --     edit = "dir_lua_special_^$()%.[]*+-?/.gitkeep"
-    --   },
-    --   "dir_lua_special_^$()%.[]*+-?/.gitkeep"
-    -- }
+    { resources .. "/injection/%1*%*", " %%1*%%* ", " %1*%* " }
   }
 })
 
@@ -255,6 +248,30 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"]["success"] =
     eq(
       vim.api.nvim_eval_statusline(child.wo.statusline, {}).str,
       expected_evaluated_statusline
+    )
+end
+
+T["components"]["file_path_relative_to_cwd"]["lua_special_chars"] = new_set({})
+
+T["components"]["file_path_relative_to_cwd"]["lua_special_chars"]["success"] =
+  function()
+    local file = resources .. "/dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
+    child.stop()
+    child.restart({ "-u", "scripts/minimal_init.lua", file })
+    child.lua([[
+    local bareline = require("bareline")
+    bareline.setup({
+      statusline = {
+        { { bareline.components.file_path_relative_to_cwd } },
+        { { bareline.components.file_path_relative_to_cwd } },
+        { { bareline.components.file_path_relative_to_cwd } }
+      }
+    })]])
+    child.cmd("cd " .. resources)
+    eq(child.wo.statusline, " dir_lua_special_chars_^$()%%.[]*+-?/.gitkeep ")
+    eq(
+      vim.api.nvim_eval_statusline(child.wo.statusline, {}).str,
+      " dir_lua_special_chars_^$()%.[]*+-?/.gitkeep "
     )
 end
 
