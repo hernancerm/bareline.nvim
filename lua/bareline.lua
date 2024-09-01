@@ -82,7 +82,7 @@ local function assign_default_config()
       { -- Statusline 1: Active window.
         { -- Section 1: Left.
           bareline.components.vim_mode,
-          bareline.components.get_file_path_relative_to_cwd,
+          bareline.components.file_path_relative_to_cwd,
           bareline.components.lsp_servers,
           "%m", "%h", "%r",
         },
@@ -98,7 +98,7 @@ local function assign_default_config()
       { -- Statusline 2: Inactive window.
         { -- Section 1: Left.
           bareline.components.vim_mode:mask(" "),
-          bareline.components.get_file_path_relative_to_cwd,
+          bareline.components.file_path_relative_to_cwd,
           bareline.components.lsp_servers,
           "%m", "%h", "%r",
         },
@@ -367,8 +367,8 @@ bareline.components.lsp_servers = bareline.BareComponent:new(
 --- The file path relative to the current working directory (|:pwd|).
 --- Mockup: `lua/bareline.lua`
 ---@type BareComponent
-bareline.components.get_file_path_relative_to_cwd = bareline.BareComponent:new(
-  function () return h.provide_file_path_relative_to_cwd() end
+bareline.components.file_path_relative_to_cwd = bareline.BareComponent:new(
+  function () return h.get_file_path_relative_to_cwd() end
 )
 
 --- Diagnostics.
@@ -565,7 +565,7 @@ end
 --- path is returned. This is meant to be used instead of the field `%f` (see
 --- 'statusline') for a more consistent experience.
 ---@return string
-function h.provide_file_path_relative_to_cwd()
+function h.get_file_path_relative_to_cwd()
   local buf_name = vim.api.nvim_buf_get_name(0)
   if buf_name == "" or vim.bo.filetype == "help" then return "%f" end
   local replacement, _ = string.gsub(
