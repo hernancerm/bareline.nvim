@@ -371,7 +371,18 @@ bareline.components.lsp_servers = bareline.BareComponent:new(
 --- Mockup: `lua/bareline.lua`
 ---@type BareComponent
 bareline.components.file_path_relative_to_cwd = bareline.BareComponent:new(
-  function () return h.get_file_path_relative_to_cwd() end
+  function ()
+    local buf_name = vim.api.nvim_buf_get_name(0)
+    -- Expression file paths.
+    if buf_name == "" or vim.bo.filetype == "help" then return "%f" end
+    -- Sanitized file paths.
+    local path_relative_to_cwd, _ = string.gsub(
+      buf_name, h.escape_lua_pattern(vim.fn.getcwd()) .. "/", "")
+    local path_relative_to_cwd_sanitized =
+      string.gsub(path_relative_to_cwd, "%%", "%%%0")
+    -- Truncate at start if path is too long.
+    return "%<" .. path_relative_to_cwd_sanitized
+  end
 )
 
 --- Diagnostics.
@@ -560,24 +571,6 @@ function h.provide_lsp_server_names()
     end,
     vim.lsp.get_clients({ bufnr = 0 })
   )
-end
-
---- Stable `%f`.
---- Returns the file path of the current buffer relative to the current working
---- directory (|:pwd|). If the file opened is not in this dir, then the absolute
---- path is returned. This is meant to be used instead of the field `%f` (see
---- 'statusline') for a more consistent experience.
----@return string
-function h.get_file_path_relative_to_cwd()
-  local buf_name = vim.api.nvim_buf_get_name(0)
-  -- Expression file paths.
-  if buf_name == "" or vim.bo.filetype == "help" then return "%f" end
-  -- Sanitized file paths.
-  local path_relative_to_cwd, _ = string.gsub(
-    buf_name, h.escape_lua_pattern(vim.fn.getcwd()) .. "/", "")
-  local path_relative_to_cwd_sanitized =
-    string.gsub(path_relative_to_cwd, "%%", "%%%0")
-  return path_relative_to_cwd_sanitized
 end
 
 -- BUILD

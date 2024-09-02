@@ -1,36 +1,7 @@
 ---@diagnostic disable: undefined-field, undefined-global
 
--- Ideas of what to test:
--- - Default config, black box test the final assigned value of 'statusline'.
---   - All window states:
---     - Active window.
---     - Inactive window.
---     - Plugin window.
---   - For each window state, consider edge cases, e.g.:
---     - File name contains Lua pattern special character.
---     - Buffer is unmodifiable.
---     - Buffer does not have an end of line.
---     - Buffer is quick fix list.
---     - Buffer is location list.
--- How to write the tests: https://github.com/echasnovski/mini.nvim
-
--- Injection tests:
--- 1. N/A: %! for expression: set statusline=%!MyStatusLine()
--- 2. %f, %m, etc., items.
--- 3. %{%} for expression.
--- 4. %{%%} for expression.
--- 5. %(%) for section.
--- 6. Specials:
---   - %
---   - %%
---   - %@
---   - %<
---   - %=
---   - %#
---   - %*
--- 7. Grand finale: dir_lua_special_chars_^$()%.[]*+-?
-
--- Basic tests, not thorough.
+-- TODO: Pending tests:
+-- [ ] File path too long gets truncated at the start.
 
 -- See: https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md
 
