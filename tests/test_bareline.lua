@@ -1,8 +1,5 @@
 ---@diagnostic disable: undefined-field, undefined-global
 
--- TODO: Pending tests:
--- [ ] File path too long gets truncated at the start.
-
 -- See: https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md
 
 local root = vim.uv.cwd()
@@ -201,20 +198,20 @@ end
 
 T["components"]["file_path_relative_to_cwd"]["trim cwd"] = new_set({
   parametrize = {
-    { { cd = resources, edit = "test_file.txt" }, "test_file.txt" },
+    { { cd = resources, edit = "test_file.txt" }, "%<test_file.txt" },
     {
       {
         cd = resources .. "/dir_a",
         edit = "dir_a_a/.gitkeep"
       },
-      "dir_a_a/.gitkeep"
+      "%<dir_a_a/.gitkeep"
     },
     {
       {
         cd = resources .. "/dir_b",
         edit = resources .. "/dir_a/dir_a_a/.gitkeep"
       },
-      resources .. "/dir_a/dir_a_a/.gitkeep"
+      "%<" .. resources .. "/dir_a/dir_a_a/.gitkeep"
     },
     -- Main test case. An absolute file path is used for `:e`, but the file path
     -- displayed should be relative to the current working directory.
@@ -223,7 +220,7 @@ T["components"]["file_path_relative_to_cwd"]["trim cwd"] = new_set({
         cd = resources .. "/dir_a",
         edit = resources .. "/dir_a/dir_a_a/.gitkeep"
       },
-      "dir_a_a/.gitkeep"
+      "%<" .. "dir_a_a/.gitkeep"
     }
   }
 })
@@ -239,17 +236,17 @@ end
 
 T["components"]["file_path_relative_to_cwd"]["sanitize"] = new_set({
   parametrize = {
-    { resources .. "/injection/%", " %% ", " % " },
-    { resources .. "/injection/%%", " %%%% ", " %% " },
-    { resources .. "/injection/%f%m", " %%f%%m ", " %f%m " },
-    { resources .. "/injection/%{0}", " %%{0} ", " %{0} " },
-    { resources .. "/injection/%{%0%}", " %%{%%0%%} ", " %{%0%} " },
-    { resources .. "/injection/%(0%)", " %%(0%%) ", " %(0%) " },
-    { resources .. "/injection/%@B@c.c%X", " %%@B@c.c%%X ", " %@B@c.c%X " },
-    { resources .. "/injection/%<", " %%< ", " %< " },
-    { resources .. "/injection/%=", " %%= ", " %= " },
-    { resources .. "/injection/%#Normal#", " %%#Normal# ", " %#Normal# " },
-    { resources .. "/injection/%1*%*", " %%1*%%* ", " %1*%* " }
+    { resources .. "/injection/%", " %<%% ", " % " },
+    { resources .. "/injection/%%", " %<%%%% ", " %% " },
+    { resources .. "/injection/%f%m", " %<%%f%%m ", " %f%m " },
+    { resources .. "/injection/%{0}", " %<%%{0} ", " %{0} " },
+    { resources .. "/injection/%{%0%}", " %<%%{%%0%%} ", " %{%0%} " },
+    { resources .. "/injection/%(0%)", " %<%%(0%%) ", " %(0%) " },
+    { resources .. "/injection/%@B@c.c%X", " %<%%@B@c.c%%X ", " %@B@c.c%X " },
+    { resources .. "/injection/%<", " %<%%< ", " %< " },
+    { resources .. "/injection/%=", " %<%%= ", " %= " },
+    { resources .. "/injection/%#Normal#", " %<%%#Normal# ", " %#Normal# " },
+    { resources .. "/injection/%1*%*", " %<%%1*%%* ", " %1*%* " }
   }
 })
 
@@ -291,10 +288,35 @@ T["components"]["file_path_relative_to_cwd"]["lua_special_chars"]["success"] =
       }
     })]])
     child.cmd("cd " .. resources)
-    eq(child.wo.statusline, " dir_lua_special_chars_^$()%%.[]*+-?/.gitkeep ")
+    eq(child.wo.statusline, " %<dir_lua_special_chars_^$()%%.[]*+-?/.gitkeep ")
     eq(
       vim.api.nvim_eval_statusline(child.wo.statusline, {}).str,
       " dir_lua_special_chars_^$()%.[]*+-?/.gitkeep "
+    )
+end
+
+T["components"]["file_path_relative_to_cwd"]["truncate_long_path"] = new_set({})
+
+T["components"]["file_path_relative_to_cwd"]["truncate_long_path"]["success"] =
+  function()
+    child.restart({ "-u", "scripts/minimal_init.lua", file })
+    child.lua([[
+    local bareline = require("bareline")
+    bareline.setup({
+      statusline = {
+        { { bareline.components.file_path_relative_to_cwd } },
+        { { bareline.components.file_path_relative_to_cwd } },
+        { { bareline.components.file_path_relative_to_cwd } }
+      }
+    })]])
+    child.cmd("cd " .. resources)
+    child.cmd("edit " .. "123456789012")
+    child.o.columns = 12
+    eq(child.wo.statusline, " %<123456789012 ")
+    eq(
+      vim.api.nvim_eval_statusline(
+        child.wo.statusline, { maxwidth = child.o.columns }).str,
+      " <456789012 "
     )
 end
 
