@@ -2,15 +2,17 @@
 ---
 --- MIT License Copyright (c) 2024 Hernán Cervera.
 ---
+---                                              Press gO for a table of contents.
 --- ==============================================================================
 --- #tag bareline-intro
+--- Introduction ~
 ---
---- Key design ideas ~
+--- Key design ideas
 ---
 --- 1. Ease of configuration.
 --- 2. No timer required. Update immediately as changes happen.
 ---
---- Concepts ~
+--- Concepts
 ---
 --- Bareline conceptualizes a statusline in this way:
 --- * A statusline is a list of sections.
@@ -30,16 +32,17 @@ local bareline = {}
 local h = {}
 
 --- #delimiter
+--- #tag bareline-quickstart
+--- Quickstart ~
 
---- Module setup.
----
 --- To enable the plugin you need to call the `setup()` function. Usage:
 --- >lua
+---   vim.o.showmode = false
 ---   local bareline = require("bareline")
 ---   bareline.setup() -- You may provide a table for your configuration.
 --- <
---- I recommend disabling 'showmode', so only Bareline shows the Vim mode.
----
+
+--- Module setup.
 ---@param config table|nil If a table is provided, it's merged with the default
 --- config (|bareline.default_config|) and the keys in the user's config take
 --- precedence. If `config` is nil, then the default config is used.
@@ -54,9 +57,8 @@ end
 
 --- #delimiter
 --- #tag bareline.default_config
+--- Default configuration ~
 
---- Behavior ~
----
 --- The default config used for |bareline.setup()| uses distinct statuslines for
 --- active, inactive and plugin windows. Here is a sample of how the statuslines
 --- can look:
@@ -68,7 +70,7 @@ end
 --- Plugin window:
 --- * | [nvimtree]  [-]                                                 28,09/33 |
 ---
---- Default config ~
+--- Default configuration
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
 --minidoc_replace_start
 local function assign_default_config()
@@ -125,6 +127,7 @@ end
 
 --- #delimiter
 --- #tag bareline-custom-config
+--- Custom configuration ~
 
 --- To override the defaults (|bareline.default_config|), change only the values
 --- of the keys that you need. You do not have to copy paste the entire defaults.
@@ -139,7 +142,7 @@ end
 ---   })
 --- <
 --- Custom components: Each statusline sections is a list-like table of
---- components. These components can be Bareline's built-in
+--- components. These components can be Bareline's built-in components
 --- (|bareline.components|) or a type as below:
 ---
 --- 1. String: Gets evaluated as a statusline string (see 'statusline'). Examples:
@@ -158,7 +161,7 @@ end
 ---    end
 ---    -- Possible output: "bareline.nvim".
 --- <
---- 3. |bareline.BareComponent|: Create one of tyis type if you need to specify a
+--- 3. |bareline.BareComponent|: Create one of this type if you need to specify a
 ---    watching config on when to redraw the statusline to keep the component
 ---    up-to-date. This is for when you need to watch a file or directory or
 ---    register autocommands. Use: |bareline.BareComponentWatcher|
@@ -167,6 +170,7 @@ end
 ---    can get away with a string or function component. The autocmds configured
 ---    by default might be enough to monitor what you are displaying in your
 ---    statusline:
+---
 ---      |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|,
 ---      |FocusGained|, |OptionSet|, |DirChanged|.
 
@@ -178,6 +182,7 @@ bareline.components = {}
 
 --- #delimiter
 --- #tag bareline-bare-component
+--- BareComponent ~
 
 --- All built-in components (|bareline.components|) are a |bareline.BareComponent|.
 --- To create your own components, you can use this class or, more simply, follow
@@ -257,10 +262,11 @@ end
 
 --- #delimiter
 --- #tag bareline.components
+--- Built-in components ~
 
---- Built-in components, meant to be used for |bareline.setup()|. These are all
---- structured as a |bareline.BareComponent|. User created components may have a
---- simpler structure. See |bareline-custom-config|.
+--- Built-in components for use for |bareline.setup()|. These are all structured
+--- as a |bareline.BareComponent|. User created components may have a simpler
+--- structure. See |bareline-custom-config|.
 
 --- Vim mode.
 --- The Vim mode in 3 characters.
