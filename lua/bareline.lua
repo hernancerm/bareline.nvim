@@ -3,12 +3,12 @@
 --- MIT License Copyright (c) 2024 Hernán Cervera.
 ---
 --- ==============================================================================
+--- #tag bareline-intro
 ---
 --- Key design ideas ~
 ---
 --- 1. Ease of configuration.
----
---- 2. Update immediately as changes happen. No timer required.
+--- 2. No timer required. Update immediately as changes happen.
 ---
 --- Concepts ~
 ---
@@ -40,10 +40,9 @@ local h = {}
 --- <
 --- I recommend disabling 'showmode', so only Bareline shows the Vim mode.
 ---
----@param config table|nil Module config table. |bareline.default_config| defines
---- the default configuration. If the `config` arg is nil, then the default config
---- is used. If a config table is provided, it's merged with the default config
---- and the keys in the user's config take precedence.
+---@param config table|nil If a table is provided, it's merged with the default
+--- config (|bareline.default_config|) and the keys in the user's config take
+--- precedence. If `config` is nil, then the default config is used.
 function bareline.setup(config)
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
   h.draw_methods.draw_active_inactive_plugin(
@@ -58,9 +57,9 @@ end
 
 --- Behavior ~
 ---
---- The default `config` used for |bareline.setup()| uses distinct statuslines for
---- active, inactive and plugin windows. The resulting style is inspired by
---- Helix's default statusline:
+--- The default config used for |bareline.setup()| uses distinct statuslines for
+--- active, inactive and plugin windows. Here is a sample of how the statuslines
+--- can look:
 ---
 --- Active window:
 --- * | NOR  lua/bareline.lua  [lua_ls]      e:2,w:1  spaces-2  (main)  42,21/50 |
@@ -68,7 +67,6 @@ end
 --- * |      lua/bareline.lua  [lua_ls]              e:2,w:1  spaces-2  42,21/50 |
 --- Plugin window:
 --- * | [nvimtree]  [-]                                                 28,09/33 |
----                      https://github.com/helix-editor/helix
 ---
 --- Default config ~
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
@@ -125,24 +123,53 @@ end
 --minidoc_replace_end
 --minidoc_afterlines_end
 
---- Overriding the defaults ~
+--- #delimiter
+--- #tag bareline-custom-config
+
+--- To override the defaults (|bareline.default_config|), change only the values
+--- of the keys that you need. You do not have to copy paste the entire defaults.
+--- For example, if you want to make the inactive statusline be the same as the
+--- default active one, you can call |bareline.setup()| like this:
+--- >lua
+---   local bareline = require("bareline")
+---   bareline.setup({
+---     statuslines = {
+---       inactive = bareline.default_config.statuslines.active
+---     }
+---   })
+--- <
+--- Custom components: Each statusline sections is a list-like table of
+--- components. These components can be Bareline's built-in
+--- (|bareline.components|) or a type as below:
 ---
---- To override the defaults, copy/paste the default config as a starting point to
---- use for the function |bareline.setup()|.
+--- 1. String: Gets evaluated as a statusline string (see 'statusline'). Examples:
+---    * Arbitrary string: `"PROSE"`. In the statusline you'll see `PROSE`.
+---    * Options: `vim.bo.fileformat`. In the statusline you might see `unix`.
+---    * Statusline item: `"%r"`. In the statusline you might see `[RO]`.
 ---
---- Custom components: These are the allowed types for `user supplied components`:
+--- 2. Function: Returns a string or nil. When a string, it's placed in the
+---    statusline; when nil, the component is skipped. Example:
+--- >lua
+---    -- Current working directory.
+---    local component_cwd = function ()
+---      local cwd = vim.uv.cwd() or ""
+---      if cwd == vim.uv.os_getenv("HOME", 60) then return "~" end
+---      return vim.fn.fnamemodify(cwd, ":t")
+---    end
+---    -- Possible output: "bareline.nvim".
+--- <
+--- 3. |bareline.BareComponent|: Create one of tyis type if you need to specify a
+---    watching config on when to redraw the statusline to keep the component
+---    up-to-date. This is for when you need to watch a file or directory or
+---    register autocommands. Use: |bareline.BareComponentWatcher|
 ---
---- * String: Useful for very simple components, for example, statusline items
----   like `%r` (see 'statusline') or options like 'fileformat'.
---- * Function: Must return either a string or nil. The returned string is
----   what gets placed in the statusline. When nil is returned, the component
----   is skipped, leaving no gap.
---- * |bareline.BareComponent|: Object which allows component configuration. The
----   bundled components follow this structure (|bareline.components|). This is
----   used to provide a watching config, to avoid using a timer. In some cases,
----   watching can work even without a user-supplied watching configuration, refer
----   to |bareline.BareComponentWatcher|, in those cases you can simply use a
----   string or function component.
+---    For several use cases, you don't need to specify a watching config, so you
+---    can get away with a string or function component. The autocmds configured
+---    by default might be enough to monitor what you are displaying in your
+---    statusline:
+---      |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|,
+---      |FocusGained|, |OptionSet|, |DirChanged|.
+
 ---@alias UserSuppliedComponent string|function|BareComponent
 
 -- COMPONENTS
@@ -150,11 +177,16 @@ end
 bareline.components = {}
 
 --- #delimiter
+--- #tag bareline-bare-component
+
+--- All built-in components (|bareline.components|) are a |bareline.BareComponent|.
+--- To create your own components, you can use this class or, more simply, follow
+--- the alternate component types described in |bareline-custom-config|.
+---
+--- For examples on how to create a |bareline.BareComponent|, see the source code
+--- of this plugin on the built-in components.
 
 --- Standardized component.
---- All bundled components are structured like this. To create your own
---- components, you can use this class or, more simply, follow the alternate
---- component types described in |bareline.default_config|.
 ---@class BareComponent
 ---@field value string|function Provides the value displayed in the statusline,
 --- like the Vim mode. When a function, should return a single value of any type.
@@ -171,24 +203,21 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- it expects no args and should return a list with the Vim modes.
 
 --- #tag bareline.BareComponentWatcher
---- Defines the structure of watcher configuration for a component.
+--- Defines watcher configuration for a component.
 --- With Bareline, you don't need a timer to have the statusline update when you
 --- expect it to. Since there is no fixed redraw, the plugin needs a way to know
 --- when to do a redraw. That knowledge is provided to Bareline in a per component
---- basis through the watcher configuration. When adding new components, you don't
---- have to worry about watchers if the base autocmds are enough: |BufNew|,
---- |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|, |FocusGained|,
---- |OptionSet|, |DirChanged|.
+--- basis through this watcher configuration.
 ---@class BareComponentWatcher
 ---@field autocmd table Expects a table with the keys `event` and `opts`. These
---- values are passed as is to |vim.api.nvim_create_autocmd()|.
+--- values are passed as-is to |vim.api.nvim_create_autocmd()|.
 ---@field filepath string|function Filepath to watch. Alternatively, a function
----which expects zero args can be provided to compute the filepath.
+--- which expects zero args can be provided to compute the filepath.
 
 --- Constructor.
 --- Parameters ~
 --- {value} `function|string` As a function, it expects no args and returns a
---- single value of any type. As a string, is used as is.
+--- single value of any type. As a string, is used as-is.
 --- {opts} BareComponentOpts Options.
 --- Return ~
 --- Bareline.BareComponent
@@ -229,12 +258,9 @@ end
 --- #delimiter
 --- #tag bareline.components
 
---- Bundled components, meant to be used for the function |bareline.setup()|.
---- These are all structured as a |bareline.BareComponent|.
----
---- User supplied components can have a simpler structure. Read the section
---- 'Overriding the defaults' from |bareline.default_config|.
----
+--- Built-in components, meant to be used for |bareline.setup()|. These are all
+--- structured as a |bareline.BareComponent|. User created components may have a
+--- simpler structure. See |bareline-custom-config|.
 
 --- Vim mode.
 --- The Vim mode in 3 characters.
@@ -423,7 +449,7 @@ function h.draw_methods.draw_active_inactive_plugin(
     stl_window_active, stl_window_inactive, stl_window_plugin)
 
   -- Create base autocmds.
-  -- DOCS: Keep in sync with "bareline.BareComponentWatcher".
+  -- DOCS: Keep in sync with bareline-custom-config.
   vim.api.nvim_create_autocmd(
     {
       "BufNew", "BufEnter", "BufWinEnter", "WinEnter",

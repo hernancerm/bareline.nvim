@@ -24,7 +24,7 @@ hooks.write_pre = function(lines)
     if string.find(line, "^#delimiter$") then
       return string.rep("-", 78)
     end
-    if string.find(line, "^#tag [%w%d._]+$") then
+    if string.find(line, "^#tag [%w%d._-]+$") then
       return string.format("%80s", "*" .. vim.fn.split(line, " ")[2] .. "*")
     end
     return line
