@@ -115,13 +115,11 @@ Please refer to the help file: [bareline.txt](./doc/bareline.txt).
 ## Similar plugins
 
 - [lualine.nvim](https://github.com/nvim-lualine/lualine.nvim)
-- [mini.statusline](https://github.com/echasnovski/mini.nvim/blob/main/readmes/mini-statusline.md)
 - [express_line.nvim](https://github.com/tjdevries/express_line.nvim)
-- [vim-airline](https://github.com/vim-airline/vim-airline)
-- [lightline.vim](https://github.com/itchyny/lightline.vim)
+- [mini.statusline](https://github.com/echasnovski/mini.nvim/blob/main/readmes/mini-statusline.md)
 - [staline.nvim](https://github.com/tamton-aquib/staline.nvim)
 
-## Why another statusline plugin?
+## Why another plugin?
 
 > In the Steven Spielberg movie "E.T.," why is the alien brown? No reason. In "Love Story," why do
 > the two characters fall madly in love with each other? No reason. In Oliver Stone's "JFK," why is

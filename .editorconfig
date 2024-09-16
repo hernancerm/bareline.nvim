@@ -15,5 +15,5 @@ indent_style = space
 max_line_length = 80
 
 [lua/*.lua]
-# Align with help file hard wrap.
+# Align with the Vim help file hard wrap.
 max_line_length = 82
