@@ -10,7 +10,8 @@ Introduction ~
 Key design ideas
 
 1. Ease of configuration.
-2. No timer required. Update immediately as changes happen.
+2. Batteries included experience.
+3. No timer required. Update immediately as changes happen.
 
 Concepts
 

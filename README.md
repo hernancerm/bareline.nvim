@@ -1,40 +1,6 @@
-# bareline.nvim
-
-TODO: Update anything not up to date (screenshots, default config, etc.)
+# Bareline
 
 Configure your statusline with ease.
-
-## Features
-
-- Simple configuration.
-- Batteries included experience.
-- Data providers to use this plugin as a library, if you so wish.
-
-## Limitations
-
-- Reliance on a timer (and some autocmds), so updates of some components have a brief delay.
-- No fancy colors. The colors of the entire statusline itself depend on your color scheme.
-- No fancy separators.
-
-## Requirements
-
-- Works on Neovim 0.10.0. Not tested on other versions.
-
-## Installation
-
-Use your favorite package manager. For example, [Lazy.nvim](https://github.com/folke/lazy.nvim):
-
-```lua
-{
-  "hernancerm/bareline.nvim",
-  opts = {}
-},
-```
-
-The function `require("barelilne").setup({config})` needs to be called for Bareline to draw the
-statusline. Lazy.nvim does this automatically using the snippet above.
-
-## Default config
 
 Bareline comes with sensible defaults to provide a batteries included experience. Demo:
 
@@ -59,26 +25,49 @@ Bareline comes with sensible defaults to provide a batteries included experience
 
 <div align=center>
   <p>
-    Color scheme for the demo: <code>github_light</code>, from
-    <a href="https://github.com/projekt0n/github-nvim-theme">projekt0n/github-nvim-theme</a>
+    Colorscheme config for the demo: <code>colorscheme lunaperche|set background=light</code>
   </p>
 </div>
 
+## Features
 
-Defaults:
+- Simple configuration.
+- Batteries included experience.
+- No timer. Update immediately as changes happen.
+
+## Limitations
+
+- No fancy colors. The colors of the entire statusline itself depend on your color scheme.
+- No fancy separators. Components are separated by whitespace.
+
+## Requirements
+
+- Works on Neovim 0.10.1. Not tested on other versions.
+
+## Installation
+
+Use your favorite package manager. For example, [Lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 {
-  -- Function which takes a single argument, the `statusline` table. Based
-  -- on the draw method, `statusline` might need to contain more than one
-  -- statusline definition. With the default, 3 statuslines are expected.
-  draw_method = bareline.draw_methods.draw_active_inactive_plugin,
+  "hernancerm/bareline.nvim",
+  opts = {}
+},
+```
 
-  statusline = {
-    { -- Statusline 1: Active window.
+The function `require("barelilne").setup({config})` needs to be called for Bareline to draw the
+statusline. Lazy.nvim does this automatically using the snippet above.
+
+## Default config
+
+```lua
+{
+  statuslines = {
+    -- Active window.
+    active = {
       { -- Section 1: Left.
         bareline.components.vim_mode,
-        bareline.components.get_file_path_relative_to_cwd,
+        bareline.components.file_path_relative_to_cwd,
         bareline.components.lsp_servers,
         "%m", "%h", "%r",
       },
@@ -86,15 +75,15 @@ Defaults:
         bareline.components.diagnostics,
         bareline.components.indent_style,
         bareline.components.end_of_line,
-        bareline.components.git_branch,
+        bareline.components.git_head,
         bareline.components.position,
       },
     },
-
-    { -- Statusline 2: Inactive window.
+    -- Inactive windows.
+    inactive = {
       { -- Section 1: Left.
         bareline.components.vim_mode:mask(" "),
-        bareline.components.get_file_path_relative_to_cwd,
+        bareline.components.file_path_relative_to_cwd,
         bareline.components.lsp_servers,
         "%m", "%h", "%r",
       },
@@ -105,10 +94,11 @@ Defaults:
         bareline.components.position,
       },
     },
-
-    { -- Statusline 3: Plugin window.
+    -- Plugin windows.
+    plugin = {
       { -- Section 1: Left.
-        bareline.components.plugin_name
+        bareline.components.plugin_name,
+        "%m"
       },
       { -- Section 2: Right.
         bareline.components.position
@@ -118,27 +108,7 @@ Defaults:
 }
 ```
 
-## Overriding the defaults
-
-Copy/paste the default config table ([Default config](#default-config)) or modify a deep copy of it,
-and pass that to `require("bareline").setup({config})`. Example of the latter approach:
-
-```lua
-local bareline = require("bareline")
--- Custom component.
-local component_prose_mode = function ()
-  if string.find(vim.bo.formatoptions, "a") then return "PROSE" end
-  return nil
-end
--- Overrides to default config.
-local config = vim.deepcopy(bareline.default_config)
-table.insert(config.statusline[1][1], 2, component_prose_mode)
-table.insert(config.statusline[2][1], 2, component_prose_mode)
--- Draw statusline.
-bareline.setup(config)
-```
-
-## Complete documentation
+## Documentation
 
 Please refer to the help file: [bareline.txt](./doc/bareline.txt).
 
@@ -151,7 +121,7 @@ Please refer to the help file: [bareline.txt](./doc/bareline.txt).
 - [lightline.vim](https://github.com/itchyny/lightline.vim)
 - [staline.nvim](https://github.com/tamton-aquib/staline.nvim)
 
-## Why yet another statusline plugin?
+## Why another statusline plugin?
 
 > In the Steven Spielberg movie "E.T.," why is the alien brown? No reason. In "Love Story," why do
 > the two characters fall madly in love with each other? No reason. In Oliver Stone's "JFK," why is
@@ -167,7 +137,3 @@ No reason.
 ## License
 
 [MIT](./LICENSE)
-
-> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. [...]
