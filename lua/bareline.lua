@@ -46,11 +46,11 @@ local h = {}
 --- and the keys in the user's config take precedence.
 function bareline.setup(config)
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
-  h.draw_methods.draw_active_inactive_plugin({
+  h.draw_methods.draw_active_inactive_plugin(
     bareline.config.window_active,
     bareline.config.window_inactive,
     bareline.config.window_plugin
-  })
+  )
 end
 
 --- #delimiter
@@ -412,22 +412,16 @@ assign_default_config()
 
 h.draw_methods = {}
 
--- Draw methods are functions which take a single argument, a table holding one or
--- more statuslines, and implement how the statusline(s) is(are) drawn.
-
 --- Draw distinct statuslines for active, inactive and plugin windows.
 --- Relies on base |autocmd|s and user-supplied autocmds and file paths which are
 --- watched using |uv_fs_event_t|s. The provided statuslines are handled in this
 --- order by table index: [1] draw on the active window, [2] inactive window and
 --- [3] plugin window (having precedence over the active window statusline).
----@param statuslines BareStatusline[]
-function h.draw_methods.draw_active_inactive_plugin(statuslines)
-  ---@type BareStatusline
-  local stl_window_active = statuslines[1]
-  ---@type BareStatusline
-  local stl_window_inactive = statuslines[2]
-  ---@type BareStatusline
-  local stl_window_plugin = statuslines[3]
+---@param stl_window_active BareStatusline
+---@param stl_window_inactive BareStatusline
+---@param stl_window_plugin BareStatusline
+function h.draw_methods.draw_active_inactive_plugin(
+    stl_window_active, stl_window_inactive, stl_window_plugin)
 
   -- Create base autocmds.
   -- DOCS: Keep in sync with "bareline.BareComponentWatcher".
@@ -461,6 +455,9 @@ function h.draw_methods.draw_active_inactive_plugin(statuslines)
       end,
     }
   )
+
+  local statuslines = {
+    stl_window_active, stl_window_inactive, stl_window_plugin }
 
   -- Create component-specific autocmds.
   h.create_bare_component_autocmds(statuslines, 2, function()
