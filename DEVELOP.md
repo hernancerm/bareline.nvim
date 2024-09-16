@@ -28,6 +28,7 @@ vim.o.formatlistpat = [[^\s*\d\+[\]:.)}\t ]\s*\|\s*[-*•]\s*]]
 
 - Tests are run with the EX command `lua MiniTest.run()` through
   [mini.test](https://github.com/echasnovski/mini.test).
+- To run all the tests, you may run from a shell `make test`.
 - Tests should be kept as black-box as possible.
 
 ## Tips
