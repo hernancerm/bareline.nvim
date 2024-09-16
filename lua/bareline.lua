@@ -47,9 +47,9 @@ local h = {}
 function bareline.setup(config)
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
   h.draw_methods.draw_active_inactive_plugin(
-    bareline.config.window_active,
-    bareline.config.window_inactive,
-    bareline.config.window_plugin
+    bareline.config.statuslines.active,
+    bareline.config.statuslines.inactive,
+    bareline.config.statuslines.plugin
   )
 end
 
@@ -76,50 +76,49 @@ end
 local function assign_default_config()
 --minidoc_replace_end
 bareline.default_config = {
-
-  -- Statusline drawn on the ACTIVE window.
-  window_active = {
-    { -- Section 1: Left.
-      bareline.components.vim_mode,
-      bareline.components.file_path_relative_to_cwd,
-      bareline.components.lsp_servers,
-      "%m", "%h", "%r",
+  statuslines = {
+    -- Active window.
+    active = {
+      { -- Section 1: Left.
+        bareline.components.vim_mode,
+        bareline.components.file_path_relative_to_cwd,
+        bareline.components.lsp_servers,
+        "%m", "%h", "%r",
+      },
+      { -- Section 2: Right.
+        bareline.components.diagnostics,
+        bareline.components.indent_style,
+        bareline.components.end_of_line,
+        bareline.components.git_head,
+        bareline.components.position,
+      },
     },
-    { -- Section 2: Right.
-      bareline.components.diagnostics,
-      bareline.components.indent_style,
-      bareline.components.end_of_line,
-      bareline.components.git_head,
-      bareline.components.position,
+    -- Inactive windows.
+    inactive = {
+      { -- Section 1: Left.
+        bareline.components.vim_mode:mask(" "),
+        bareline.components.file_path_relative_to_cwd,
+        bareline.components.lsp_servers,
+        "%m", "%h", "%r",
+      },
+      { -- Section 2: Right.
+        bareline.components.diagnostics,
+        bareline.components.indent_style,
+        bareline.components.end_of_line,
+        bareline.components.position,
+      },
     },
-  },
-
-  -- Statusline drawn on INACTIVE windows.
-  window_inactive = {
-    { -- Section 1: Left.
-      bareline.components.vim_mode:mask(" "),
-      bareline.components.file_path_relative_to_cwd,
-      bareline.components.lsp_servers,
-      "%m", "%h", "%r",
+    -- Plugin windows.
+    plugin = {
+      { -- Section 1: Left.
+        bareline.components.plugin_name,
+        "%m"
+      },
+      { -- Section 2: Right.
+        bareline.components.position
+      },
     },
-    { -- Section 2: Right.
-      bareline.components.diagnostics,
-      bareline.components.indent_style,
-      bareline.components.end_of_line,
-      bareline.components.position,
-    },
-  },
-
-  -- Statusline drawn on PLUGIN windows.
-  window_plugin = {
-    { -- Section 1: Left.
-      bareline.components.plugin_name,
-      "%m"
-    },
-    { -- Section 2: Right.
-      bareline.components.position
-    },
-  },
+  }
 }
 --minidoc_replace_start
 end
@@ -800,9 +799,12 @@ function h.get_config_with_fallback(config, default_config)
   config = vim.tbl_deep_extend(
     "force", vim.deepcopy(default_config), config or {})
   vim.validate {
-    window_active = { config.window_active, "table" },
-    window_inactive = { config.window_inactive, "table" },
-    window_plugin = { config.window_plugin, "table" }
+    statuslines = { config.statuslines, "table" }
+  }
+  vim.validate {
+    ["statuslines.active"] = { config.statuslines.active, "table" },
+    ["statuslines.inactive"] = { config.statuslines.inactive, "table" },
+    ["statuslines.plugin"] = { config.statuslines.plugin, "table" }
   }
   return config
 end
