@@ -46,9 +46,9 @@ T["smoke"]["inactive window success"] = function()
   child.cmd("new")
   local expected = "      %f  %m  %h  %r%=  tabs:8  %02l,%02c/%02L "
   local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
-  local statusline_inactive_window =
+  local statusline_window_inactive =
     child.lua_get("vim.wo[" .. window_ids[2] .. "].statusline")
-  eq(statusline_inactive_window, expected)
+  eq(statusline_window_inactive, expected)
 end
 
 T["smoke"]["plugin window success"] = function()
@@ -257,11 +257,9 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"]["success"] =
     child.lua([[
     local bareline = require("bareline")
     bareline.setup({
-      statusline = {
-        { { bareline.components.file_path_relative_to_cwd } },
-        { { bareline.components.file_path_relative_to_cwd } },
-        { { bareline.components.file_path_relative_to_cwd } }
-      }
+      window_active = {{ bareline.components.file_path_relative_to_cwd }},
+      window_inactive = {{ bareline.components.file_path_relative_to_cwd }},
+      window_plugin = {{ bareline.components.file_path_relative_to_cwd }}
     })]])
     child.cmd("cd " .. resources .. "/injection")
     eq(child.wo.statusline, expected_statusline)
@@ -281,11 +279,9 @@ T["components"]["file_path_relative_to_cwd"]["lua_special_chars"]["success"] =
     child.lua([[
     local bareline = require("bareline")
     bareline.setup({
-      statusline = {
-        { { bareline.components.file_path_relative_to_cwd } },
-        { { bareline.components.file_path_relative_to_cwd } },
-        { { bareline.components.file_path_relative_to_cwd } }
-      }
+      window_active = {{ bareline.components.file_path_relative_to_cwd }},
+      window_inactive = {{ bareline.components.file_path_relative_to_cwd }},
+      window_plugin = {{ bareline.components.file_path_relative_to_cwd }}
     })]])
     child.cmd("cd " .. resources)
     eq(child.wo.statusline, " %<dir_lua_special_chars_^$()%%.[]*+-?/.gitkeep ")
@@ -303,11 +299,9 @@ T["components"]["file_path_relative_to_cwd"]["truncate_long_path"]["success"] =
     child.lua([[
     local bareline = require("bareline")
     bareline.setup({
-      statusline = {
-        { { bareline.components.file_path_relative_to_cwd } },
-        { { bareline.components.file_path_relative_to_cwd } },
-        { { bareline.components.file_path_relative_to_cwd } }
-      }
+      window_active = {{ bareline.components.file_path_relative_to_cwd }},
+      window_inactive = {{ bareline.components.file_path_relative_to_cwd }},
+      window_plugin = {{ bareline.components.file_path_relative_to_cwd }}
     })]])
     child.cmd("cd " .. resources)
     child.cmd("edit " .. "123456789012")
@@ -385,23 +379,18 @@ T["setup"] = new_set({
   hooks = {
     pre_case = function()
       child.lua([[
-        local statusline_active = {
-          { bareline.components.vim_mode },
-          { bareline.components.position }
-        }
-        local statusline_inactive = {
-          { bareline.components.vim_mode:mask(" ") },
-          { bareline.components.position }
-        }
-        local statusline_plugin = {
-          { bareline.components.plugin_name },
-          { bareline.components.position }
-        }
         bareline.setup({
-          statusline = {
-            statusline_active,
-            statusline_inactive,
-            statusline_plugin
+          window_active = {
+            { bareline.components.vim_mode },
+            { bareline.components.position }
+          },
+          window_inactive = {
+            { bareline.components.vim_mode:mask(" ") },
+            { bareline.components.position }
+          },
+          window_plugin = {
+            { bareline.components.plugin_name },
+            { bareline.components.position }
           }
         })
       ]])
@@ -419,9 +408,9 @@ T["setup"]["custom statusline inactive window success"] = function()
   child.cmd("new")
   local expected = "    %=%02l,%02c/%02L "
   local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
-  local statusline_inactive_window =
+  local statusline_window_inactive =
     child.lua_get("vim.wo[" .. window_ids[2] .. "].statusline")
-  eq(statusline_inactive_window, expected)
+  eq(statusline_window_inactive, expected)
 end
 
 T["setup"]["custom statusline plugin window success"] = function()

@@ -46,7 +46,11 @@ local h = {}
 --- and the keys in the user's config take precedence.
 function bareline.setup(config)
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
-  bareline.config.draw_method(bareline.config.statusline)
+  h.draw_methods.draw_active_inactive_plugin({
+    bareline.config.window_active,
+    bareline.config.window_inactive,
+    bareline.config.window_plugin
+  })
 end
 
 --- #delimiter
@@ -71,56 +75,52 @@ end
 --minidoc_replace_start
 local function assign_default_config()
 --minidoc_replace_end
-  bareline.default_config = {
+bareline.default_config = {
 
-    -- Function which takes a single argument, the `statusline` table. Based
-    -- on the draw method, `statusline` might need to contain more than one
-    -- statusline definition. With the default, 3 statuslines are expected.
-    draw_method = bareline.draw_methods.draw_active_inactive_plugin,
+  -- Statusline drawn on the ACTIVE window.
+  window_active = {
+    { -- Section 1: Left.
+      bareline.components.vim_mode,
+      bareline.components.file_path_relative_to_cwd,
+      bareline.components.lsp_servers,
+      "%m", "%h", "%r",
+    },
+    { -- Section 2: Right.
+      bareline.components.diagnostics,
+      bareline.components.indent_style,
+      bareline.components.end_of_line,
+      bareline.components.git_head,
+      bareline.components.position,
+    },
+  },
 
-    statusline = {
-      { -- Statusline 1: Active window.
-        { -- Section 1: Left.
-          bareline.components.vim_mode,
-          bareline.components.file_path_relative_to_cwd,
-          bareline.components.lsp_servers,
-          "%m", "%h", "%r",
-        },
-        { -- Section 2: Right.
-          bareline.components.diagnostics,
-          bareline.components.indent_style,
-          bareline.components.end_of_line,
-          bareline.components.git_head,
-          bareline.components.position,
-        },
-      },
+  -- Statusline drawn on INACTIVE windows.
+  window_inactive = {
+    { -- Section 1: Left.
+      bareline.components.vim_mode:mask(" "),
+      bareline.components.file_path_relative_to_cwd,
+      bareline.components.lsp_servers,
+      "%m", "%h", "%r",
+    },
+    { -- Section 2: Right.
+      bareline.components.diagnostics,
+      bareline.components.indent_style,
+      bareline.components.end_of_line,
+      bareline.components.position,
+    },
+  },
 
-      { -- Statusline 2: Inactive window.
-        { -- Section 1: Left.
-          bareline.components.vim_mode:mask(" "),
-          bareline.components.file_path_relative_to_cwd,
-          bareline.components.lsp_servers,
-          "%m", "%h", "%r",
-        },
-        { -- Section 2: Right.
-          bareline.components.diagnostics,
-          bareline.components.indent_style,
-          bareline.components.end_of_line,
-          bareline.components.position,
-        },
-      },
-
-      { -- Statusline 3: Plugin window.
-        { -- Section 1: Left.
-          bareline.components.plugin_name,
-          "%m"
-        },
-        { -- Section 2: Right.
-          bareline.components.position
-        },
-      },
-    }
-  }
+  -- Statusline drawn on PLUGIN windows.
+  window_plugin = {
+    { -- Section 1: Left.
+      bareline.components.plugin_name,
+      "%m"
+    },
+    { -- Section 2: Right.
+      bareline.components.position
+    },
+  },
+}
 --minidoc_replace_start
 end
 --minidoc_replace_end
@@ -145,23 +145,6 @@ end
 ---   to |bareline.BareComponentWatcher|, in those cases you can simply use a
 ---   string or function component.
 ---@alias UserSuppliedComponent string|function|BareComponent
-
---- If the changes you want to make are few, then your config can be concise by
---- doing a deep copy of the defaults and then inserting your components, e.g.:
---- >lua
----   local bareline = require("bareline")
----   -- Custom component.
----   local component_prose_mode = function ()
----     if string.find(vim.bo.formatoptions, "a") then return "PROSE" end
----     return nil
----   end
----   -- Overrides to default config.
----   local config = vim.deepcopy(bareline.default_config)
----   table.insert(config.statusline[1][1], 2, component_prose_mode)
----   table.insert(config.statusline[2][1], 2, component_prose_mode)
----   -- Draw statusline.
----   bareline.setup(config)
---- <
 
 -- COMPONENTS
 
@@ -193,13 +176,10 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- With Bareline, you don't need a timer to have the statusline update when you
 --- expect it to. Since there is no fixed redraw, the plugin needs a way to know
 --- when to do a redraw. That knowledge is provided to Bareline in a per component
---- basis through the watcher configuration.
---- When adding new components, you don't have to worry about watchers if the base
---- autocmds are enough. Here are the base autocmds per draw method:
---- * |bareline.draw_methods.draw_active_inactive_plugin|:
----   * |BufNew|, |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|,
----     |FocusGained|, |OptionSet|, |DirChanged|.
----   * In other words, pretty much only option changes are watched as a base.
+--- basis through the watcher configuration. When adding new components, you don't
+--- have to worry about watchers if the base autocmds are enough: |BufNew|,
+--- |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|, |FocusGained|,
+--- |OptionSet|, |DirChanged|.
 ---@class BareComponentWatcher
 ---@field autocmd table Expects a table with the keys `event` and `opts`. These
 --- values are passed as is to |vim.api.nvim_create_autocmd()|.
@@ -422,20 +402,18 @@ bareline.components.diagnostics = bareline.BareComponent:new(
 ---@type BareComponent
 bareline.components.position = bareline.BareComponent:new("%02l,%02c/%02L")
 
+-- Set module default config.
+assign_default_config()
+
+-- -----
+--- #end
+
 -- DRAW METHODS
 
---- #delimiter
---- #tag bareline.draw_methods
+h.draw_methods = {}
 
---- Draw methods are functions which take a single argument, a table holding one
---- or more statuslines, and implement how the statusline(s) is(are) drawn.
----
---- A statusline is a list of sections, and a section is a list of components, as
---- per the `user supplied components` documented in the section 'Overriding the
---- defaults' from |bareline.default_config|.
----
-
-bareline.draw_methods = {}
+-- Draw methods are functions which take a single argument, a table holding one or
+-- more statuslines, and implement how the statusline(s) is(are) drawn.
 
 --- Draw distinct statuslines for active, inactive and plugin windows.
 --- Relies on base |autocmd|s and user-supplied autocmds and file paths which are
@@ -443,13 +421,13 @@ bareline.draw_methods = {}
 --- order by table index: [1] draw on the active window, [2] inactive window and
 --- [3] plugin window (having precedence over the active window statusline).
 ---@param statuslines BareStatusline[]
-function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
+function h.draw_methods.draw_active_inactive_plugin(statuslines)
   ---@type BareStatusline
-  local active_window_statusline = statuslines[1]
+  local stl_window_active = statuslines[1]
   ---@type BareStatusline
-  local inactive_window_statusline = statuslines[2]
+  local stl_window_inactive = statuslines[2]
   ---@type BareStatusline
-  local plugin_window_statusline = statuslines[3]
+  local stl_window_plugin = statuslines[3]
 
   -- Create base autocmds.
   -- DOCS: Keep in sync with "bareline.BareComponentWatcher".
@@ -462,8 +440,8 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
       group = h.draw_methods_augroup,
       callback = function()
         h.draw_statusline_if_plugin_window(
-          plugin_window_statusline,
-          active_window_statusline
+          stl_window_plugin,
+          stl_window_active
         )
       end,
     }
@@ -477,8 +455,8 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
         }
         if vim.tbl_contains(options_blacklist, event.match) then return end
         h.draw_statusline_if_plugin_window(
-          plugin_window_statusline,
-          active_window_statusline
+          stl_window_plugin,
+          stl_window_active
         )
       end,
     }
@@ -487,8 +465,8 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
   -- Create component-specific autocmds.
   h.create_bare_component_autocmds(statuslines, 2, function()
     h.draw_statusline_if_plugin_window(
-      plugin_window_statusline,
-      active_window_statusline
+      stl_window_plugin,
+      stl_window_active
     )
   end)
 
@@ -498,8 +476,8 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     callback = function ()
       h.start_uv_fs_events(statuslines, 2, function()
         h.draw_statusline_if_plugin_window(
-          plugin_window_statusline,
-          active_window_statusline
+          stl_window_plugin,
+          stl_window_active
         )
       end
       )
@@ -518,18 +496,12 @@ function bareline.draw_methods.draw_active_inactive_plugin(statuslines)
     group = h.draw_methods_augroup,
     callback = function()
       h.draw_statusline_if_plugin_window(
-          plugin_window_statusline,
-          inactive_window_statusline
+          stl_window_plugin,
+          stl_window_inactive
         )
     end,
   })
 end
-
--- Set module default config.
-assign_default_config()
-
--- -----
---- #end
 
 -- PROVIDERS
 
@@ -830,8 +802,9 @@ function h.get_config_with_fallback(config, default_config)
   config = vim.tbl_deep_extend(
     "force", vim.deepcopy(default_config), config or {})
   vim.validate {
-    draw_method = { config.draw_method, "function" },
-    statusline = { config.statusline, "table" }
+    window_active = { config.window_active, "table" },
+    window_inactive = { config.window_inactive, "table" },
+    window_plugin = { config.window_plugin, "table" }
   }
   return config
 end
