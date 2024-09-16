@@ -381,7 +381,9 @@ end
 
 -- SETUP
 
-T["setup"] = new_set({
+T["setup"] = new_set({})
+
+T["setup"]["all"] = new_set({
   hooks = {
     pre_case = function()
       child.lua([[
@@ -407,12 +409,12 @@ T["setup"] = new_set({
   }
 })
 
-T["setup"]["custom statusline active window success"] = function()
+T["setup"]["all"]["custom statusline active window success"] = function()
   local expected = " NOR%=%02l,%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
-T["setup"]["custom statusline inactive window success"] = function()
+T["setup"]["all"]["custom statusline inactive window success"] = function()
   child.cmd("new")
   local expected = "    %=%02l,%02c/%02L "
   local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
@@ -421,10 +423,43 @@ T["setup"]["custom statusline inactive window success"] = function()
   eq(statusline_inactive_window, expected)
 end
 
-T["setup"]["custom statusline plugin window success"] = function()
+T["setup"]["all"]["custom statusline plugin window success"] = function()
   child.bo.filetype = "test"
   child.bo.buflisted = false
   local expected = " [test]%=%02l,%02c/%02L "
+  eq(child.wo.statusline, expected)
+end
+
+T["setup"]["partial"] = new_set({
+  hooks = {
+    pre_case = function()
+      child.lua([[
+        bareline.setup({
+          statuslines = {
+            active = {
+              { bareline.components.vim_mode },
+              { bareline.components.position }
+            }
+          }
+        })
+      ]])
+      child.cmd("cd " .. resources)
+    end
+  }
+})
+
+-- Active statusline user-supplied config is honored.
+T["setup"]["partial"]["custom statusline active window success"] = function()
+  local expected = " NOR%=%02l,%02c/%02L "
+  eq(child.wo.statusline, expected)
+end
+
+-- Plugin statusline default config is used as a fallback.
+T["setup"]["partial"]["default statusline plugin window success"] = function()
+  child.bo.filetype = "test"
+  child.bo.buflisted = false
+  child.bo.modifiable = false
+  local expected = " [test]  %m%=%02l,%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
