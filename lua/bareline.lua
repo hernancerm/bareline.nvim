@@ -492,6 +492,7 @@ function h.draw_methods.draw_active_inactive_plugin(
   vim.api.nvim_create_autocmd("WinLeave", {
     group = h.draw_methods_augroup,
     callback = function()
+      if vim.o.laststatus == 3 then return end
       h.draw_statusline_if_plugin_window(
           stl_window_plugin,
           stl_window_inactive
