@@ -252,18 +252,14 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"] = new_set({
 
 T["components"]["file_path_relative_to_cwd"]["sanitize"]["success"] =
   function(file, expected_statusline, expected_evaluated_statusline)
-    child.stop()
-    child.restart({ "-u", "scripts/minimal_init.lua", file })
     child.lua([[
-    local bareline = require("bareline")
-    bareline.setup({
-      statuslines = {
-        active = {{ bareline.components.file_path_relative_to_cwd }},
-        inactive = {{ bareline.components.file_path_relative_to_cwd }},
-        plugin = {{ bareline.components.file_path_relative_to_cwd }}
-      }
-    })]])
+      bareline.setup({
+        statuslines = {
+          active = {{ bareline.components.file_path_relative_to_cwd }}
+        }
+      })]])
     child.cmd("cd " .. resources .. "/injection")
+    child.cmd("edit " .. string.gsub(file, "[%%#]", [[\%0]]))
     eq(child.wo.statusline, expected_statusline)
     eq(
       vim.api.nvim_eval_statusline(child.wo.statusline, {}).str,
@@ -276,18 +272,14 @@ T["components"]["file_path_relative_to_cwd"]["lua_special_chars"] = new_set({})
 T["components"]["file_path_relative_to_cwd"]["lua_special_chars"]["success"] =
   function()
     local file = resources .. "/dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
-    child.stop()
-    child.restart({ "-u", "scripts/minimal_init.lua", file })
     child.lua([[
-    local bareline = require("bareline")
-    bareline.setup({
-      statuslines = {
-        active = {{ bareline.components.file_path_relative_to_cwd }},
-        inactive = {{ bareline.components.file_path_relative_to_cwd }},
-        plugin = {{ bareline.components.file_path_relative_to_cwd }}
-      }
-    })]])
+      bareline.setup({
+        statuslines = {
+          active = {{ bareline.components.file_path_relative_to_cwd }}
+        }
+      })]])
     child.cmd("cd " .. resources)
+    child.cmd("edit " .. string.gsub(file, "[%%#]", [[\%0]]))
     eq(child.wo.statusline, " %<dir_lua_special_chars_^$()%%.[]*+-?/.gitkeep ")
     eq(
       vim.api.nvim_eval_statusline(child.wo.statusline, {}).str,
@@ -299,16 +291,12 @@ T["components"]["file_path_relative_to_cwd"]["truncate_long_path"] = new_set({})
 
 T["components"]["file_path_relative_to_cwd"]["truncate_long_path"]["success"] =
   function()
-    child.restart({ "-u", "scripts/minimal_init.lua", file })
     child.lua([[
-    local bareline = require("bareline")
-    bareline.setup({
-      statuslines = {
-        active = {{ bareline.components.file_path_relative_to_cwd }},
-        inactive = {{ bareline.components.file_path_relative_to_cwd }},
-        plugin = {{ bareline.components.file_path_relative_to_cwd }}
-      }
-    })]])
+      bareline.setup({
+        statuslines = {
+          active = {{ bareline.components.file_path_relative_to_cwd }}
+        }
+      })]])
     child.cmd("cd " .. resources)
     child.cmd("edit " .. "123456789012")
     child.o.columns = 12

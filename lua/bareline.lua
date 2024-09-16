@@ -48,6 +48,12 @@ local h = {}
 --- config (|bareline.default_config|) and the keys in the user's config take
 --- precedence. If `config` is nil, then the default config is used.
 function bareline.setup(config)
+  -- Cleanup.
+  if #vim.api.nvim_get_autocmds({ group = h.draw_methods_augroup }) > 0 then
+    vim.api.nvim_clear_autocmds({ group = h.draw_methods_augroup })
+  end
+  h.close_uv_fs_events()
+  -- Setup.
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
   h.draw_methods.draw_active_inactive_plugin(
     bareline.config.statuslines.active,
@@ -531,6 +537,12 @@ function h.draw_methods.draw_active_inactive_plugin(
         )
     end,
   })
+
+  -- Initial draw. Useful when re-running `setup()` after Neovim's startup.
+  h.draw_statusline_if_plugin_window(
+    stl_window_plugin,
+    stl_window_active
+  )
 end
 
 -- PROVIDERS
