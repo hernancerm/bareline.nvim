@@ -436,9 +436,9 @@ bareline.components.diagnostics = bareline.BareComponent:new(
 
 --- Cursor position.
 --- The current cursor position in the format: line,column/total-lines.
---- Mockup: `181,43/329`
+--- Mockup: `181:43/329`
 ---@type BareComponent
-bareline.components.position = bareline.BareComponent:new("%02l,%02c/%02L")
+bareline.components.position = bareline.BareComponent:new("%02l:%02c/%02L")
 
 -- Set module default config.
 assign_default_config()

@@ -38,13 +38,13 @@ T["smoke"] = new_set({
 -- SMOKE
 
 T["smoke"]["active window success"] = function()
-  local expected = " NOR  %f  %m  %h  %r%=  tabs:8  (main)  %02l,%02c/%02L "
+  local expected = " NOR  %f  %m  %h  %r%=  tabs:8  (main)  %02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
 T["smoke"]["inactive window success"] = function()
   child.cmd("new")
-  local expected = "      %f  %m  %h  %r%=  tabs:8  %02l,%02c/%02L "
+  local expected = "      %f  %m  %h  %r%=  tabs:8  %02l:%02c/%02L "
   local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
   local statusline_window_inactive =
     child.lua_get("vim.wo[" .. window_ids[2] .. "].statusline")
@@ -54,7 +54,7 @@ end
 T["smoke"]["plugin window success"] = function()
   child.bo.filetype = "test"
   child.bo.buflisted = false
-  local expected = " [test]  %m%=%02l,%02c/%02L "
+  local expected = " [test]  %m%=%02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
@@ -363,7 +363,7 @@ T["components"]["position"] = new_set({})
 T["components"]["position"]["success"] = function()
   eq(
     child.lua_get("bareline.components.position:get_value()"),
-    "%02l,%02c/%02L"
+    "%02l:%02c/%02L"
   )
 end
 
@@ -398,13 +398,13 @@ T["setup"]["all"] = new_set({
 })
 
 T["setup"]["all"]["custom statusline active window success"] = function()
-  local expected = " NOR%=%02l,%02c/%02L "
+  local expected = " NOR%=%02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
 T["setup"]["all"]["custom statusline inactive window success"] = function()
   child.cmd("new")
-  local expected = "    %=%02l,%02c/%02L "
+  local expected = "    %=%02l:%02c/%02L "
   local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
   local statusline_inactive_window =
     child.lua_get("vim.wo[" .. window_ids[2] .. "].statusline")
@@ -414,7 +414,7 @@ end
 T["setup"]["all"]["custom statusline plugin window success"] = function()
   child.bo.filetype = "test"
   child.bo.buflisted = false
-  local expected = " [test]%=%02l,%02c/%02L "
+  local expected = " [test]%=%02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
@@ -438,7 +438,7 @@ T["setup"]["partial"] = new_set({
 
 -- Active statusline user-supplied config is honored.
 T["setup"]["partial"]["custom statusline active window success"] = function()
-  local expected = " NOR%=%02l,%02c/%02L "
+  local expected = " NOR%=%02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
@@ -447,7 +447,7 @@ T["setup"]["partial"]["default statusline plugin window success"] = function()
   child.bo.filetype = "test"
   child.bo.buflisted = false
   child.bo.modifiable = false
-  local expected = " [test]  %m%=%02l,%02c/%02L "
+  local expected = " [test]  %m%=%02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
