@@ -1,3 +1,5 @@
+[![CI](https://github.com/hernancerm/bareline.nvim/actions/workflows/ci.yml/badge.svg)](https://github.com/hernancerm/bareline.nvim/actions/workflows/ci.yml)
+
 # Bareline
 
 Configure your statusline with ease.
