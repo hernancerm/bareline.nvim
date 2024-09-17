@@ -27,7 +27,7 @@ Bareline comes with sensible defaults to provide a batteries included experience
 
 <div align=center>
   <p>
-    Colorscheme config for the demo: <code>colorscheme lunaperche|set background=light</code>
+    Color scheme config for the demo: <code>colorscheme lunaperche|set background=light</code>
   </p>
 </div>
 
