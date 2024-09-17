@@ -1,11 +1,5 @@
 # Developing Bareline
 
-## Development guidelines
-
-Lua:
-- Every identifier is named in snake_case, except classes which use PascalCase.
-- The table `h` holds helper functions and values, not meant to be public.
-
 ## Vim help file
 
 - The Vim help file [bareline.txt](./doc/bareline.txt) is generated from the plugin file
@@ -24,11 +18,12 @@ vim.o.formatlistpat = [[^\s*\d\+[\]:.)}\t ]\s*\|\s*[-*•]\s*]]
   important to convey on user-facing documentation. When modifying sections close to these comments,
   honor them.
 
-## Testing
+## Tests
 
 - Tests are run with the EX command `lua MiniTest.run()` through
   [mini.test](https://github.com/echasnovski/mini.test).
-- To run all the tests, you may run from a shell `make test`.
+- To run all the tests you may run from a shell `make` or `make test`. You need [GNU
+  Make](https://www.gnu.org/software/make/).
 - Tests should be kept as black-box as possible.
 
 ## Tips
