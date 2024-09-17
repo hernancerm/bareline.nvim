@@ -2,9 +2,7 @@
 
 # Bareline
 
-Configure your statusline with ease.
-
-Bareline comes with sensible defaults to provide a batteries included experience. Demo:
+Configure your statusline with ease. Default config demo:
 
 <table>
   <tr>
@@ -27,7 +25,10 @@ Bareline comes with sensible defaults to provide a batteries included experience
 
 <div align=center>
   <p>
-    Color scheme config for the demo: <code>colorscheme lunaperche|set background=light</code>
+    Color scheme (built-in):
+    <a href="https://github.com/vim/colorschemes/blob/master/colors/lunaperche.vim">
+      lunaperche
+    </a>
   </p>
 </div>
 
