@@ -1,0 +1,36 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Neovim
+        shell: bash
+        run: |
+          # Install Neovim as per instructions in:
+          # https://github.com/neovim/neovim/blob/master/INSTALL.md#pre-built-archives-2
+          curl -LO https://github.com/neovim/neovim/releases/download/v0.10.1/nvim-linux64.tar.gz
+          rm -rf /opt/nvim
+          mkdir -p /opt
+          tar -C /opt -xzf nvim-linux64.tar.gz
+          # Add the nvim binary to the system's path.
+          echo /opt/nvim-linux64/bin >> ${GITHUB_PATH}
+
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        run: |
+          nvim --version
+          make test
+
+# ---
+# Full list of packages installed on ubuntu-latest:
+# https://gist.github.com/stevecondylios/fc6fd259af75a2545bfece930e24f57f
