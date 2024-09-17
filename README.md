@@ -2,7 +2,7 @@
 
 # Bareline
 
-Configure your statusline with ease. Default config demo:
+Yet another statusline plugin.
 
 <table>
   <tr>
@@ -25,7 +25,7 @@ Configure your statusline with ease. Default config demo:
 
 <div align=center>
   <p>
-    Color scheme (built-in):
+    Demo of <a href="default-config">default config</a>. Color scheme (built-in):
     <a href="https://github.com/vim/colorschemes/blob/master/colors/lunaperche.vim">
       lunaperche
     </a>
@@ -58,8 +58,8 @@ Use your favorite package manager. For example, [Lazy.nvim](https://github.com/f
 },
 ```
 
-The function `require("barelilne").setup({config})` needs to be called for Bareline to draw the
-statusline. Lazy.nvim does this automatically using the snippet above.
+The function `require("barelilne").setup()` needs to be called for Bareline to draw the statusline.
+Lazy.nvim does this automatically using the snippet above.
 
 ## Default config
 
