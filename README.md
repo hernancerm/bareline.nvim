@@ -25,7 +25,7 @@ Yet another statusline plugin.
 
 <div align=center>
   <p>
-    Demo of <a href="default-config">default config</a>. Color scheme (built-in):
+    Demo of <a href="#default-config">default config</a>. Color scheme (built-in):
     <a href="https://github.com/vim/colorschemes/blob/master/colors/lunaperche.vim">
       lunaperche
     </a>
