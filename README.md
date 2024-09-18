@@ -32,6 +32,12 @@ Yet another statusline plugin.
   </p>
 </div>
 
+## Stability
+
+> [!WARNING]
+> **Expect breaking changes without previous notice**. To avoid problems, I recommend installing the
+> plugin from a tag. Every tag corresponds to a release version.
+
 ## Features
 
 - Simple configuration.
@@ -54,6 +60,7 @@ Use your favorite package manager. For example, [Lazy.nvim](https://github.com/f
 ```lua
 {
   "hernancerm/bareline.nvim",
+  tag = "0.1.0",
   opts = {}
 },
 ```
