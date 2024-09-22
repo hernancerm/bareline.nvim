@@ -38,13 +38,15 @@ T["smoke"] = new_set({
 -- SMOKE
 
 T["smoke"]["active window success"] = function()
-  local expected = " NOR  %f  %m  %h  %r%=  tabs:8  (main)  %02l:%02c/%02L "
+  local expected =
+    " NOR  %f  %m  %h  %r%=  tabs:8  (main)  git_dir_branch  %02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
 T["smoke"]["inactive window success"] = function()
   child.cmd("new")
-  local expected = "      %f  %m  %h  %r%=  tabs:8  %02l:%02c/%02L "
+  local expected =
+    "      %f  %m  %h  %r%=  tabs:8  git_dir_branch  %02l:%02c/%02L "
   local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
   local statusline_window_inactive =
     child.lua_get("vim.wo[" .. window_ids[2] .. "].statusline")
@@ -365,6 +367,20 @@ T["components"]["position"]["success"] = function()
     child.lua_get("bareline.components.position:get_value()"),
     "%02l:%02c/%02L"
   )
+end
+
+-- CWD
+
+T["components"]["cwd"] = new_set({
+  parametrize = {
+    { "tests/resources/dir_a", "dir_a" },
+    { os.getenv("HOME"), "~" }
+  }
+})
+
+T["components"]["cwd"]["success"] = function(dir, expected_cwd)
+  child.cmd("cd " .. dir)
+  eq(child.lua_get("bareline.components.cwd:get_value()"), expected_cwd)
 end
 
 -- SETUP

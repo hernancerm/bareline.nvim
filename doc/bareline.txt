@@ -78,6 +78,7 @@ Default configuration
           bareline.components.indent_style,
           bareline.components.end_of_line,
           bareline.components.git_head,
+          bareline.components.cwd,
           bareline.components.position,
         },
       },
@@ -93,6 +94,7 @@ Default configuration
           bareline.components.diagnostics,
           bareline.components.indent_style,
           bareline.components.end_of_line,
+          bareline.components.cwd,
           bareline.components.position,
         },
       },
@@ -307,7 +309,16 @@ BareComponent
                          `bareline.components.position`
 Cursor position.
 The current cursor position in the format: line,column/total-lines.
-Mockup: `181,43/329`
+Mockup: `181:43/329`
+Type ~
+BareComponent
+
+                                                       *bareline.components.cwd*
+                           `bareline.components.cwd`
+Current working directory.
+When the current working directory (cwd) is the home dir, then `~` is shown.
+Otherwise, the name of the directory is shown, excluding the path.
+Mockup: `bareline.nvim`
 Type ~
 BareComponent
 

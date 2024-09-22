@@ -97,6 +97,7 @@ bareline.default_config = {
         bareline.components.indent_style,
         bareline.components.end_of_line,
         bareline.components.git_head,
+        bareline.components.cwd,
         bareline.components.position,
       },
     },
@@ -112,6 +113,7 @@ bareline.default_config = {
         bareline.components.diagnostics,
         bareline.components.indent_style,
         bareline.components.end_of_line,
+        bareline.components.cwd,
         bareline.components.position,
       },
     },
@@ -439,6 +441,17 @@ bareline.components.diagnostics = bareline.BareComponent:new(
 --- Mockup: `181:43/329`
 ---@type BareComponent
 bareline.components.position = bareline.BareComponent:new("%02l:%02c/%02L")
+
+--- Current working directory.
+--- When the current working directory (cwd) is the home dir, then `~` is shown.
+--- Otherwise, the name of the directory is shown, excluding the path.
+--- Mockup: `bareline.nvim`
+---@type BareComponent
+bareline.components.cwd = bareline.BareComponent:new(function()
+  local cwd = vim.uv.cwd() or ""
+  if cwd == os.getenv("HOME") then return "~" end
+  return vim.fn.fnamemodify(cwd, ":t")
+end)
 
 -- Set module default config.
 assign_default_config()
