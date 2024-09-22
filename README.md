@@ -25,24 +25,21 @@ Yet another statusline plugin.
 
 <div align=center>
   <p>
-    Demo of <a href="#default-config">default config</a>. Color scheme (built-in):
+    Demo of <a href="#default-config">default config</a>. Color scheme (Neovim built-in):
     <a href="https://github.com/vim/colorschemes/blob/master/colors/lunaperche.vim">
       lunaperche
     </a>
   </p>
 </div>
 
-## Stability
-
-> [!WARNING]
-> **Expect breaking changes without previous notice**. To avoid problems, I recommend installing the
-> plugin from a tag. Every tag corresponds to a release version.
-
 ## Features
 
 - Simple configuration.
 - Batteries included experience.
-- No timer. Update immediately as changes happen.
+- No timer. The statusline updates immediately as changes happen.
+- Support for global statusline (`laststatus=3`).
+- Idempotent `setup()` function.
+- Built-in components.
 
 ## Limitations
 
@@ -60,7 +57,6 @@ Use your favorite package manager. For example, [Lazy.nvim](https://github.com/f
 ```lua
 {
   "hernancerm/bareline.nvim",
-  tag = "0.1.0",
   opts = {}
 },
 ```
@@ -71,7 +67,15 @@ Lazy.nvim does this automatically using the snippet above.
 ## Default config
 
 ```lua
-{
+local bareline = require("bareline")
+bareline.setup()
+```
+
+Is equivalent to:
+
+```lua
+local bareline = require("bareline")
+bareline.setup({
   statuslines = {
     -- Active window.
     active = {
@@ -115,7 +119,7 @@ Lazy.nvim does this automatically using the snippet above.
       },
     },
   }
-}
+})
 ```
 
 ## Documentation
