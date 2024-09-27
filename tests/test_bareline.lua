@@ -200,7 +200,13 @@ end
 
 T["components"]["file_path_relative_to_cwd"]["trim cwd"] = new_set({
   parametrize = {
-    { { cd = resources, edit = "test_file.txt" }, "%<test_file.txt" },
+    {
+      {
+        cd = resources,
+        edit = "test_file.txt"
+      },
+      "%<test_file.txt"
+    },
     {
       {
         cd = resources .. "/dir_a",
@@ -213,16 +219,27 @@ T["components"]["file_path_relative_to_cwd"]["trim cwd"] = new_set({
         cd = resources .. "/dir_b",
         edit = resources .. "/dir_a/dir_a_a/.gitkeep"
       },
-      "%<" .. resources .. "/dir_a/dir_a_a/.gitkeep"
+      "%<"
+        .. string.gsub(resources, h.escape_lua_pattern(os.getenv("HOME")), "~")
+        .. "/dir_a/dir_a_a/.gitkeep"
     },
-    -- Main test case. An absolute file path is used for `:e`, but the file path
-    -- displayed should be relative to the current working directory.
+    -- An absolute file path is used for `:e`, but the file path displayed
+    -- should be relative to the current working directory:
     {
       {
         cd = resources .. "/dir_a",
         edit = resources .. "/dir_a/dir_a_a/.gitkeep"
       },
       "%<" .. "dir_a_a/.gitkeep"
+    },
+    -- If the cwd is not home and a file rooted at home is edited, then the home
+    -- portion of the file path should be replaced by `~`.
+    {
+      {
+        cd = resources,
+        edit = os.getenv("HOME") .. "/this_file_does_not_need_to_exist.txt"
+      },
+      "%<" .. "~/this_file_does_not_need_to_exist.txt"
     }
   }
 })

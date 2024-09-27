@@ -387,21 +387,16 @@ bareline.components.lsp_servers = bareline.BareComponent:new(
 )
 
 --- Stable `%f`.
---- The file path relative to the current working directory (|:pwd|).
+--- The file path relative to the current working directory (|:pwd|). When the
+--- user home directory appears in the file path, `~` is used to shorten the path.
 --- Mockup: `lua/bareline.lua`
 ---@type BareComponent
 bareline.components.file_path_relative_to_cwd = bareline.BareComponent:new(
   function ()
     local buf_name = vim.api.nvim_buf_get_name(0)
-    -- Expression file paths.
     if buf_name == "" or vim.bo.filetype == "help" then return "%f" end
-    -- Sanitized file paths.
-    local path_relative_to_cwd, _ = string.gsub(
-      buf_name, h.escape_lua_pattern(vim.fn.getcwd()) .. "/", "")
-    local path_relative_to_cwd_sanitized =
-      string.gsub(path_relative_to_cwd, "%%", "%%%0")
-    -- Truncate at start if path is too long.
-    return "%<" .. path_relative_to_cwd_sanitized
+    local file_path_sanitized = string.gsub(h.root_at_cwd(buf_name), "%%", "%%%0")
+    return "%<" .. file_path_sanitized
   end
 )
 
@@ -865,6 +860,27 @@ function h.get_config_with_fallback(config, default_config)
     ["statuslines.plugin"] = { config.statuslines.plugin, "table" }
   }
   return config
+end
+
+---@param file_path_absolute string
+function h.root_at_cwd(file_path_absolute)
+  -- File is rooted at the cwd.
+  local cwd = vim.fn.getcwd()
+  local cwd_start_index, cwd_end_index = string.find(
+    file_path_absolute, h.escape_lua_pattern(cwd .. "/"))
+  if cwd_start_index ~= nil and cwd_start_index == 1 then
+    return string.sub(file_path_absolute, cwd_end_index + 1)
+  end
+  -- File is rooted at user home.
+  local home = os.getenv("HOME")
+  if home == nil then return file_path_absolute end
+  local home_start_index, home_end_index = string.find(
+    file_path_absolute, h.escape_lua_pattern(home))
+  if home_start_index ~= nil and home_start_index == 1 then
+    return "~" .. string.sub(file_path_absolute, home_end_index + 1)
+  end
+  -- Otherwise.
+  return file_path_absolute
 end
 
 --- Given a string, escape the Lua magic pattern characters so that the string can
