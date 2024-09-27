@@ -1,4 +1,4 @@
---- *bareline* Configure simple statuslines.
+--- *bareline* A statusline plugin for the pragmatic.
 ---
 --- MIT License Copyright (c) 2024 Hernán Cervera.
 ---
