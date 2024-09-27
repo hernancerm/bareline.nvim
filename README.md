@@ -2,7 +2,7 @@
 
 # Bareline
 
-Yet another statusline plugin.
+A statusline plugin for the pragmatic.
 
 <table>
   <tr>
@@ -147,6 +147,14 @@ Please refer to the help file: [bareline.txt](./doc/bareline.txt).
 > (2010).
 
 No reason.
+
+> You gotta have a reason. Everything has a reason. — Dr. G. House, from House M.D. (2004-2012).
+
+> I know people like to meme about how vim enthusiasts are always trying to convince people to learn
+> vim keybindings but I truly believe that learning it will not only make you faster but also
+> rekindle your love for programming, it did for me. — Nexxel (2023).
+
+The latter.
 
 ## License
 
