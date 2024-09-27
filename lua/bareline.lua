@@ -285,9 +285,8 @@ bareline.components.vim_mode = bareline.BareComponent:new(
   function()
     local vim_mode = h.provide_vim_mode()
     local mode_labels = {
-      n = "nor", i = "ins", v = "vis", s = "sel",
-      t = "ter", c = "cmd", r = "rep", bv = "vis",
-      bs = "sel", ["!"] = "ext",
+      n = "nor", i = "ins", v = "v:c", vl = "v:l", vb = "v:b", s = "s:c",
+      sb = "s:b", t = "ter", c = "cmd", r = "rep", ["!"] = "ext"
     }
     return mode_labels[vim_mode]:upper()
   end,
@@ -558,15 +557,12 @@ end
 -- A provider is a function which provides the base data to implement a component.
 
 --- Vim mode.
---- Returns the first char of the current Vim mode (see |mode()|). For block
---- modes, two characters are returned, a "b" followed by the mode; currently,
---- only `bv` for "block visual mode" and `bs` for "block select mode". The
---- returned string has only lower case letters.
 ---@return string
 function h.provide_vim_mode()
   local function standardize_mode(character)
-    if character == "" then return "bv" end
-    if character == "" then return "bs" end
+    if character == "V" then return "vl" end
+    if character == "" then return "vb" end
+    if character == "" then return "sb" end
     return character:lower()
   end
   return standardize_mode(vim.fn.mode())

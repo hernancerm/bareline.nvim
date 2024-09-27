@@ -77,9 +77,9 @@ T["components"]["vim_mode"] = new_set({
     { "",           "NOR" }, -- Normal.
     { "i",          "INS" }, -- Insert.
     { ":",          "CMD" }, -- Command.
-    { "v",          "VIS" }, -- Charwise Visual.
-    { "V",          "VIS" }, -- Linewise Visual.
-    { "<C-q>",      "VIS" }, -- Block Visual.
+    { "v",          "V:C" }, -- Charwise Visual.
+    { "V",          "V:L" }, -- Linewise Visual.
+    { "<C-q>",      "V:B" }, -- Block Visual.
     { ":term<CR>a", "TER" }  -- Terminal.
   }
 })
