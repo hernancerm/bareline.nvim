@@ -1,35 +1,35 @@
-[![CI](https://github.com/hernancerm/bareline.nvim/actions/workflows/ci.yml/badge.svg)](https://github.com/hernancerm/bareline.nvim/actions/workflows/ci.yml)
-
-# Bareline
-
-A statusline plugin for the pragmatic.
-
-<table>
-  <tr>
-    <th>Window state</th>
-    <th>Appearance</th>
-  </tr>
-  <tr>
-    <td>Active</td>
-    <td><img src="./media/demo_active.png" alt="Active statusline"></th>
-  </tr>
-  <tr>
-    <td>Inactive</td>
-    <td><img src="./media/demo_inactive.png" alt="Inactive statusline"></th>
-  </tr>
-  <tr>
-    <td>Plugin</td>
-    <td><img src="./media/demo_plugin.png" alt="Plugin statusline"></th>
-  </tr>
-</table>
-
 <div align=center>
-  <p>
-    Demo of <a href="#default-config">default config</a>. Color scheme (Neovim built-in):
-    <a href="https://github.com/vim/colorschemes/blob/master/colors/lunaperche.vim">
-      lunaperche
-    </a>
-  </p>
+  <a href="https://github.com/hernancerm/bareline.nvim/actions/workflows/ci.yml" target="_blank">
+    <img src="https://github.com/hernancerm/bareline.nvim/actions/workflows/ci.yml/badge.svg" />
+  </a>
+  <h1>Bareline</h1>
+  <p>A statusline plugin for the pragmatic.</p>
+  <table>
+    <tr>
+      <th>Window state</th>
+      <th>Appearance</th>
+    </tr>
+    <tr>
+      <td>Active</td>
+      <td><img src="./media/demo_active.png" alt="Active statusline"></th>
+    </tr>
+    <tr>
+      <td>Inactive</td>
+      <td><img src="./media/demo_inactive.png" alt="Inactive statusline"></th>
+    </tr>
+    <tr>
+      <td>Plugin</td>
+      <td><img src="./media/demo_plugin.png" alt="Plugin statusline"></th>
+    </tr>
+  </table>
+  <div align=center>
+    <p>
+      <a href="#default-config">Default config</a>. Color scheme (Neovim built-in):
+      <a href="https://github.com/vim/colorschemes/blob/master/colors/lunaperche.vim">
+        lunaperche
+      </a>
+    </p>
+  </div>
 </div>
 
 ## Features
