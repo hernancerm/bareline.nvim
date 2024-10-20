@@ -181,7 +181,7 @@ end
 ---    statusline:
 ---
 ---      |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|,
----      |FocusGained|, |OptionSet|, |DirChanged|.
+---      |FocusGained|, |OptionSet|, |DirChanged|, |TermLeave|.
 
 ---@alias UserSuppliedComponent string|function|BareComponent
 
@@ -473,7 +473,7 @@ function h.draw_methods.draw_active_inactive_plugin(
   vim.api.nvim_create_autocmd(
     {
       "BufNew", "BufEnter", "BufWinEnter", "WinEnter",
-      "VimResume", "FocusGained", "DirChanged"
+      "VimResume", "FocusGained", "DirChanged", "TermLeave"
     },
     {
       group = h.draw_methods_augroup,
