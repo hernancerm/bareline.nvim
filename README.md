@@ -4,6 +4,10 @@
   </a>
   <h1>Bareline</h1>
   <p>A statusline plugin for the pragmatic.</p>
+  <p>
+    Do you want a statusline that looks like the default one but can show more info, is async and
+    easy to configure? <br> Then this plugins is for you.
+  </p>
   <table>
     <tr>
       <th>Window state</th>
@@ -34,17 +38,17 @@
 
 ## Features
 
+- No timer. Autocmds and file watchers are used to update the statusline immediately as changes
+  happen.
+- Sensible defaults.
 - Simple configuration.
-- Batteries included experience.
-- No timer. The statusline updates immediately as changes happen.
+- Built-in statusline components.
 - Support for global statusline (`laststatus=3`).
-- Idempotent `setup()` function.
-- Built-in components.
 
-## Limitations
+## Out of scope
 
-- No fancy colors. The colors of the entire statusline itself depend on your color scheme.
-- No fancy separators. Components are separated by whitespace.
+- Fancy coloring: Currently the colors of the statusline depend on your color scheme.
+- Fancy section separators: Currently components are separated by whitespace.
 
 ## Requirements
 
@@ -135,7 +139,7 @@ Please refer to the help file: [bareline.txt](./doc/bareline.txt).
 - [mini.statusline](https://github.com/echasnovski/mini.nvim/blob/main/readmes/mini-statusline.md)
 - [staline.nvim](https://github.com/tamton-aquib/staline.nvim)
 
-## Why another plugin?
+## Why another statusline plugin?
 
 > In "Love Story," why do the two characters fall madly in love with each other? No reason. In
 > Oliver Stone's "JFK," why is the President suddenly assassinated by some stranger? No reason. In
