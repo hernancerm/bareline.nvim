@@ -178,9 +178,8 @@ Standardized component.
 Class ~
 {BareComponent}
 Fields ~
-{value} `(string|function)` Provides the value displayed in the statusline,
-like the Vim mode. When a function, should return a single value of any type.
-When a string, that itself is used.
+{value} `(string|fun():any)` Provides the value displayed in the statusline,
+like the Vim mode or diagnostics.
 {opts} BareComponentOpts Options.
 
                                                     *bareline.BareComponentOpts*
@@ -188,9 +187,8 @@ Class ~
 {BareComponentOpts}
 Fields ~
 {watcher} BareComponentWatcher Watcher. Triggers a statusline redraw.
-{cache_on_vim_modes} `(function|string[])` Use cache in these Vim modes. Each
-Vim mode is expected as the first char returned by |mode()|. When a function,
-it expects no args and should return a list with the Vim modes.
+{cache_on_vim_modes} `(string[]|fun():string[])` Use cache in these Vim modes.
+Each Vim mode is expected as the first char returned by |mode()|.
 
                                                  *bareline.BareComponentWatcher*
 Defines watcher configuration for a component.
@@ -203,8 +201,7 @@ Class ~
 Fields ~
 {autocmd} `(table)` Expects a table with the keys `event` and `opts`. These
 values are passed as-is to |vim.api.nvim_create_autocmd()|.
-{filepath} `(string|function)` Filepath to watch. Alternatively, a function
-which expects zero args can be provided to compute the filepath.
+{filepath} `(string|fun():string)` Filepath to watch.
 
                                                   *bareline.BareComponent:new()*
                  `bareline.BareComponent:new`({value}, {opts})

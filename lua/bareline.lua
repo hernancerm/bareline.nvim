@@ -183,7 +183,7 @@ end
 ---      |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|,
 ---      |FocusGained|, |OptionSet|, |DirChanged|, |TermLeave|.
 
----@alias UserSuppliedComponent string|function|BareComponent
+---@alias UserSuppliedComponent any|fun():any|BareComponent
 
 -- COMPONENTS
 
@@ -202,9 +202,8 @@ bareline.components = {}
 
 --- Standardized component.
 ---@class BareComponent
----@field value string|function Provides the value displayed in the statusline,
---- like the Vim mode. When a function, should return a single value of any type.
---- When a string, that itself is used.
+---@field value string|fun():any Provides the value displayed in the statusline,
+--- like the Vim mode or diagnostics.
 ---@field opts BareComponentOpts Options.
 bareline.BareComponent = {}
 bareline.BareComponent["__index"] = bareline.BareComponent
@@ -212,9 +211,8 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- #tag bareline.BareComponentOpts
 ---@class BareComponentOpts
 ---@field watcher BareComponentWatcher Watcher. Triggers a statusline redraw.
----@field cache_on_vim_modes function|string[] Use cache in these Vim modes. Each
---- Vim mode is expected as the first char returned by |mode()|. When a function,
---- it expects no args and should return a list with the Vim modes.
+---@field cache_on_vim_modes string[]|fun():string[] Use cache in these Vim modes.
+--- Each Vim mode is expected as the first char returned by |mode()|.
 
 --- #tag bareline.BareComponentWatcher
 --- Defines watcher configuration for a component.
@@ -225,8 +223,7 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 ---@class BareComponentWatcher
 ---@field autocmd table Expects a table with the keys `event` and `opts`. These
 --- values are passed as-is to |vim.api.nvim_create_autocmd()|.
----@field filepath string|function Filepath to watch. Alternatively, a function
---- which expects zero args can be provided to compute the filepath.
+---@field filepath string|fun():string Filepath to watch.
 
 --- Constructor.
 --- Parameters ~
@@ -620,7 +617,7 @@ function h.store_bare_component_cache(bare_component, bare_component_value)
     { value = bare_component_value }
 end
 
----@param cache_on_vim_modes function|string[]
+---@param cache_on_vim_modes string[]|fun():string[]
 ---@return string[]
 function h.get_vim_modes_for_cache(cache_on_vim_modes)
   if type(cache_on_vim_modes) == "function" then return cache_on_vim_modes() end
@@ -735,7 +732,7 @@ end
 
 ---@param nested_components_list BareComponent[] Statusline(s) definition(s).
 ---@param depth number Depth at which the components exist in the list.
----@param callback function Autocmd callback function.
+---@param callback fun() Autocmd callback.
 function h.create_bare_component_autocmds(nested_components_list, depth, callback)
   local autocmds = vim.iter(nested_components_list)
     :flatten(depth)
@@ -771,7 +768,7 @@ h.uv_fs_event_handles = {}
 
 ---@param nested_components_list BareComponent[] Statusline(s) definition(s).
 ---@param depth number Depth at which the components exist in the list.
----@param callback function Callback for |uv.fs_event_start()|.
+---@param callback fun() Callback for |uv.fs_event_start()|.
 function h.start_uv_fs_events(
     nested_components_list, depth, callback)
 
