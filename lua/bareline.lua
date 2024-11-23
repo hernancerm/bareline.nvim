@@ -81,55 +81,59 @@ end
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
 --minidoc_replace_start
 local function assign_default_config()
---minidoc_replace_end
-bareline.default_config = {
-  statuslines = {
-    -- Active window.
-    active = {
-      { -- Section 1: Left.
-        bareline.components.vim_mode,
-        bareline.components.file_path_relative_to_cwd,
-        bareline.components.lsp_servers,
-        "%m", "%h", "%r",
+  --minidoc_replace_end
+  bareline.default_config = {
+    statuslines = {
+      -- Active window.
+      active = {
+        { -- Section 1: Left.
+          bareline.components.vim_mode,
+          bareline.components.file_path_relative_to_cwd,
+          bareline.components.lsp_servers,
+          "%m",
+          "%h",
+          "%r",
+        },
+        { -- Section 2: Right.
+          bareline.components.diagnostics,
+          bareline.components.indent_style,
+          bareline.components.end_of_line,
+          bareline.components.git_head,
+          bareline.components.cwd,
+          bareline.components.position,
+        },
       },
-      { -- Section 2: Right.
-        bareline.components.diagnostics,
-        bareline.components.indent_style,
-        bareline.components.end_of_line,
-        bareline.components.git_head,
-        bareline.components.cwd,
-        bareline.components.position,
+      -- Inactive windows.
+      inactive = {
+        { -- Section 1: Left.
+          bareline.components.vim_mode:mask(" "),
+          bareline.components.file_path_relative_to_cwd,
+          bareline.components.lsp_servers,
+          "%m",
+          "%h",
+          "%r",
+        },
+        { -- Section 2: Right.
+          bareline.components.diagnostics,
+          bareline.components.indent_style,
+          bareline.components.end_of_line,
+          bareline.components.cwd,
+          bareline.components.position,
+        },
       },
-    },
-    -- Inactive windows.
-    inactive = {
-      { -- Section 1: Left.
-        bareline.components.vim_mode:mask(" "),
-        bareline.components.file_path_relative_to_cwd,
-        bareline.components.lsp_servers,
-        "%m", "%h", "%r",
-      },
-      { -- Section 2: Right.
-        bareline.components.diagnostics,
-        bareline.components.indent_style,
-        bareline.components.end_of_line,
-        bareline.components.cwd,
-        bareline.components.position,
-      },
-    },
-    -- Plugin windows.
-    plugin = {
-      { -- Section 1: Left.
-        bareline.components.plugin_name,
-        "%m"
-      },
-      { -- Section 2: Right.
-        bareline.components.position
+      -- Plugin windows.
+      plugin = {
+        { -- Section 1: Left.
+          bareline.components.plugin_name,
+          "%m",
+        },
+        { -- Section 2: Right.
+          bareline.components.position,
+        },
       },
     },
   }
-}
---minidoc_replace_start
+  --minidoc_replace_start
 end
 --minidoc_replace_end
 --minidoc_afterlines_end
@@ -278,109 +282,103 @@ end
 --- The Vim mode in 3 characters.
 --- Mockups: `NOR`, `VIS`
 ---@type BareComponent
-bareline.components.vim_mode = bareline.BareComponent:new(
-  function()
-    local vim_mode = h.provide_vim_mode()
-    local mode_labels = {
-      n = "nor", i = "ins", v = "v:c", vl = "v:l", vb = "v:b", s = "s:c",
-      sb = "s:b", t = "ter", c = "cmd", r = "rep", ["!"] = "ext"
-    }
-    return mode_labels[vim_mode]:upper()
-  end,
-  {
-    watcher = {
-      autocmd = {
-        event = { "ModeChanged", "InsertLeave" }
-      }
-    }
+bareline.components.vim_mode = bareline.BareComponent:new(function()
+  local vim_mode = h.provide_vim_mode()
+  local mode_labels = {
+    n = "nor",
+    i = "ins",
+    v = "v:c",
+    vl = "v:l",
+    vb = "v:b",
+    s = "s:c",
+    sb = "s:b",
+    t = "ter",
+    c = "cmd",
+    r = "rep",
+    ["!"] = "ext",
   }
-)
+  return mode_labels[vim_mode]:upper()
+end, {
+  watcher = {
+    autocmd = {
+      event = { "ModeChanged", "InsertLeave" },
+    },
+  },
+})
 
 --- Plugin name.
 --- When on a plugin window, the formatted name of the plugin window.
 --- Mockup: `[nvimtree]`
 ---@type BareComponent
-bareline.components.plugin_name = bareline.BareComponent:new(
-  function()
-    if vim.bo.filetype == "qf" then
-      return "%t%{exists('w:quickfix_title')? ' '.w:quickfix_title : ''}"
-    end
-    return string.format("[%s]", vim.bo.filetype:lower():gsub("%s", ""))
+bareline.components.plugin_name = bareline.BareComponent:new(function()
+  if vim.bo.filetype == "qf" then
+    return "%t%{exists('w:quickfix_title')? ' '.w:quickfix_title : ''}"
   end
-)
+  return string.format("[%s]", vim.bo.filetype:lower():gsub("%s", ""))
+end)
 
 --- Indent style.
 --- The indent style. Relies on 'expandtab' and 'tabstop'. This component is
 --- omitted when the buffer has 'modifiable' disabled.
 --- Mockups: `spaces:2`, `tabs:4`
 ---@type BareComponent
-bareline.components.indent_style = bareline.BareComponent:new(
-  function()
-    if not vim.bo.modifiable then return nil end
-    local whitespace_type = (vim.bo.expandtab and "spaces") or "tabs"
-    return whitespace_type .. ":" .. vim.bo.tabstop
-  end
-)
+bareline.components.indent_style = bareline.BareComponent:new(function()
+  if not vim.bo.modifiable then return nil end
+  local whitespace_type = (vim.bo.expandtab and "spaces") or "tabs"
+  return whitespace_type .. ":" .. vim.bo.tabstop
+end)
 
 --- End of line (EOL).
 --- Indicates when the buffer does not have an EOL on its last line. Return `noeol`
 --- in this case, nil otherwise. This uses the option 'eol'.
 ---@type BareComponent
-bareline.components.end_of_line = bareline.BareComponent:new(
-  function()
-    if vim.bo.eol then return nil end
-    return "noeol"
-  end
-)
+bareline.components.end_of_line = bareline.BareComponent:new(function()
+  if vim.bo.eol then return nil end
+  return "noeol"
+end)
 
 --- Git HEAD.
 --- Displays the Git HEAD based on the cwd (|pwd|). Useful to show the Git branch.
 --- Mockup: `(main)`
 ---@type BareComponent
-bareline.components.git_head = bareline.BareComponent:new(
-  function()
-    local git_head = h.provide_git_head()
-    if git_head == nil then return nil end
-    local function format(head)
-      local formatted_head
-      if head:match "^ref: " then
-        formatted_head = head:gsub("^ref: refs/%w+/", "")
-      else
-        formatted_head = head:sub(1, 7)
-      end
-      return formatted_head
+bareline.components.git_head = bareline.BareComponent:new(function()
+  local git_head = h.provide_git_head()
+  if git_head == nil then return nil end
+  local function format(head)
+    local formatted_head
+    if head:match("^ref: ") then
+      formatted_head = head:gsub("^ref: refs/%w+/", "")
+    else
+      formatted_head = head:sub(1, 7)
     end
-    return string.format("(%s)", format(git_head))
-  end,
-  {
-    watcher = {
-      filepath = function()
-        local git_dir = vim.fn.finddir(".git", (vim.uv.cwd() or "") .. ";")
-        if git_dir ~= "" then return git_dir end
-        return nil
-      end
-    }
-  }
-)
+    return formatted_head
+  end
+  return string.format("(%s)", format(git_head))
+end, {
+  watcher = {
+    filepath = function()
+      local git_dir = vim.fn.finddir(".git", (vim.uv.cwd() or "") .. ";")
+      if git_dir ~= "" then return git_dir end
+      return nil
+    end,
+  },
+})
 
 --- LSP servers.
 --- The LSP servers attached to the current buffer.
 --- Mockup: `[lua_ls]`
 ---@type BareComponent
-bareline.components.lsp_servers = bareline.BareComponent:new(
-  function()
-    local lsp_servers = h.provide_lsp_server_names()
-    if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then return nil end
-    return "[" .. vim.fn.join(lsp_servers, ",") .. "]"
-  end,
-  {
-    watcher = {
-      autocmd = {
-        event = { "LspAttach", "LspDetach" }
-      }
-    }
-  }
-)
+bareline.components.lsp_servers = bareline.BareComponent:new(function()
+  local lsp_servers = h.provide_lsp_server_names()
+  if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then return nil end
+  return "[" .. vim.fn.join(lsp_servers, ",") .. "]"
+end, {
+  watcher = {
+    autocmd = {
+      event = { "LspAttach", "LspDetach" },
+    },
+  },
+})
 
 --- Stable `%f`.
 --- The file path relative to the current working directory (|:pwd|). When the
@@ -388,10 +386,11 @@ bareline.components.lsp_servers = bareline.BareComponent:new(
 --- Mockup: `lua/bareline.lua`
 ---@type BareComponent
 bareline.components.file_path_relative_to_cwd = bareline.BareComponent:new(
-  function ()
+  function()
     local buf_name = vim.api.nvim_buf_get_name(0)
     if buf_name == "" or vim.bo.filetype == "help" then return "%f" end
-    local file_path_sanitized = string.gsub(h.root_at_cwd(buf_name), "%%", "%%%0")
+    local file_path_sanitized =
+      string.gsub(h.root_at_cwd(buf_name), "%%", "%%%0")
     return "%<" .. file_path_sanitized
   end
 )
@@ -401,31 +400,28 @@ bareline.components.file_path_relative_to_cwd = bareline.BareComponent:new(
 --- `update_in_insert` from |vim.diagnostic.config()|.
 --- Mockup: `e:2,w:1`
 ---@type BareComponent
-bareline.components.diagnostics = bareline.BareComponent:new(
-  function()
-    local output = ""
-    local severity_labels = { "e", "w", "i", "h" }
-    local diagnostic_count = vim.diagnostic.count(0)
-    for i = 1, 4 do
-      local count = diagnostic_count[i]
-      if count ~= nil then
-        output = output .. severity_labels[i] .. ":" .. count .. ","
-      end
+bareline.components.diagnostics = bareline.BareComponent:new(function()
+  local output = ""
+  local severity_labels = { "e", "w", "i", "h" }
+  local diagnostic_count = vim.diagnostic.count(0)
+  for i = 1, 4 do
+    local count = diagnostic_count[i]
+    if count ~= nil then
+      output = output .. severity_labels[i] .. ":" .. count .. ","
     end
-    return string.sub(output, 1, #output - 1)
-  end,
-  {
-    watcher = {
-      autocmd = {
-        event = "DiagnosticChanged"
-      }
+  end
+  return string.sub(output, 1, #output - 1)
+end, {
+  watcher = {
+    autocmd = {
+      event = "DiagnosticChanged",
     },
-    cache_on_vim_modes = function()
-      if vim.diagnostic.config().update_in_insert then return {} end
-      return { "i" }
-    end
-  }
-)
+  },
+  cache_on_vim_modes = function()
+    if vim.diagnostic.config().update_in_insert then return {} end
+    return { "i" }
+  end,
+})
 
 --- Cursor position.
 --- The current cursor position in the format: line,column/total-lines.
@@ -463,70 +459,78 @@ h.draw_methods = {}
 ---@param stl_window_inactive BareStatusline
 ---@param stl_window_plugin BareStatusline
 function h.draw_methods.draw_active_inactive_plugin(
-    stl_window_active, stl_window_inactive, stl_window_plugin)
-
+  stl_window_active,
+  stl_window_inactive,
+  stl_window_plugin
+)
   -- Create base autocmds.
   -- DOCS: Keep in sync with bareline-custom-config.
-  vim.api.nvim_create_autocmd(
-    {
-      "BufNew", "BufEnter", "BufWinEnter", "WinEnter",
-      "VimResume", "FocusGained", "DirChanged", "TermLeave"
-    },
-    {
-      group = h.draw_methods_augroup,
-      callback = function()
-        h.draw_statusline_if_plugin_window(
-          stl_window_plugin,
-          stl_window_active
-        )
-      end,
-    }
-  )
+  vim.api.nvim_create_autocmd({
+    "BufNew",
+    "BufEnter",
+    "BufWinEnter",
+    "WinEnter",
+    "VimResume",
+    "FocusGained",
+    "DirChanged",
+    "TermLeave",
+  }, {
+    group = h.draw_methods_augroup,
+    callback = function()
+      h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
+    end,
+  })
   vim.api.nvim_create_autocmd("OptionSet", {
-      group = h.draw_methods_augroup,
-      callback = function(event)
-        local options_blacklist = {
-          "statusline", "laststatus", "eventignore",
-          "winblend", "winhighlight"
-        }
-        if vim.tbl_contains(options_blacklist, event.match) then return end
-        h.draw_statusline_if_plugin_window(
-          stl_window_plugin,
-          stl_window_active
-        )
-      end,
-    }
-  )
+    group = h.draw_methods_augroup,
+    callback = function(event)
+      local options_blacklist = {
+        "statusline",
+        "laststatus",
+        "eventignore",
+        "winblend",
+        "winhighlight",
+      }
+      if vim.tbl_contains(options_blacklist, event.match) then return end
+      h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
+    end,
+  })
 
   local statuslines = {
-    stl_window_active, stl_window_inactive, stl_window_plugin }
+    stl_window_active,
+    stl_window_inactive,
+    stl_window_plugin,
+  }
 
   -- Create component-specific autocmds.
-  h.create_bare_component_autocmds(statuslines, 2, function()
-    h.draw_statusline_if_plugin_window(
-      stl_window_plugin,
-      stl_window_active
-    )
-  end)
+  h.create_bare_component_autocmds(
+    statuslines,
+    2,
+    function()
+      h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
+    end
+  )
 
   -- Create file watchers.
   vim.api.nvim_create_autocmd({ "VimEnter", "DirChanged" }, {
     group = h.draw_methods_augroup,
-    callback = function ()
-      h.start_uv_fs_events(statuslines, 2, function()
-        h.draw_statusline_if_plugin_window(
-          stl_window_plugin,
-          stl_window_active
-        )
-      end
+    callback = function()
+      h.start_uv_fs_events(
+        statuslines,
+        2,
+        function()
+          h.draw_statusline_if_plugin_window(
+            stl_window_plugin,
+            stl_window_active
+          )
+        end
       )
-    end
+    end,
   })
 
   -- Close file watchers (cleanup on dir change).
   vim.api.nvim_create_autocmd({ "VimLeave", "DirChangedPre" }, {
     group = h.draw_methods_augroup,
-    callback = function () h.close_uv_fs_events() end
+    callback = function() h.close_uv_fs_events() end,
   })
 
   -- Draw a different statusline for inactive windows. For inactive plugin
@@ -535,18 +539,12 @@ function h.draw_methods.draw_active_inactive_plugin(
     group = h.draw_methods_augroup,
     callback = function()
       if vim.o.laststatus == 3 then return end
-      h.draw_statusline_if_plugin_window(
-          stl_window_plugin,
-          stl_window_inactive
-        )
+      h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_inactive)
     end,
   })
 
   -- Initial draw. Useful when re-running `setup()` after Neovim's startup.
-  h.draw_statusline_if_plugin_window(
-    stl_window_plugin,
-    stl_window_active
-  )
+  h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
 end
 
 -- PROVIDERS
@@ -581,9 +579,7 @@ end
 ---@return table
 function h.provide_lsp_server_names()
   return vim.tbl_map(
-    function (client)
-      return client.name
-    end,
+    function(client) return client.name end,
     vim.lsp.get_clients({ bufnr = 0 })
   )
 end
@@ -629,7 +625,7 @@ end
 ---@return BareComponent
 function h.standardize_component(component)
   vim.validate({
-    component = { component, { "string", "function", "table" }, true }
+    component = { component, { "string", "function", "table" }, true },
   })
   if type(component) == "string" or type(component) == "function" then
     return bareline.BareComponent:new(component, {})
@@ -652,7 +648,8 @@ function h.build_user_supplied_component(component)
 
   if opts.cache_on_vim_modes and component_cache then
     local short_current_vim_mode = vim.fn.mode():lower():sub(1, 1)
-    local vim_modes_for_cache = h.get_vim_modes_for_cache(opts.cache_on_vim_modes)
+    local vim_modes_for_cache =
+      h.get_vim_modes_for_cache(opts.cache_on_vim_modes)
     if vim.tbl_contains(vim_modes_for_cache, short_current_vim_mode) then
       return component_cache.value
     end
@@ -678,10 +675,10 @@ function h.build_section(section)
     table.insert(built_components, h.build_user_supplied_component(component))
   end
   return table.concat(
-    vim.tbl_filter(function(built_component)
-      return built_component ~= nil
-    end,
-    built_components),
+    vim.tbl_filter(
+      function(built_component) return built_component ~= nil end,
+      built_components
+    ),
     h.component_separator
   )
 end
@@ -711,7 +708,8 @@ function h.is_plugin_window(bufnr)
   -- Although the quickfix and location lists are not plugin windows, using the
   -- plugin window format in these windows looks more sensible.
   if vim.bo.filetype == "qf" then return true end
-  return matched_filetype == nil and not vim.bo.buflisted
+  return matched_filetype == nil
+    and not vim.bo.buflisted
     and not vim.tbl_contains(special_non_plugin_filetypes, filetype)
 end
 
@@ -733,16 +731,24 @@ end
 ---@param nested_components_list BareComponent[] Statusline(s) definition(s).
 ---@param depth number Depth at which the components exist in the list.
 ---@param callback fun() Autocmd callback.
-function h.create_bare_component_autocmds(nested_components_list, depth, callback)
-  local autocmds = vim.iter(nested_components_list)
+function h.create_bare_component_autocmds(
+  nested_components_list,
+  depth,
+  callback
+)
+  local autocmds = vim
+    .iter(nested_components_list)
     :flatten(depth)
-    :map(function (bare_component)
+    :map(function(bare_component)
       local bc = bare_component
       if type(bc) ~= "table" then return nil end
       local autocmd = bc.opts and bc.opts.watcher and bc.opts.watcher.autocmd
       if autocmd == nil then return end
-      vim.validate({ ["autocmd.event"] = {
-        autocmd.event, { "string", "table" } }
+      vim.validate({
+        ["autocmd.event"] = {
+          autocmd.event,
+          { "string", "table" },
+        },
       })
       if autocmd.opts == nil then autocmd.opts = {} end
       autocmd.opts.group = h.draw_methods_augroup
@@ -750,18 +756,19 @@ function h.create_bare_component_autocmds(nested_components_list, depth, callbac
       return autocmd
     end)
     -- Remove duplicate autocmds.
-    :fold({}, function (acc, v)
+    :fold({}, function(acc, v)
       local is_duplicate_autocmd = vim.tbl_contains(
-        acc, function(accv)
-          return vim.deep_equal(accv, v)
-        end, { predicate = true })
+        acc,
+        function(accv) return vim.deep_equal(accv, v) end,
+        { predicate = true }
+      )
       if not is_duplicate_autocmd then table.insert(acc, v) end
       return acc
     end)
-    -- Create autocmds.
-    for _, autocmd in ipairs(autocmds) do
-      vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
-    end
+  -- Create autocmds.
+  for _, autocmd in ipairs(autocmds) do
+    vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
+  end
 end
 
 h.uv_fs_event_handles = {}
@@ -769,36 +776,38 @@ h.uv_fs_event_handles = {}
 ---@param nested_components_list BareComponent[] Statusline(s) definition(s).
 ---@param depth number Depth at which the components exist in the list.
 ---@param callback fun() Callback for |uv.fs_event_start()|.
-function h.start_uv_fs_events(
-    nested_components_list, depth, callback)
-
+function h.start_uv_fs_events(nested_components_list, depth, callback)
   local function watch_file(absolute_filepath)
     local uv_fs_event, error = vim.uv.new_fs_event()
     assert(uv_fs_event, error)
     local success, err_name = uv_fs_event:start(
-      absolute_filepath, {},
-      vim.schedule_wrap(function()
-        callback()
-      end))
+      absolute_filepath,
+      {},
+      vim.schedule_wrap(function() callback() end)
+    )
     assert(success, err_name)
     table.insert(h.uv_fs_event_handles, uv_fs_event)
   end
 
-  local absolute_filepaths = vim.iter(nested_components_list)
+  local absolute_filepaths = vim
+    .iter(nested_components_list)
     :flatten(depth)
-    :map(function (bare_component)
+    :map(function(bare_component)
       local bc = bare_component
       if type(bc) ~= "table" then return nil end
       local filepath = bc.opts and bc.opts.watcher and bc.opts.watcher.filepath
       if filepath == nil then return end
-      vim.validate({ filepath = {
-        filepath, { "string", "function" } }
+      vim.validate({
+        filepath = {
+          filepath,
+          { "string", "function" },
+        },
       })
       return filepath
     end)
     :flatten()
     -- Map to absolute file paths.
-    :map(function (filepath)
+    :map(function(filepath)
       if filepath == nil then return nil end
       if type(filepath) == "function" then
         local filepath_found = filepath()
@@ -811,15 +820,17 @@ function h.start_uv_fs_events(
       if v ~= nil and not vim.tbl_contains(acc, v) then table.insert(acc, v) end
       return acc
     end)
-    -- Start file watchers.
-    for _, absolute_filepath in ipairs(absolute_filepaths) do
-      watch_file(absolute_filepath)
-    end
+  -- Start file watchers.
+  for _, absolute_filepath in ipairs(absolute_filepaths) do
+    watch_file(absolute_filepath)
+  end
 end
 
 -- Close all fs_event handles.
 function h.close_uv_fs_events()
-  for _, handle in ipairs(h.uv_fs_event_handles) do handle:close() end
+  for _, handle in ipairs(h.uv_fs_event_handles) do
+    handle:close()
+  end
   h.uv_fs_event_handles = {}
 end
 
@@ -841,17 +852,17 @@ vim.api.nvim_create_autocmd({ "WinClosed" }, {
 ---@param default_config table Bareline's default config.
 ---@return table
 function h.get_config_with_fallback(config, default_config)
-  vim.validate { config = { config, "table", true } }
-  config = vim.tbl_deep_extend(
-    "force", vim.deepcopy(default_config), config or {})
-  vim.validate {
-    statuslines = { config.statuslines, "table" }
-  }
-  vim.validate {
+  vim.validate({ config = { config, "table", true } })
+  config =
+    vim.tbl_deep_extend("force", vim.deepcopy(default_config), config or {})
+  vim.validate({
+    statuslines = { config.statuslines, "table" },
+  })
+  vim.validate({
     ["statuslines.active"] = { config.statuslines.active, "table" },
     ["statuslines.inactive"] = { config.statuslines.inactive, "table" },
-    ["statuslines.plugin"] = { config.statuslines.plugin, "table" }
-  }
+    ["statuslines.plugin"] = { config.statuslines.plugin, "table" },
+  })
   return config
 end
 
@@ -859,16 +870,16 @@ end
 function h.root_at_cwd(file_path_absolute)
   -- File is rooted at the cwd.
   local cwd = vim.fn.getcwd()
-  local cwd_start_index, cwd_end_index = string.find(
-    file_path_absolute, h.escape_lua_pattern(cwd .. "/"))
+  local cwd_start_index, cwd_end_index =
+    string.find(file_path_absolute, h.escape_lua_pattern(cwd .. "/"))
   if cwd_start_index ~= nil and cwd_start_index == 1 then
     return string.sub(file_path_absolute, cwd_end_index + 1)
   end
   -- File is rooted at user home.
   local home = os.getenv("HOME")
   if home == nil then return file_path_absolute end
-  local home_start_index, home_end_index = string.find(
-    file_path_absolute, h.escape_lua_pattern(home))
+  local home_start_index, home_end_index =
+    string.find(file_path_absolute, h.escape_lua_pattern(home))
   if home_start_index ~= nil and home_start_index == 1 then
     return "~" .. string.sub(file_path_absolute, home_end_index + 1)
   end

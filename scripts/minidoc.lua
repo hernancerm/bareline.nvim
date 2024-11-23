@@ -21,9 +21,7 @@ hooks.write_pre = function(lines)
   -- - `#delimiter`: Draw a simple section delimiter.
   -- - `#tag`: Add a |tag|, these are the right-aligned words.
   lines = vim.tbl_map(function(line)
-    if string.find(line, "^#delimiter$") then
-      return string.rep("-", 78)
-    end
+    if string.find(line, "^#delimiter$") then return string.rep("-", 78) end
     if string.find(line, "^#tag [%w%d._-]+$") then
       return string.format("%80s", "*" .. vim.fn.split(line, " ")[2] .. "*")
     end
@@ -32,9 +30,7 @@ hooks.write_pre = function(lines)
 
   -- If code block has no language, set Lua.
   lines = vim.tbl_map(function(line)
-    if string.find(line, "^>$") then
-      return ">lua"
-    end
+    if string.find(line, "^>$") then return ">lua" end
     return line
   end, lines)
 
@@ -76,8 +72,4 @@ hooks.write_pre = function(lines)
   return lines
 end
 
-minidoc.generate(
-  { "lua/bareline.lua" },
-  "doc/bareline.txt",
-  { hooks = hooks }
-)
+minidoc.generate({ "lua/bareline.lua" }, "doc/bareline.txt", { hooks = hooks })

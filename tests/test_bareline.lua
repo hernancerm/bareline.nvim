@@ -12,9 +12,7 @@ local child = MiniTest.new_child_neovim()
 
 local T = new_set({
   hooks = {
-    pre_once = function()
-      h.rename_gitdir_to_dotdir()
-    end,
+    pre_once = function() h.rename_gitdir_to_dotdir() end,
     pre_case = function()
       child.restart({ "-u", "scripts/minimal_init.lua" })
       child.lua([[bareline = require("bareline")]])
@@ -31,8 +29,8 @@ T["smoke"] = new_set({
     pre_case = function()
       child.lua("bareline.setup()")
       child.cmd("cd " .. resources .. "/git_dir_branch/")
-    end
-  }
+    end,
+  },
 })
 
 -- SMOKE
@@ -64,15 +62,14 @@ end
 
 T["components"] = new_set({
   hooks = {
-    pre_case = function()
-      child.lua("bareline.setup()")
-    end
-  }
+    pre_case = function() child.lua("bareline.setup()") end,
+  },
 })
 
 -- VIM_MODE
 
 T["components"]["vim_mode"] = new_set({
+  -- stylua: ignore start
   parametrize = {
     { "",           "NOR" }, -- Normal.
     { "i",          "INS" }, -- Insert.
@@ -80,8 +77,9 @@ T["components"]["vim_mode"] = new_set({
     { "v",          "V:C" }, -- Charwise Visual.
     { "V",          "V:L" }, -- Linewise Visual.
     { "<C-q>",      "V:B" }, -- Block Visual.
-    { ":term<CR>a", "TER" }  -- Terminal.
-  }
+    { ":term<CR>a", "TER" }, -- Terminal.
+  },
+  -- stylua: ignore end
 })
 
 T["components"]["vim_mode"]["success"] = function(keys, expected_vim_mode)
@@ -98,8 +96,8 @@ T["components"]["plugin_name"] = new_set({
       child.lua([[
         qf = "%t%{exists('w:quickfix_title')? ' '.w:quickfix_title : ''}"
       ]])
-    end
-  }
+    end,
+  },
 })
 
 T["components"]["plugin_name"]["quickfix list success"] = function()
@@ -129,20 +127,26 @@ end
 -- INDENT_STYLE
 
 T["components"]["indent_style"] = new_set({
+  -- stylua: ignore start
   parametrize = {
     { vim.NIL,  vim.NIL,  "tabs:8"   }, -- Nvim defaults.
     { false,    4,        "tabs:4"   },
     { true,     2,        "spaces:2" },
     { true,     4,        "spaces:4" },
   }
+,
+  -- stylua: ignore end
 })
 
 T["components"]["indent_style"]["success"] = function(
-    expandtab, tabstop, expected_indent_style)
+  expandtab,
+  tabstop,
+  expected_indent_style
+)
   if expandtab ~= vim.NIL then child.bo.expandtab = expandtab end
   if tabstop ~= vim.NIL then child.bo.tabstop = tabstop end
-  local indent_style = child.lua_get(
-    "bareline.components.indent_style:get_value()")
+  local indent_style =
+    child.lua_get("bareline.components.indent_style:get_value()")
   eq(indent_style, expected_indent_style)
 end
 
@@ -151,8 +155,8 @@ end
 T["components"]["end_of_line"] = new_set({
   parametrize = {
     { ":set eol<CR>", vim.NIL },
-    { ":set noeol<CR>", "noeol" }
-  }
+    { ":set noeol<CR>", "noeol" },
+  },
 })
 
 T["components"]["end_of_line"]["success"] = function(keys, expected_eol_marker)
@@ -164,11 +168,14 @@ end
 -- GIT_HEAD
 
 T["components"]["git_head"] = new_set({
+  -- stylua: ignore start
   parametrize = {
     { "/tests/resources/git_dir_branch/", "(main)" },
     { "/tests/resources/git_dir_hash/",   "(b1a8f4a)" },
     { "/tests/resources/git_dir_tag/",    "(b1a8f4a)" },
   }
+,
+  -- stylua: ignore end
 })
 
 T["components"]["git_head"]["success"] = function(git_dir, expected_git_head)
@@ -185,16 +192,16 @@ T["components"]["file_path_relative_to_cwd"]["%f"] = new_set({})
 
 T["components"]["file_path_relative_to_cwd"]["%f"]["[No Name]"] = function()
   child.cmd("cd " .. resources)
-  local file_path_relative_to_cwd = child.lua_get(
-    "bareline.components.file_path_relative_to_cwd:get_value()")
+  local file_path_relative_to_cwd =
+    child.lua_get("bareline.components.file_path_relative_to_cwd:get_value()")
   eq(file_path_relative_to_cwd, "%f")
 end
 
 T["components"]["file_path_relative_to_cwd"]["%f"]["help page"] = function()
   child.cmd("cd " .. resources)
   child.cmd("help")
-  local file_path_relative_to_cwd = child.lua_get(
-    "bareline.components.file_path_relative_to_cwd:get_value()")
+  local file_path_relative_to_cwd =
+    child.lua_get("bareline.components.file_path_relative_to_cwd:get_value()")
   eq(file_path_relative_to_cwd, "%f")
 end
 
@@ -203,53 +210,55 @@ T["components"]["file_path_relative_to_cwd"]["trim cwd"] = new_set({
     {
       {
         cd = resources,
-        edit = "test_file.txt"
+        edit = "test_file.txt",
       },
-      "%<test_file.txt"
+      "%<test_file.txt",
     },
     {
       {
         cd = resources .. "/dir_a",
-        edit = "dir_a_a/.gitkeep"
+        edit = "dir_a_a/.gitkeep",
       },
-      "%<dir_a_a/.gitkeep"
+      "%<dir_a_a/.gitkeep",
     },
     {
       {
         cd = resources .. "/dir_b",
-        edit = resources .. "/dir_a/dir_a_a/.gitkeep"
+        edit = resources .. "/dir_a/dir_a_a/.gitkeep",
       },
       "%<"
         .. string.gsub(resources, h.escape_lua_pattern(os.getenv("HOME")), "~")
-        .. "/dir_a/dir_a_a/.gitkeep"
+        .. "/dir_a/dir_a_a/.gitkeep",
     },
     -- An absolute file path is used for `:e`, but the file path displayed
     -- should be relative to the current working directory:
     {
       {
         cd = resources .. "/dir_a",
-        edit = resources .. "/dir_a/dir_a_a/.gitkeep"
+        edit = resources .. "/dir_a/dir_a_a/.gitkeep",
       },
-      "%<" .. "dir_a_a/.gitkeep"
+      "%<" .. "dir_a_a/.gitkeep",
     },
     -- If the cwd is not home and a file rooted at home is edited, then the home
     -- portion of the file path should be replaced by `~`.
     {
       {
         cd = resources,
-        edit = os.getenv("HOME") .. "/this_file_does_not_need_to_exist.txt"
+        edit = os.getenv("HOME") .. "/this_file_does_not_need_to_exist.txt",
       },
-      "%<" .. "~/this_file_does_not_need_to_exist.txt"
-    }
-  }
+      "%<" .. "~/this_file_does_not_need_to_exist.txt",
+    },
+  },
 })
 
 T["components"]["file_path_relative_to_cwd"]["trim cwd"]["success"] = function(
-    setup, expected_file_path)
+  setup,
+  expected_file_path
+)
   child.cmd("cd " .. setup.cd)
   child.cmd("edit " .. setup.edit)
-  local file_path_relative_to_cwd = child.lua_get(
-    "bareline.components.file_path_relative_to_cwd:get_value()")
+  local file_path_relative_to_cwd =
+    child.lua_get("bareline.components.file_path_relative_to_cwd:get_value()")
   eq(file_path_relative_to_cwd, expected_file_path)
 end
 
@@ -265,66 +274,69 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"] = new_set({
     { resources .. "/injection/%<", " %<%%< ", " %< " },
     { resources .. "/injection/%=", " %<%%= ", " %= " },
     { resources .. "/injection/%#Normal#", " %<%%#Normal# ", " %#Normal# " },
-    { resources .. "/injection/%1*%*", " %<%%1*%%* ", " %1*%* " }
-  }
+    { resources .. "/injection/%1*%*", " %<%%1*%%* ", " %1*%* " },
+  },
 })
 
-T["components"]["file_path_relative_to_cwd"]["sanitize"]["success"] =
-  function(file, expected_statusline, expected_evaluated_statusline)
-    child.lua([[
+T["components"]["file_path_relative_to_cwd"]["sanitize"]["success"] = function(
+  file,
+  expected_statusline,
+  expected_evaluated_statusline
+)
+  child.lua([[
       bareline.setup({
         statuslines = {
           active = {{ bareline.components.file_path_relative_to_cwd }}
         }
       })]])
-    child.cmd("cd " .. resources .. "/injection")
-    child.cmd("edit " .. string.gsub(file, "[%%#]", [[\%0]]))
-    eq(child.wo.statusline, expected_statusline)
-    eq(
-      vim.api.nvim_eval_statusline(child.wo.statusline, {}).str,
-      expected_evaluated_statusline
-    )
+  child.cmd("cd " .. resources .. "/injection")
+  child.cmd("edit " .. string.gsub(file, "[%%#]", [[\%0]]))
+  eq(child.wo.statusline, expected_statusline)
+  eq(
+    vim.api.nvim_eval_statusline(child.wo.statusline, {}).str,
+    expected_evaluated_statusline
+  )
 end
 
 T["components"]["file_path_relative_to_cwd"]["lua_special_chars"] = new_set({})
 
-T["components"]["file_path_relative_to_cwd"]["lua_special_chars"]["success"] =
-  function()
-    local file = resources .. "/dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
-    child.lua([[
+T["components"]["file_path_relative_to_cwd"]["lua_special_chars"]["success"] = function()
+  local file = resources .. "/dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
+  child.lua([[
       bareline.setup({
         statuslines = {
           active = {{ bareline.components.file_path_relative_to_cwd }}
         }
       })]])
-    child.cmd("cd " .. resources)
-    child.cmd("edit " .. string.gsub(file, "[%%#]", [[\%0]]))
-    eq(child.wo.statusline, " %<dir_lua_special_chars_^$()%%.[]*+-?/.gitkeep ")
-    eq(
-      vim.api.nvim_eval_statusline(child.wo.statusline, {}).str,
-      " dir_lua_special_chars_^$()%.[]*+-?/.gitkeep "
-    )
+  child.cmd("cd " .. resources)
+  child.cmd("edit " .. string.gsub(file, "[%%#]", [[\%0]]))
+  eq(child.wo.statusline, " %<dir_lua_special_chars_^$()%%.[]*+-?/.gitkeep ")
+  eq(
+    vim.api.nvim_eval_statusline(child.wo.statusline, {}).str,
+    " dir_lua_special_chars_^$()%.[]*+-?/.gitkeep "
+  )
 end
 
 T["components"]["file_path_relative_to_cwd"]["truncate_long_path"] = new_set({})
 
-T["components"]["file_path_relative_to_cwd"]["truncate_long_path"]["success"] =
-  function()
-    child.lua([[
+T["components"]["file_path_relative_to_cwd"]["truncate_long_path"]["success"] = function()
+  child.lua([[
       bareline.setup({
         statuslines = {
           active = {{ bareline.components.file_path_relative_to_cwd }}
         }
       })]])
-    child.cmd("cd " .. resources)
-    child.cmd("edit " .. "123456789012")
-    child.o.columns = 12
-    eq(child.wo.statusline, " %<123456789012 ")
-    eq(
-      vim.api.nvim_eval_statusline(
-        child.wo.statusline, { maxwidth = child.o.columns }).str,
-      " <456789012 "
-    )
+  child.cmd("cd " .. resources)
+  child.cmd("edit " .. "123456789012")
+  child.o.columns = 12
+  eq(child.wo.statusline, " %<123456789012 ")
+  eq(
+    vim.api.nvim_eval_statusline(
+      child.wo.statusline,
+      { maxwidth = child.o.columns }
+    ).str,
+    " <456789012 "
+  )
 end
 
 -- DIAGNOSTICS
@@ -334,38 +346,45 @@ T["components"]["diagnostics"] = new_set({
     {
       {
         {
-          lnum = 1, col = 1,
-          severity = vim.diagnostic.severity.WARN
-        }
+          lnum = 1,
+          col = 1,
+          severity = vim.diagnostic.severity.WARN,
+        },
       },
-      "w:1"
+      "w:1",
     },
     {
       {
         {
-          lnum = 1, col = 1,
-          severity = vim.diagnostic.severity.ERROR
+          lnum = 1,
+          col = 1,
+          severity = vim.diagnostic.severity.ERROR,
         },
         {
-          lnum = 1, col = 1,
-          severity = vim.diagnostic.severity.HINT
+          lnum = 1,
+          col = 1,
+          severity = vim.diagnostic.severity.HINT,
         },
         {
-          lnum = 1, col = 1,
-          severity = vim.diagnostic.severity.WARN
+          lnum = 1,
+          col = 1,
+          severity = vim.diagnostic.severity.WARN,
         },
         {
-          lnum = 1, col = 2,
-          severity = vim.diagnostic.severity.WARN
-        }
+          lnum = 1,
+          col = 2,
+          severity = vim.diagnostic.severity.WARN,
+        },
       },
-      "e:1,w:2,h:1"
-    }
-  }
+      "e:1,w:2,h:1",
+    },
+  },
 })
 
 T["components"]["diagnostics"]["success"] = function(
-    diagnostics, expected_diagnostics)
+  diagnostics,
+  expected_diagnostics
+)
   child.api.nvim_create_namespace("test")
   local test_ns = child.api.nvim_get_namespaces().test
   child.diagnostic.set(test_ns, 0, diagnostics)
@@ -391,8 +410,8 @@ end
 T["components"]["cwd"] = new_set({
   parametrize = {
     { "tests/resources/dir_a", "dir_a" },
-    { os.getenv("HOME"), "~" }
-  }
+    { os.getenv("HOME"), "~" },
+  },
 })
 
 T["components"]["cwd"]["success"] = function(dir, expected_cwd)
@@ -426,8 +445,8 @@ T["setup"]["all"] = new_set({
         })
       ]])
       child.cmd("cd " .. resources)
-    end
-  }
+    end,
+  },
 })
 
 T["setup"]["all"]["custom statusline active window success"] = function()
@@ -465,8 +484,8 @@ T["setup"]["partial"] = new_set({
         })
       ]])
       child.cmd("cd " .. resources)
-    end
-  }
+    end,
+  },
 })
 
 -- Active statusline user-supplied config is honored.

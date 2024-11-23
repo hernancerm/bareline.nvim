@@ -1,21 +1,33 @@
 local H = {}
 
 function H.rename_gitdir_to_dotdir()
-  vim.uv.fs_rename("tests/resources/git_dir_branch/gitdir/",
-  "tests/resources/git_dir_branch/.git/")
-  vim.uv.fs_rename("tests/resources/git_dir_hash/gitdir/",
-  "tests/resources/git_dir_hash/.git/")
-  vim.uv.fs_rename("tests/resources/git_dir_tag/gitdir/",
-  "tests/resources/git_dir_tag/.git/")
+  vim.uv.fs_rename(
+    "tests/resources/git_dir_branch/gitdir/",
+    "tests/resources/git_dir_branch/.git/"
+  )
+  vim.uv.fs_rename(
+    "tests/resources/git_dir_hash/gitdir/",
+    "tests/resources/git_dir_hash/.git/"
+  )
+  vim.uv.fs_rename(
+    "tests/resources/git_dir_tag/gitdir/",
+    "tests/resources/git_dir_tag/.git/"
+  )
 end
 
 function H.rename_dotdir_to_gitdir()
-  vim.uv.fs_rename("tests/resources/git_dir_branch/.git/",
-  "tests/resources/git_dir_branch/gitdir/")
-  vim.uv.fs_rename("tests/resources/git_dir_hash/.git/",
-  "tests/resources/git_dir_hash/gitdir/")
-  vim.uv.fs_rename("tests/resources/git_dir_tag/.git/",
-  "tests/resources/git_dir_tag/gitdir/")
+  vim.uv.fs_rename(
+    "tests/resources/git_dir_branch/.git/",
+    "tests/resources/git_dir_branch/gitdir/"
+  )
+  vim.uv.fs_rename(
+    "tests/resources/git_dir_hash/.git/",
+    "tests/resources/git_dir_hash/gitdir/"
+  )
+  vim.uv.fs_rename(
+    "tests/resources/git_dir_tag/.git/",
+    "tests/resources/git_dir_tag/gitdir/"
+  )
 end
 
 --- Given a string, escape the Lua magic pattern characters so that the string can
