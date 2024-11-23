@@ -2,6 +2,13 @@
 test: deps/lua/test.lua
 	nvim --headless --noplugin -u ./scripts/minimal_init.lua -c "lua MiniTest.run()"
 
+# Verify all files match the configured formatting
+testfmt:
+ifeq (, $(shell which stylua))
+$(error "No stylua found. Install from: https://github.com/JohnnyMorganz/StyLua")
+endif
+	stylua --check lua/ scripts/ tests/
+
 # Formatting with https://github.com/JohnnyMorganz/StyLua
 fmt:
 ifeq (, $(shell which stylua))
