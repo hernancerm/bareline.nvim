@@ -1,0 +1,6 @@
+# To use this file (requires git 2.23):
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# The config change is applied in .git/config
+
+# Style (stylua, etc.)
+016888c3c77738b4e092a7ef5ffd8fb1f6a27b56
