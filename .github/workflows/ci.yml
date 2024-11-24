@@ -13,26 +13,25 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
 
       - name: Install asdf
-        shell: bash
-        run: |
-          git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.1
-          . "$HOME/.asdf/asdf.sh"
+        # https://github.com/asdf-vm/actions
+        uses: asdf-vm/actions/setup@v3
 
       - name: Install stylua
-        shell: bash
         run: asdf install stylua
 
       - name: Run stylua check
         run: make testfmt
 
       - name: Install Neovim
-        shell: bash
         run: |
           # Install Neovim as per instructions in:
           # https://github.com/neovim/neovim/blob/master/INSTALL.md#pre-built-archives-2
@@ -44,7 +43,6 @@ jobs:
           echo /opt/nvim-linux64/bin >> ${GITHUB_PATH}
 
       - name: Run tests
-        shell: bash
         run: |
           nvim --version
           make test
