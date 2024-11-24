@@ -18,18 +18,15 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
-      - name: Install stylua
+      - name: Install asdf
         shell: bash
         run: |
-          # To update the version of stylua refer to the releases page for the URL:
-          # https://github.com/JohnnyMorganz/StyLua/releases
-          curl -LO https://github.com/JohnnyMorganz/StyLua/releases/download/v2.0.1/stylua-linux-x86_64.zip
-          unzip stylua-linux-x86_64.zip
-          rm -rf /opt/stylua
-          mkdir -p /opt/stylua
-          mv stylua /opt/stylua
-          # Add the stylua binary to the system's path.
-          echo /opt/stylua >> ${GITHUB_PATH}
+          git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.1
+          . "$HOME/.asdf/asdf.sh"
+
+      - name: Install stylua
+        shell: bash
+        run: asdf install stylua
 
       - name: Run stylua check
         run: make testfmt
