@@ -26,7 +26,9 @@ jobs:
         uses: asdf-vm/actions/setup@v3
 
       - name: Install stylua
-        run: asdf install stylua
+        run: |
+          asdf plugin add stylua
+          asdf install stylua
 
       - name: Run stylua check
         run: make testfmt
