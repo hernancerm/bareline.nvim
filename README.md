@@ -15,25 +15,21 @@
     </tr>
     <tr>
       <td>Active</td>
-      <td><img src="./media/demo_active.png" alt="Active statusline"></th>
+      <td><img src="./media/demo_active.png" alt="Active statusline"></td>
     </tr>
     <tr>
       <td>Inactive</td>
-      <td><img src="./media/demo_inactive.png" alt="Inactive statusline"></th>
+      <td><img src="./media/demo_inactive.png" alt="Inactive statusline"></td>
     </tr>
     <tr>
       <td>Plugin</td>
-      <td><img src="./media/demo_plugin.png" alt="Plugin statusline"></th>
+      <td><img src="./media/demo_plugin.png" alt="Plugin statusline"></td>
     </tr>
   </table>
-  <div align=center>
-    <p>
-      <a href="#default-config">Default config</a>. Color scheme (Neovim built-in):
-      <a href="https://github.com/vim/colorschemes/blob/master/colors/lunaperche.vim">
-        lunaperche
-      </a>
-    </p>
-  </div>
+  <p>
+    <a href="#default-config">Default config</a>. Color scheme (Neovim built-in):
+    <a href="https://github.com/vim/colorschemes/blob/master/colors/lunaperche.vim">lunaperche</a>
+  </p>
 </div>
 
 ## Features
