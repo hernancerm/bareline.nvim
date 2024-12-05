@@ -2,10 +2,9 @@
 ---
 --- MIT License Copyright (c) 2024 Hernán Cervera.
 ---
----                                              Press gO for a table of contents.
+---                         Press gO for a table of contents in the location list.
 --- ==============================================================================
---- #tag bareline-intro
---- Introduction ~
+--- Introduction
 ---
 --- Key design ideas
 ---
@@ -40,7 +39,8 @@ local h = {}
 --- >lua
 ---   vim.o.showmode = false
 ---   local bareline = require("bareline")
----   bareline.setup() -- You may provide a table for your configuration.
+---   bareline.setup() -- You may provide a table for your config, or pass no
+---                       argument to hit the ground running with the defaults.
 --- <
 
 --- Module setup.
@@ -63,26 +63,22 @@ function bareline.setup(config)
 end
 
 --- #delimiter
---- #tag bareline.default_config
---- Default configuration ~
+--- #tag bareline.config
+--- Configuration ~
 
---- The default config used for |bareline.setup()| uses distinct statuslines for
---- active, inactive and plugin windows. Here is a sample of how the statuslines
---- can look:
+--- The applied config for Bareline is provided via `require("bareline").config`.
+--- This is the result of the default config merged with any user overrides. The
+--- default config is accessible via `require("bareline").default_config`. This
+--- uses distinct statuslines for active, inactive and plugin windows.
 ---
---- Active window:
---- * | NOR  lua/bareline.lua  [lua_ls]      e:2,w:1  spaces-2  (main)  42,21/50 |
---- Inactive window:
---- * |      lua/bareline.lua  [lua_ls]              e:2,w:1  spaces-2  42,21/50 |
---- Plugin window:
---- * | [nvimtree]  [-]                                                 28,09/33 |
----
---- Default configuration
+--- Below is the default config; `bareline` is the value of `require("bareline")`.
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
 --minidoc_replace_start
 local function assign_default_config()
   --minidoc_replace_end
+  --minidoc_replace_start {
   bareline.default_config = {
+  --minidoc_replace_end
     statuslines = {
       -- Active window.
       active = {
@@ -90,9 +86,7 @@ local function assign_default_config()
           bareline.components.vim_mode,
           bareline.components.file_path_relative_to_cwd,
           bareline.components.lsp_servers,
-          "%m",
-          "%h",
-          "%r",
+          "%m", "%h", "%r"
         },
         { -- Section 2: Right.
           bareline.components.diagnostics,
@@ -100,8 +94,8 @@ local function assign_default_config()
           bareline.components.end_of_line,
           bareline.components.git_head,
           bareline.components.cwd,
-          bareline.components.position,
-        },
+          bareline.components.position
+        }
       },
       -- Inactive windows.
       inactive = {
@@ -109,43 +103,35 @@ local function assign_default_config()
           bareline.components.vim_mode:mask(" "),
           bareline.components.file_path_relative_to_cwd,
           bareline.components.lsp_servers,
-          "%m",
-          "%h",
-          "%r",
+          "%m", "%h", "%r"
         },
         { -- Section 2: Right.
           bareline.components.diagnostics,
           bareline.components.indent_style,
           bareline.components.end_of_line,
           bareline.components.cwd,
-          bareline.components.position,
-        },
+          bareline.components.position
+        }
       },
       -- Plugin windows.
       plugin = {
         { -- Section 1: Left.
           bareline.components.plugin_name,
-          "%m",
+          "%m"
         },
         { -- Section 2: Right.
-          bareline.components.position,
-        },
-      },
-    },
+          bareline.components.position
+        }
+      }
+    }
   }
-  --minidoc_replace_start
+  --minidoc_afterlines_end
 end
---minidoc_replace_end
---minidoc_afterlines_end
 
---- #delimiter
---- #tag bareline-custom-config
---- Custom configuration ~
-
---- To override the defaults (|bareline.default_config|), change only the values
---- of the keys that you need. You do not have to copy paste the entire defaults.
---- For example, if you want to make the inactive statusline be the same as the
---- default active one, you can call |bareline.setup()| like this:
+--- To override the defaults, change only the values of the keys that you need.
+--- You do not have to copy/paste the entire defaults. For example, if you want to
+--- make the inactive statusline be the same as the default active one, you can
+--- call |bareline.setup()| like this:
 --- >lua
 ---   local bareline = require("bareline")
 ---   bareline.setup({
@@ -154,9 +140,14 @@ end
 ---     }
 ---   })
 --- <
---- Custom components: Each statusline sections is a list-like table of
---- components. These components can be Bareline's built-in components
---- (|bareline.components|) or a type as below:
+
+--- #delimiter
+--- #tag bareline.custom-components
+--- Custom components ~
+
+--- Each statusline sections is a list-like table of components. These components
+--- can be Bareline's built-in components (|bareline.built-in-components|) or a
+--- type as below:
 ---
 --- 1. String: Gets evaluated as a statusline string (see 'statusline'). Examples:
 ---    * Arbitrary string: `"PROSE"`. In the statusline you'll see `PROSE`.
@@ -194,17 +185,11 @@ end
 bareline.components = {}
 
 --- #delimiter
---- #tag bareline-bare-component
---- BareComponent ~
-
---- All built-in components (|bareline.components|) are a |bareline.BareComponent|.
---- To create your own components, you can use this class or, more simply, follow
---- the alternate component types described in |bareline-custom-config|.
----
---- For examples on how to create a |bareline.BareComponent|, see the source code
---- of this plugin on the built-in components.
 
 --- Standardized component.
+--- All |bareline.built-in-components| are a |bareline.BareComponent|. To create
+--- your own components, you can use this class or, more simply, follow the
+--- alternate component types described in |bareline.custom-components|.
 ---@class BareComponent
 ---@field value string|fun():any Provides the value displayed in the statusline,
 --- like the Vim mode or diagnostics.
@@ -271,12 +256,12 @@ function bareline.BareComponent:get_value()
 end
 
 --- #delimiter
---- #tag bareline.components
+--- #tag bareline.built-in-components
 --- Built-in components ~
 
 --- Built-in components for use for |bareline.setup()|. These are all structured
 --- as a |bareline.BareComponent|. User created components may have a simpler
---- structure. See |bareline-custom-config|.
+--- structure. See |bareline.custom-components|.
 
 --- Vim mode.
 --- The Vim mode in 3 characters.
@@ -464,7 +449,7 @@ function h.draw_methods.draw_active_inactive_plugin(
   stl_window_plugin
 )
   -- Create base autocmds.
-  -- DOCS: Keep in sync with bareline-custom-config.
+  -- DOCS: Keep in sync with bareline.custom-components.
   vim.api.nvim_create_autocmd({
     "BufNew",
     "BufEnter",
