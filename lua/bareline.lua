@@ -78,7 +78,7 @@ local function assign_default_config()
   --minidoc_replace_end
   --minidoc_replace_start {
   bareline.default_config = {
-  --minidoc_replace_end
+    --minidoc_replace_end
     statuslines = {
       -- Active window.
       active = {
@@ -86,7 +86,9 @@ local function assign_default_config()
           bareline.components.vim_mode,
           bareline.components.file_path_relative_to_cwd,
           bareline.components.lsp_servers,
-          "%m", "%h", "%r"
+          "%m",
+          "%h",
+          "%r",
         },
         { -- Section 2: Right.
           bareline.components.diagnostics,
@@ -94,8 +96,8 @@ local function assign_default_config()
           bareline.components.end_of_line,
           bareline.components.git_head,
           bareline.components.cwd,
-          bareline.components.position
-        }
+          bareline.components.position,
+        },
       },
       -- Inactive windows.
       inactive = {
@@ -103,27 +105,29 @@ local function assign_default_config()
           bareline.components.vim_mode:mask(" "),
           bareline.components.file_path_relative_to_cwd,
           bareline.components.lsp_servers,
-          "%m", "%h", "%r"
+          "%m",
+          "%h",
+          "%r",
         },
         { -- Section 2: Right.
           bareline.components.diagnostics,
           bareline.components.indent_style,
           bareline.components.end_of_line,
           bareline.components.cwd,
-          bareline.components.position
-        }
+          bareline.components.position,
+        },
       },
       -- Plugin windows.
       plugin = {
         { -- Section 1: Left.
           bareline.components.plugin_name,
-          "%m"
+          "%m",
         },
         { -- Section 2: Right.
-          bareline.components.position
-        }
-      }
-    }
+          bareline.components.position,
+        },
+      },
+    },
   }
   --minidoc_afterlines_end
 end

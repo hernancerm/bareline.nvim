@@ -83,7 +83,9 @@ bareline.setup({
         bareline.components.vim_mode,
         bareline.components.file_path_relative_to_cwd,
         bareline.components.lsp_servers,
-        "%m", "%h", "%r",
+        "%m",
+        "%h",
+        "%r",
       },
       { -- Section 2: Right.
         bareline.components.diagnostics,
@@ -100,7 +102,9 @@ bareline.setup({
         bareline.components.vim_mode:mask(" "),
         bareline.components.file_path_relative_to_cwd,
         bareline.components.lsp_servers,
-        "%m", "%h", "%r",
+        "%m",
+        "%h",
+        "%r",
       },
       { -- Section 2: Right.
         bareline.components.diagnostics,
@@ -114,13 +118,13 @@ bareline.setup({
     plugin = {
       { -- Section 1: Left.
         bareline.components.plugin_name,
-        "%m"
+        "%m",
       },
       { -- Section 2: Right.
-        bareline.components.position
+        bareline.components.position,
       },
     },
-  }
+  },
 })
 ```
 
