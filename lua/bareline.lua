@@ -44,12 +44,12 @@ local h = {}
 --- #tag bareline-quickstart
 --- Quickstart ~
 
---- To enable the plugin you need to call the `setup()` function. Usage:
+--- To enable the plugin with the defaults, call the `setup()` function. Usage:
 --- >lua
----   vim.o.showmode = false
 ---   local bareline = require("bareline")
 ---   bareline.setup() -- You may provide a table for your config, or pass no
 ---                       argument to hit the ground running with the defaults.
+---   vim.o.showmode = false -- Optional, recommended.
 --- <
 
 --- Module setup.
@@ -75,10 +75,9 @@ end
 --- #tag bareline.config
 --- Configuration ~
 
---- The applied config for Bareline is provided via `require("bareline").config`.
---- This is the result of the default config merged with any user overrides. The
---- default config is accessible via `require("bareline").default_config`. This
---- uses distinct statuslines for active, inactive and plugin windows.
+--- The merged config (defaults with user overrides) is in `bareline.config`. The
+--- default config is in `bareline.default_config`. The defaults use distinct
+--- statuslines for active, inactive and plugin windows.
 ---
 --- Below is the default config; `bareline` is the value of `require("bareline")`.
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
