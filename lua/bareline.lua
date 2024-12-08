@@ -2,9 +2,18 @@
 ---
 --- MIT License Copyright (c) 2024 Hernán Cervera.
 ---
----                         Press gO for a table of contents in the location list.
+---  Contents ~
+---
+--- 1. Introduction                                   |bareline-introduction|
+--- 2. Quickstart                                     |bareline-quickstart|
+--- 3. Configuration                                  |bareline.config|
+--- 4. Custom components                              |bareline-custom-components|
+--- 5. Built-in components                            |bareline-built-in-components|
+---
+---                   Press `gO` to load the table of contents in the location list.
 --- ==============================================================================
---- Introduction
+--- #tag bareline-introduction
+--- Introduction ~
 ---
 --- Key design ideas
 ---
@@ -18,7 +27,7 @@
 --- * A statusline is a list of sections.
 --- * Each section is a list of components.
 ---
---- Visualized example:
+--- Visualized example
 ---
 --- Statusline: | NOR  lua/bareline.lua                        (main)  22,74/454 |
 ---               Section 1                                    Section 2
@@ -144,13 +153,37 @@ end
 ---     }
 ---   })
 --- <
+--- The remaining tags in this section explain each configuration key.
+
+-- DOCS: Keep in sync with the type BareStatusline.
+--- #tag bareline.config.statuslines
+--- Configures the statusline. Each field holds a statusline table definition per
+--- window state. All the fields are of the same type: a list of lists of objects.
+--- The lists are the sections (i.e. left, right) and the objects are the
+--- components (strings, functions or |BareComponent|s).
+---
+---  Fields: ~
+---
+--- #tag bareline.config.statuslines.active
+--- * {active}
+--- Definition for the statusline of the win focused by the cursor.
+---
+--- #tag bareline.config.statuslines.inactive
+--- * {inactive}
+--- Definition for the statuslines of the wins which are:
+--- 1. NOT focused by the cursor and
+--- 2. NOT displaying a plugin's UI.
+---
+--- #tag bareline.config.statuslines.plugin
+--- * {plugin}
+--- Definition for the statusline of the wins displaying a plugin's UI.
 
 --- #delimiter
---- #tag bareline.custom-components
+--- #tag bareline-custom-components
 --- Custom components ~
 
 --- Each statusline sections is a list-like table of components. These components
---- can be Bareline's built-in components (|bareline.built-in-components|) or a
+--- can be Bareline's built-in components (|bareline-built-in-components|) or a
 --- type as below:
 ---
 --- 1. String: Gets evaluated as a statusline string (see 'statusline'). Examples:
@@ -190,10 +223,10 @@ bareline.components = {}
 
 --- #delimiter
 
---- Standardized component.
---- All |bareline.built-in-components| are a |bareline.BareComponent|. To create
+--- Standardized statusline component.
+--- All |bareline-built-in-components| are a |bareline.BareComponent|. To create
 --- your own components, you can use this class or, more simply, follow the
---- alternate component types described in |bareline.custom-components|.
+--- alternate component types described in |bareline-custom-components|.
 ---@class BareComponent
 ---@field value string|fun():any Provides the value displayed in the statusline,
 --- like the Vim mode or diagnostics.
@@ -201,14 +234,13 @@ bareline.components = {}
 bareline.BareComponent = {}
 bareline.BareComponent["__index"] = bareline.BareComponent
 
---- #tag bareline.BareComponentOpts
+--- Options of a |bareline.BareComponent|.
 ---@class BareComponentOpts
 ---@field watcher BareComponentWatcher Watcher. Triggers a statusline redraw.
 ---@field cache_on_vim_modes string[]|fun():string[] Use cache in these Vim modes.
 --- Each Vim mode is expected as the first char returned by |mode()|.
 
---- #tag bareline.BareComponentWatcher
---- Defines watcher configuration for a component.
+--- Defines watcher configuration for a |bareline.BareComponent| component.
 --- With Bareline, you don't need a timer to have the statusline update when you
 --- expect it to. Since there is no fixed redraw, the plugin needs a way to know
 --- when to do a redraw. That knowledge is provided to Bareline in a per component
@@ -260,12 +292,12 @@ function bareline.BareComponent:get_value()
 end
 
 --- #delimiter
---- #tag bareline.built-in-components
+--- #tag bareline-built-in-components
 --- Built-in components ~
 
 --- Built-in components for use for |bareline.setup()|. These are all structured
 --- as a |bareline.BareComponent|. User created components may have a simpler
---- structure. See |bareline.custom-components|.
+--- structure. See |bareline-custom-components|.
 
 --- Vim mode.
 --- The Vim mode in 3 characters.
@@ -362,7 +394,7 @@ bareline.components.lsp_servers = bareline.BareComponent:new(function()
   if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then return nil end
   return "[" .. vim.fn.join(lsp_servers, ",") .. "]"
 end, {
-  watcher = {
+  weatcher = {
     autocmd = {
       event = { "LspAttach", "LspDetach" },
     },
@@ -453,7 +485,7 @@ function h.draw_methods.draw_active_inactive_plugin(
   stl_window_plugin
 )
   -- Create base autocmds.
-  -- DOCS: Keep in sync with bareline.custom-components.
+  -- DOCS: Keep in sync with bareline-custom-components.
   vim.api.nvim_create_autocmd({
     "BufNew",
     "BufEnter",
