@@ -1,8 +1,11 @@
-# ACTIONS
-
 HELP_FILE := ./doc/bareline.txt
 CMD_NVIM := nvim --headless --noplugin
+ECHASNOVSKI_GH_BASE_URL := https://raw.githubusercontent.com/echasnovski
 CMD_MINI_DOC_GENERATE := @$(CMD_NVIM) -u ./scripts/testdocs_init.lua && echo ''
+STYLUA_VERSION := $(shell grep stylua .tool-versions | awk '{ print $$2 }')
+STYLUA := $(HOME)/.asdf/installs/stylua/$(STYLUA_VERSION)/bin/stylua
+
+# ACTIONS
 
 # Check formatting.
 .PHONY: testmft
@@ -35,10 +38,6 @@ docs:
 	$(CMD_MINI_DOC_GENERATE)
 
 # FILES
-
-ECHASNOVSKI_GH_BASE_URL := https://raw.githubusercontent.com/echasnovski
-STYLUA_VERSION := $(shell grep stylua .tool-versions | awk '{ print $$2 }')
-STYLUA := $(shell echo ~)/.asdf/installs/stylua/$(STYLUA_VERSION)/bin/stylua
 
 deps/lua/test.lua:
 	@mkdir -p deps/lua
