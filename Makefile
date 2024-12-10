@@ -14,7 +14,7 @@ testfmt: $(STYLUA)
 
 # Check docs are up to date.
 .PHONY: testdocs
-testdocs:
+testdocs: deps/lua/doc.lua
 	git checkout $(HELP_FILE)
 	@$(CMD_MINI_DOC_GENERATE)
 	git diff --exit-code $(HELP_FILE)
