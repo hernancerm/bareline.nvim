@@ -1,22 +1,54 @@
-# Run all test files
-test: deps/lua/test.lua
-	nvim --headless --noplugin -u ./scripts/minimal_init.lua -c "lua MiniTest.run()"
+# ACTIONS
 
-# Verify all files match the configured formatting
-testfmt:
-ifeq (, $(shell which stylua))
-$(error "No stylua found. Install from: https://github.com/JohnnyMorganz/StyLua")
-endif
+HELP_FILE := ./doc/bareline.txt
+CMD_NVIM := nvim --headless --noplugin
+CMD_MINI_DOC_GENERATE := @$(CMD_NVIM) -u ./scripts/testdocs_init.lua && echo ''
+
+# Check formatting.
+.PHONY: testmft
+testfmt: $(STYLUA)
 	stylua --check lua/ scripts/ tests/
 
-# Formatting with https://github.com/JohnnyMorganz/StyLua
-fmt:
-ifeq (, $(shell which stylua))
-$(error "No stylua found. Install from: https://github.com/JohnnyMorganz/StyLua")
-endif
+# Check docs are up to date.
+.PHONY: testdocs
+testdocs:
+	git checkout $(HELP_FILE)
+	@$(CMD_MINI_DOC_GENERATE)
+	git diff --exit-code $(HELP_FILE)
+
+# Run all unit test.
+.PHONY: test
+test: deps/lua/test.lua
+	$(CMD_NVIM) -u ./scripts/minimal_init.lua -c "lua MiniTest.run()"
+
+# Run CI tests.
+.PHONY: testci
+testci: testfmt testdocs test
+
+# Format.
+.PHONY: fmt
+fmt: $(STYLUA)
 	stylua lua/ scripts/ tests/
 
-# Download 'mini.nvim' to use its 'mini.test' testing module
+# Update docs.
+docs:
+	$(CMD_MINI_DOC_GENERATE)
+
+# FILES
+
+ECHASNOVSKI_GH_BASE_URL := https://raw.githubusercontent.com/echasnovski
+STYLUA_VERSION := $(shell grep stylua .tool-versions | awk '{ print $$2 }')
+STYLUA := $(shell echo ~)/.asdf/installs/stylua/$(STYLUA_VERSION)/bin/stylua
+
 deps/lua/test.lua:
 	@mkdir -p deps/lua
-	curl https://raw.githubusercontent.com/echasnovski/mini.test/main/lua/mini/test.lua -o $@
+	curl $(ECHASNOVSKI_GH_BASE_URL)/mini.test/main/lua/mini/test.lua -o $@
+
+deps/lua/doc.lua:
+	@mkdir -p deps/lua
+	curl $(ECHASNOVSKI_GH_BASE_URL)/mini.doc/main/lua/mini/doc.lua -o $@
+
+# Install Stylua using asdf (https://asdf-vm.com/).
+# <https://github.com/JohnnyMorganz/StyLua>.
+$(STYLUA):
+	asdf install stylua

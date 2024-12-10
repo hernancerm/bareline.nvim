@@ -2,7 +2,7 @@
 
 -- See: https://github.com/echasnovski/mini.nvim/blob/main/scripts/minidoc.lua
 
-local minidoc = require("mini.doc")
+local minidoc = MiniDoc
 if _G.MiniDoc == nil then minidoc.setup() end
 
 local hooks = vim.deepcopy(MiniDoc.default_hooks)

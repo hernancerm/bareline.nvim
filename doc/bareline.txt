@@ -46,7 +46,6 @@ To enable the plugin with the defaults, call the `setup()` function. Usage:
                       argument to hit the ground running with the defaults.
   vim.o.showmode = false -- Optional, recommended.
 <
-
                                                               *bareline.setup()*
                            `bareline.setup`({config})
 Module setup.
@@ -117,7 +116,6 @@ Below is the default config; `bareline` is the value of `require("bareline")`.
     },
   }
 <
-
 To override the defaults, change only the values of the keys that you need.
 You do not have to copy/paste the entire defaults. For example, if you want to
 make the inactive statusline be the same as the default active one, you can
