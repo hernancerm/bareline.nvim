@@ -18,20 +18,12 @@ jobs:
         shell: bash
 
     steps:
-      - name: Check out repository code
+      - name: Check out repo
         uses: actions/checkout@v4
 
       - name: Install asdf
         # https://github.com/asdf-vm/actions
         uses: asdf-vm/actions/setup@v3
-
-      - name: Install stylua
-        run: |
-          asdf plugin add stylua
-          asdf install stylua
-
-      - name: Run stylua check
-        run: make testfmt
 
       - name: Install Neovim
         run: |
@@ -44,10 +36,10 @@ jobs:
           # Add the nvim binary to the system's path.
           echo /opt/nvim-linux64/bin >> ${GITHUB_PATH}
 
-      - name: Run tests
+      - name: Run all checks
         run: |
           nvim --version
-          make test
+          make testci
 
 # ---
 # Full list of packages installed on ubuntu-latest:

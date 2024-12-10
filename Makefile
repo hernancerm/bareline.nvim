@@ -51,4 +51,5 @@ deps/lua/doc.lua:
 # Install Stylua using asdf (https://asdf-vm.com/).
 # <https://github.com/JohnnyMorganz/StyLua>.
 $(STYLUA):
+	asdf plugin add stylua
 	asdf install stylua
