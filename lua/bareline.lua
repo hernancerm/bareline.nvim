@@ -204,7 +204,7 @@ end
 --- 3. |bareline.BareComponent|: Create one of this type if you need to specify a
 ---    watching config on when to redraw the statusline to keep the component
 ---    up-to-date. This is for when you need to watch a file or directory or
----    register autocommands. Use: |bareline.BareComponentWatcher|
+---    register autocommands. Use: |bareline-BareComponentWatcher|
 ---
 ---    For several use cases, you don't need to specify a watching config, so you
 ---    can get away with a string or function component. The autocmds configured
@@ -233,12 +233,14 @@ bareline.components = {}
 bareline.BareComponent = {}
 bareline.BareComponent["__index"] = bareline.BareComponent
 
+--- #tag bareline-BareComponentOpts
 --- Options of a |bareline.BareComponent|.
 ---@class BareComponentOpts
 ---@field watcher BareComponentWatcher Watcher. Triggers a statusline redraw.
 ---@field cache_on_vim_modes string[]|fun():string[] Use cache in these Vim modes.
 --- Each Vim mode is expected as the first char returned by |mode()|.
 
+--- #tag bareline-BareComponentWatcher
 --- Defines watcher configuration for a |bareline.BareComponent| component.
 --- With Bareline, you don't need a timer to have the statusline update when you
 --- expect it to. Since there is no fixed redraw, the plugin needs a way to know
