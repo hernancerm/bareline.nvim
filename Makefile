@@ -34,7 +34,7 @@ fmt: $(STYLUA)
 	stylua lua/ scripts/ tests/
 
 # Update docs.
-docs:
+docs: deps/lua/doc.lua
 	$(CMD_MINI_DOC_GENERATE)
 
 # FILES
