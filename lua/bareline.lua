@@ -662,11 +662,8 @@ end
 ---@param component UserSuppliedComponent
 ---@return ComponentValue
 function h.build_user_supplied_component(component)
-  ---@type BareComponent
   local bare_component = h.standardize_component(component)
-  ---@type ComponentValueCache|nil
   local component_cache = h.get_component_cache(bare_component)
-  ---@type BareComponentOpts
   local opts = bare_component.opts
 
   if opts.cache_on_vim_modes and component_cache then
