@@ -164,19 +164,18 @@ end
 ---  Fields: ~
 ---
 --- #tag bareline.config.statuslines.active
---- * {active} `(table|fun():table)`
+--- * {active}
 --- Definition for the statusline of the win focused by the cursor.
 ---
 --- #tag bareline.config.statuslines.inactive
---- * {inactive} `(table|fun():table)`
+--- * {inactive}
 --- Definition for the statuslines of the wins which are:
 --- 1. NOT focused by the cursor and
 --- 2. NOT displaying a plugin's UI.
 ---
 --- #tag bareline.config.statuslines.plugin
---- * {plugin} `(table|fun():table)`
---- Definition for the statusline of the wins displaying a plugin's UI. For
---- example, this is used for <https://github.com/nvim-tree/nvim-tree.lua>.
+--- * {plugin}
+--- Definition for the statusline of the wins displaying a plugin's UI.
 
 --- #delimiter
 --- #tag bareline-custom-components
@@ -684,7 +683,7 @@ end
 h.component_separator = "  "
 
 ---@alias BareSection UserSuppliedComponent[]
----@alias BareStatusline BareSection[]|fun():BareSection[]
+---@alias BareStatusline BareSection[]
 
 --- At least one component is expected to be built into a non-nil value.
 ---@param section table Statusline section, as may be provided by a user.
@@ -735,13 +734,7 @@ end
 
 ---@param statusline BareStatusline
 function h.draw_window_statusline(statusline)
-  local sections = {}
-  if type(statusline) == "table" then
-    sections = statusline
-  elseif type(statusline == "function") then
-    sections = statusline()
-  end
-  vim.wo.statusline = h.build_statusline(sections)
+  vim.wo.statusline = h.build_statusline(statusline)
 end
 
 ---@param statusline_1 BareStatusline Statusline for a plugin window.
@@ -885,18 +878,9 @@ function h.get_config_with_fallback(config, default_config)
     statuslines = { config.statuslines, "table" },
   })
   vim.validate({
-    ["statuslines.active"] = {
-      config.statuslines.active,
-      { "table", "function" },
-    },
-    ["statuslines.inactive"] = {
-      config.statuslines.inactive,
-      { "table", "function" },
-    },
-    ["statuslines.plugin"] = {
-      config.statuslines.plugin,
-      { "table", "function" },
-    },
+    ["statuslines.active"] = { config.statuslines.active, "table" },
+    ["statuslines.inactive"] = { config.statuslines.inactive, "table" },
+    ["statuslines.plugin"] = { config.statuslines.plugin, "table" },
   })
   return config
 end

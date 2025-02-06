@@ -139,19 +139,18 @@ components (strings, functions or |BareComponent|s).
  Fields: ~
 
                                             *bareline.config.statuslines.active*
-• {active} `(table|fun():table)`
+• {active}
 Definition for the statusline of the win focused by the cursor.
 
                                           *bareline.config.statuslines.inactive*
-• {inactive} `(table|fun():table)`
+• {inactive}
 Definition for the statuslines of the wins which are:
 1. NOT focused by the cursor and
 2. NOT displaying a plugin's UI.
 
                                             *bareline.config.statuslines.plugin*
-• {plugin} `(table|fun():table)`
-Definition for the statusline of the wins displaying a plugin's UI. For
-example, this is used for <https://github.com/nvim-tree/nvim-tree.lua>.
+• {plugin}
+Definition for the statusline of the wins displaying a plugin's UI.
 
 ------------------------------------------------------------------------------
                                                     *bareline-custom-components*

@@ -327,7 +327,7 @@ T["components"]["file_path_relative_to_cwd"]["truncate_long_path"]["success"] = 
         }
       })]])
   child.cmd("cd " .. resources)
-  child.cmd("edit 123456789012")
+  child.cmd("edit " .. "123456789012")
   child.o.columns = 12
   eq(child.wo.statusline, " %<123456789012 ")
   eq(
@@ -501,41 +501,6 @@ T["setup"]["partial"]["default statusline plugin window success"] = function()
   child.bo.modifiable = false
   local expected = " [test]  %m%=%02l:%02c/%02L "
   eq(child.wo.statusline, expected)
-end
-
-T["setup"]["function_statusline_definition"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua([[
-        bareline.setup({
-          statuslines = {
-            active = function()
-              local active_statusline = {{}}
-              if vim.fn.bufnr("special") > 0 then
-                active_statusline = { { "i_am_special" } }
-              else
-                active_statusline = { { bareline.components.vim_mode } }
-              end
-              return active_statusline
-            end,
-            inactive = {{}},
-            plugin = {{}}
-          }
-        })
-      ]])
-      child.cmd("cd " .. resources)
-    end,
-  },
-})
-
-T["setup"]["function_statusline_definition"]["active_in_special"] = function()
-  child.cmd("edit special")
-  eq(child.wo.statusline, " i_am_special ")
-end
-
-T["setup"]["function_statusline_definition"]["active_in_non_special"] = function()
-  child.cmd("edit foo")
-  eq(child.wo.statusline, " NOR ")
 end
 
 return T
