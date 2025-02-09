@@ -125,6 +125,11 @@ bareline.setup({
       },
     },
   },
+  components = {
+    git_head = {
+      worktrees = {},
+    },
+  },
 })
 ```
 

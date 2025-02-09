@@ -46,16 +46,14 @@ local h = {}
 
 --- To enable the plugin with the defaults, call the `setup()` function. Usage:
 --- >lua
----   local bareline = require("bareline")
----   bareline.setup() -- You may provide a table for your config, or pass no
----                       argument to hit the ground running with the defaults.
+---   require("bareline").setup()
 ---   vim.o.showmode = false -- Optional, recommended.
 --- <
 
 --- Module setup.
----@param config table|nil If a table is provided, it's merged with the default
---- config (|bareline.default_config|) and the keys in the user's config take
---- precedence. If `config` is nil, then the default config is used.
+---@param config table? If a table is provided, it's merged with the default
+--- config (|bareline.default_config|) and the former takes precedence on
+--- duplicate keys.
 function bareline.setup(config)
   -- Cleanup.
   if #vim.api.nvim_get_autocmds({ group = h.draw_methods_augroup }) > 0 then
@@ -73,10 +71,11 @@ end
 
 --- #delimiter
 --- #tag bareline.config
+--- #tag bareline.default_config
 --- Configuration ~
 
 --- The merged config (defaults with user overrides) is in `bareline.config`. The
---- default config is in `bareline.default_config`. The defaults use distinct
+--- default config is in `bareline.default_config`. The default uses distinct
 --- statuslines for active, inactive and plugin windows.
 ---
 --- Below is the default config; `bareline` is the value of `require("bareline")`.
@@ -136,23 +135,14 @@ local function assign_default_config()
         },
       },
     },
+    components = {
+      git_head = {
+        worktrees = {},
+      },
+    },
   }
   --minidoc_afterlines_end
 end
-
---- To override the defaults, change only the values of the keys that you need.
---- You do not have to copy/paste the entire defaults. For example, if you want to
---- make the inactive statusline be the same as the default active one, you can
---- call |bareline.setup()| like this:
---- >lua
----   local bareline = require("bareline")
----   bareline.setup({
----     statuslines = {
----       inactive = bareline.default_config.statuslines.active
----     }
----   })
---- <
---- The remaining tags in this section explain each configuration key.
 
 -- DOCS: Keep in sync with the type BareStatusline.
 --- #tag bareline.config.statuslines
@@ -161,58 +151,65 @@ end
 --- The lists are the sections (i.e. left, right) and the objects are the
 --- components (strings, functions or |BareComponent|s).
 ---
----  Fields: ~
+--- Fields: ~
 ---
 --- #tag bareline.config.statuslines.active
---- * {active}
+---     {active} (`table`)
 --- Definition for the statusline of the win focused by the cursor.
 ---
 --- #tag bareline.config.statuslines.inactive
---- * {inactive}
+---     {inactive} (`table`)
 --- Definition for the statuslines of the wins which are:
 --- 1. NOT focused by the cursor and
 --- 2. NOT displaying a plugin's UI.
 ---
 --- #tag bareline.config.statuslines.plugin
---- * {plugin}
+---     {plugin} (`table`)
 --- Definition for the statusline of the wins displaying a plugin's UI.
+
+--- #tag bareline.config.components
+--- The component options set in |bareline.BareComponent:new()| are merged with
+--- these options. The options here have precedence on duplicate keys.
+---
+--- Fields: ~
+---
+--- #tag bareline.config.components.git_head
+---     {git_head} (`table`)
+--- See |bareline.components.git_head|.
 
 --- #delimiter
 --- #tag bareline-custom-components
---- Custom components ~
 
---- Each statusline sections is a list-like table of components. These components
---- can be Bareline's built-in components (|bareline-built-in-components|) or a
---- type as below:
+--- Bareline comes with some components: |bareline-built-in-components|. If none
+--- provide what you want, you can create your own. A component can be a string,
+--- function or |bareline.BareComponent|:
 ---
 --- 1. String: Gets evaluated as a statusline string (see 'statusline'). Examples:
----    * Arbitrary string: `"PROSE"`. In the statusline you'll see `PROSE`.
+---    * Arbitrary string: `"S-WRAP"`. In the statusline you'll see `S-WRAP`.
 ---    * Options: `vim.bo.fileformat`. In the statusline you might see `unix`.
 ---    * Statusline item: `"%r"`. In the statusline you might see `[RO]`.
 ---
 --- 2. Function: Returns a string or nil. When a string, it's placed in the
 ---    statusline; when nil, the component is skipped. Example:
 --- >lua
----    -- Current working directory.
+---    -- Get the tail of the current working directory.
 ---    local component_cwd = function ()
 ---      local cwd = vim.uv.cwd() or ""
 ---      if cwd == vim.uv.os_getenv("HOME", 60) then return "~" end
 ---      return vim.fn.fnamemodify(cwd, ":t")
 ---    end
----    -- Possible output: "bareline.nvim".
 --- <
 --- 3. |bareline.BareComponent|: Create one of this type if you need to specify a
 ---    watching config on when to redraw the statusline to keep the component
 ---    up-to-date. This is for when you need to watch a file or directory or
----    register autocommands. Use: |bareline-BareComponentWatcher|
+---    register autocommands.
 ---
----    For several use cases, you don't need to specify a watching config, so you
----    can get away with a string or function component. The autocmds configured
----    by default might be enough to monitor what you are displaying in your
----    statusline:
+--- For several use cases, you don't need to specify a watching config, so you can
+--- get away with a string or function component. The autocommands configured by
+--- default might be enough to monitor what is displayed in your statusline:
 ---
----      |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|,
----      |FocusGained|, |OptionSet|, |DirChanged|, |TermLeave|.
+---   |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|,
+---   |FocusGained|, |OptionSet|, |DirChanged|, |TermLeave|.
 
 ---@alias UserSuppliedComponent any|fun():any|BareComponent
 
@@ -224,46 +221,62 @@ bareline.components = {}
 
 --- Standardized statusline component.
 --- All |bareline-built-in-components| are a |bareline.BareComponent|. To create
---- your own components, you can use this class or, more simply, follow the
---- alternate component types described in |bareline-custom-components|.
+--- your own components, you can use this class or use simpler types as described
+--- in |bareline-custom-components|.
 ---@class BareComponent
----@field value string|fun():any Provides the value displayed in the statusline,
---- like the Vim mode or diagnostics.
----@field opts BareComponentOpts Options.
+---@field value string|fun(opts:table):any Provides the value displayed in the
+--- statusline, like the diagnostics. When the value is a function, it gets the
+--- argument `opts` from the field `opts` of the |bareline.BareComponent| object.
+--- This is powerful, as it allows configuring components after creation and
+--- setting options not present in |bareline-BareComponentCommonOpts|.
+--- See: |bareline.BareComponent:config()|
+---@field opts BareComponentCommonOpts
 bareline.BareComponent = {}
 bareline.BareComponent["__index"] = bareline.BareComponent
 
---- #tag bareline-BareComponentOpts
---- Options of a |bareline.BareComponent|.
----@class BareComponentOpts
+--- #tag bareline-BareComponentCommonOpts
+--- Options applicable to any |bareline.BareComponent|.
+---@class BareComponentCommonOpts
 ---@field watcher BareComponentWatcher Watcher. Triggers a statusline redraw.
 ---@field cache_on_vim_modes string[]|fun():string[] Use cache in these Vim modes.
 --- Each Vim mode is expected as the first char returned by |mode()|.
 
 --- #tag bareline-BareComponentWatcher
---- Defines watcher configuration for a |bareline.BareComponent| component.
---- With Bareline, you don't need a timer to have the statusline update when you
---- expect it to. Since there is no fixed redraw, the plugin needs a way to know
---- when to do a redraw. That knowledge is provided to Bareline in a per component
---- basis through this watcher configuration.
+--- Defines watcher configuration for a |bareline.BareComponent|.
+--- Since this plugin does not implement a timer-based statusline redraw, it needs
+--- a way to know when to do a redraw. That knowledge is provided here.
 ---@class BareComponentWatcher
 ---@field autocmd table Expects a table with the keys `event` and `opts`. These
 --- values are passed as-is to |vim.api.nvim_create_autocmd()|.
----@field filepath string|fun():string Filepath to watch.
+---@field filepath string|fun():string File or dir path to watch.
 
 --- Constructor.
 --- Parameters ~
---- {value} `function|string` As a function, it expects no args and returns a
---- single value of any type. As a string, is used as-is.
---- {opts} BareComponentOpts Options.
+--- {value} `(string|fun(opts:table):any)` Initial value of the field `value`.
+--- {common_opts} `(BareComponentCommonOpts)` Initial value of the field `opts`.
 --- Return ~
 --- Bareline.BareComponent
-function bareline.BareComponent:new(value, opts)
+function bareline.BareComponent:new(value, common_opts)
   local bare_component = {}
   setmetatable(bare_component, self)
   bare_component.value = value
-  bare_component.opts = opts
+  bare_component.opts = common_opts
   return bare_component
+end
+
+--- Update component opts.
+--- Parameters ~
+--- {opts} `(table)` The field `opts` from |bareline.BareComponent| is merged with
+--- these opts. For built-in components, the option keys here have the highest
+--- priority over what is set in either |bareline.BareComponent:new()| or at the
+--- plugin setup, i.e. |bareline.config.components|. Built-in components have
+--- their custom options documented which can be set using this method.
+--- For an example see |bareline.components.git_head|.
+--- Return ~
+--- `(BareComponent)`
+function bareline.BareComponent:config(opts)
+  self.opts = vim.tbl_deep_extend("force", vim.deepcopy(self.opts), opts or {})
+  return self
 end
 
 --- Mask with char.
@@ -273,10 +286,9 @@ end
 --- Return ~
 --- `(function)` When called returns the masked value.
 function bareline.BareComponent:mask(char)
-  local this = self
   local character = string.sub(char, 1, 1)
   return function()
-    local component_value = h.build_user_supplied_component(this)
+    local component_value = h.build_user_supplied_component(self)
     if component_value == nil then return nil end
     return component_value:gsub(".", character)
   end
@@ -284,11 +296,11 @@ end
 
 --- Retrieve the value of the component.
 --- Return ~
---- `(string|nil)` Component value.
-function bareline.BareComponent:get_value()
+--- `(string?)`
+function bareline.BareComponent:get()
   local value = self.value
   if type(value) == "string" then return value end
-  if type(value) == "function" then return value() end
+  if type(value) == "function" then return value(self.opts) end
   return nil
 end
 
@@ -296,9 +308,9 @@ end
 --- #tag bareline-built-in-components
 --- Built-in components ~
 
---- Built-in components for use for |bareline.setup()|. These are all structured
---- as a |bareline.BareComponent|. User created components may have a simpler
---- structure. See |bareline-custom-components|.
+--- Built-in components for use in |bareline.config.statusline|. These are all
+--- structured as a |bareline.BareComponent|. If you want to create your own
+--- component see |bareline-custom-components|.
 
 --- Vim mode.
 --- The Vim mode in 3 characters.
@@ -340,8 +352,7 @@ bareline.components.plugin_name = bareline.BareComponent:new(function()
 end)
 
 --- Indent style.
---- The indent style. Relies on 'expandtab' and 'tabstop'. This component is
---- omitted when the buffer has 'modifiable' disabled.
+--- Relies on 'expandtab' and 'tabstop'. Omitted when the buf is 'nomodifiable'.
 --- Mockups: `spaces:2`, `tabs:4`
 ---@type BareComponent
 bareline.components.indent_style = bareline.BareComponent:new(function()
@@ -360,11 +371,34 @@ bareline.components.end_of_line = bareline.BareComponent:new(function()
 end)
 
 --- Git HEAD.
---- Displays the Git HEAD based on the cwd (|pwd|). Useful to show the Git branch.
+--- No need to have Git installed for this to work. Search order of the Git HEAD:
+--- 1. Dir or file `.git` in the current working dir. If none, search it upwards.
+--- 2. List `worktrees` from `opts` of |bareline.BareComponent|.
+---
+--- Custom options:
+---     {worktrees} `(table)`
+--- Table with the same structure as what the gitsigns.nvim plugin expects:
+--- <https://github.com/lewis6991/gitsigns.nvim>. This provides support for
+--- detached working trees; useful for bare repositories. Example:
+--- >lua
+---   bareline.components.git_head:config({
+---     worktrees = {
+---       {
+---         toplevel = vim.env.HOME,
+---         gitdir = vim.env.HOME .. "/projects/dotfiles.git"
+---       }
+---     }
+---   })
+--- <
 --- Mockup: `(main)`
 ---@type BareComponent
-bareline.components.git_head = bareline.BareComponent:new(function()
-  local git_head = h.provide_git_head()
+bareline.components.git_head = bareline.BareComponent:new(function(opts)
+  local worktrees = opts.worktrees
+  if worktrees == nil then
+    worktrees = bareline.config.components.git_head.worktrees
+  end
+  h.validate_worktrees_for_git_head(worktrees)
+  local git_head = h.provide_git_head(worktrees)
   if git_head == nil then return nil end
   local function format(head)
     local formatted_head
@@ -380,8 +414,8 @@ end, {
   watcher = {
     filepath = function()
       local git_dir = vim.fn.finddir(".git", (vim.uv.cwd() or "") .. ";")
-      if git_dir ~= "" then return git_dir end
-      return nil
+      if git_dir == "" then git_dir = nil end
+      return git_dir
     end,
   },
 })
@@ -569,6 +603,28 @@ function h.draw_methods.draw_active_inactive_plugin(
   h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
 end
 
+-- VALIDATORS
+
+function h.validate_worktrees_for_git_head(worktrees)
+  vim.validate({
+    ["worktrees"] = { worktrees, { "table" }, true },
+  })
+  if worktrees ~= nil and #worktrees > 0 then
+    for i = 1, #worktrees do
+      vim.validate({
+        ["worktrees[" .. i .. "].toplevel"] = {
+          worktrees[i].toplevel,
+          "string",
+        },
+        ["worktrees[" .. i .. "].gitdir"] = {
+          worktrees[i].toplevel,
+          "string",
+        },
+      })
+    end
+  end
+end
+
 -- PROVIDERS
 
 -- A provider is a function which provides the base data to implement a component.
@@ -586,13 +642,30 @@ function h.provide_vim_mode()
 end
 
 --- Git HEAD.
---- Returns the Git HEAD. The file `.git/HEAD` is read and its first line is
---- returned. If the current directory does not have a `.git` dir, an upwards
---- search is performed. If the dir isn't found, then nil is returned.
+--- The Git HEAD search is done as documented for |bareline.components.git_head|.
+---@param worktrees table[]
 ---@return string|nil
-function h.provide_git_head()
-  local git_dir = vim.fn.finddir(".git", ".;")
-  return (git_dir ~= "" and vim.fn.readfile(git_dir .. "/HEAD")[1]) or nil
+function h.provide_git_head(worktrees)
+  local git_head = nil
+  local git_file_or_dir = vim.fs.find(".git", { upward = true })
+  if #git_file_or_dir == 1 then
+    if vim.fn.isdirectory(git_file_or_dir[1]) > 0 then
+      git_head = vim.fn.readfile(git_file_or_dir[1] .. "/HEAD")[1]
+    elseif vim.fn.filereadable(git_file_or_dir[1]) > 0 then
+      git_head = vim.fn.readfile(
+        string.gsub(vim.fn.readfile(git_file_or_dir[1])[1], "^gitdir:[ ]*", "")
+          .. "/HEAD"
+      )[1]
+    end
+  else
+    for _, worktree in ipairs(worktrees) do
+      if vim.uv.cwd() == worktree.toplevel then
+        git_head = vim.fn.readfile(worktree.gitdir .. "/HEAD")[1]
+        break
+      end
+    end
+  end
+  return git_head
 end
 
 --- LSP attached servers.
@@ -674,7 +747,7 @@ function h.build_user_supplied_component(component)
     end
   end
 
-  local computed_value = bare_component:get_value()
+  local computed_value = bare_component:get()
   h.store_bare_component_cache(bare_component, computed_value)
 
   return computed_value

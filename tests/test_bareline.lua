@@ -2,8 +2,13 @@
 
 -- See: https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md
 
-local root = vim.uv.cwd()
-local resources = root .. "/tests/resources"
+if not vim.fn.executable("git") then
+  print("Unsatisfied requirement: Git is not installed.\n")
+  os.exit(1)
+end
+
+local tmp_dir_for_testing = vim.fn.stdpath("data")
+  .. "/bareline.nvim/tmp_dir_for_testing"
 local h = dofile("tests/helpers.lua")
 
 local new_set = MiniTest.new_set
@@ -12,13 +17,19 @@ local child = MiniTest.new_child_neovim()
 
 local T = new_set({
   hooks = {
-    pre_once = function() h.rename_gitdir_to_dotdir() end,
+    pre_once = function()
+      h.rename_gitdir_to_dotdir()
+      h.create_git_worktree()
+      vim.fn.mkdir(tmp_dir_for_testing, "p")
+    end,
     pre_case = function()
       child.restart({ "-u", "scripts/minimal_init.lua" })
       child.lua([[bareline = require("bareline")]])
     end,
     post_once = function()
+      h.remove_git_worktree()
       h.rename_dotdir_to_gitdir()
+      vim.fn.delete(tmp_dir_for_testing, "d")
       child.stop()
     end,
   },
@@ -28,7 +39,7 @@ T["smoke"] = new_set({
   hooks = {
     pre_case = function()
       child.lua("bareline.setup()")
-      child.cmd("cd " .. resources .. "/git_dir_branch/")
+      child.cmd("cd " .. h.resources_dir .. "/git_dir_branch/")
     end,
   },
 })
@@ -58,6 +69,41 @@ T["smoke"]["plugin window success"] = function()
   eq(child.wo.statusline, expected)
 end
 
+-- BARE COMPONENT
+
+T["bare_component"] = new_set({})
+
+T["bare_component"][":config()"] = new_set({
+  hooks = {
+    pre_case = function()
+      child.lua(
+        [[component_transform_file_type = bareline.BareComponent:new(function(opts)
+          local transformer = opts.transformer
+          if type(transformer) == "function" then
+            return transformer(vim.bo.filetype)
+          end
+          return vim.bo.filetype
+        end, {})]]
+      )
+    end,
+  },
+  parametrize = {
+    { "vim.fn.sha256", vim.fn.sha256("text") },
+    { "vim.base64.encode", vim.base64.encode("text") },
+  },
+})
+
+T["bare_component"][":config()"]["success"] = function(
+  transformer,
+  expected_value
+)
+  child.cmd("edit " .. h.resources_dir .. "/foo.txt")
+  local actual_value = child.lua_get([[component_transform_file_type
+    :config({ transformer = ]] .. transformer .. [[})
+    :get()]])
+  eq(actual_value, expected_value)
+end
+
 -- COMPONENTS
 
 T["components"] = new_set({
@@ -78,13 +124,14 @@ T["components"]["vim_mode"] = new_set({
     { "V",          "V:L" }, -- Linewise Visual.
     { "<C-q>",      "V:B" }, -- Block Visual.
     { ":term<CR>a", "TER" }, -- Terminal.
-  },
+  }
+,
   -- stylua: ignore end
 })
 
 T["components"]["vim_mode"]["success"] = function(keys, expected_vim_mode)
   child.type_keys(keys)
-  local vim_mode = child.lua_get("bareline.components.vim_mode:get_value()")
+  local vim_mode = child.lua_get("bareline.components.vim_mode:get()")
   eq(vim_mode, expected_vim_mode)
 end
 
@@ -102,25 +149,22 @@ T["components"]["plugin_name"] = new_set({
 
 T["components"]["plugin_name"]["quickfix list success"] = function()
   child.cmd("copen")
-  local plugin_name =
-    child.lua_get("bareline.components.plugin_name:get_value()")
+  local plugin_name = child.lua_get("bareline.components.plugin_name:get()")
   eq(plugin_name, child.lua_get("qf"))
 end
 
 T["components"]["plugin_name"]["location list success"] = function()
-  child.cmd("edit " .. resources .. "/foo.txt")
+  child.cmd("edit " .. h.resources_dir .. "/foo.txt")
   child.cmd("lvimgrep 'foo' %")
-  child.cmd("cd " .. resources)
+  child.cmd("cd " .. h.resources_dir)
   child.cmd("lopen")
-  local plugin_name =
-    child.lua_get("bareline.components.plugin_name:get_value()")
+  local plugin_name = child.lua_get("bareline.components.plugin_name:get()")
   eq(plugin_name, child.lua_get("qf"))
 end
 
 T["components"]["plugin_name"]["fallback success"] = function()
   child.bo.filetype = "NvimTree"
-  local plugin_name =
-    child.lua_get("bareline.components.plugin_name:get_value()")
+  local plugin_name = child.lua_get("bareline.components.plugin_name:get()")
   eq(plugin_name, "[nvimtree]")
 end
 
@@ -145,8 +189,7 @@ T["components"]["indent_style"]["success"] = function(
 )
   if expandtab ~= vim.NIL then child.bo.expandtab = expandtab end
   if tabstop ~= vim.NIL then child.bo.tabstop = tabstop end
-  local indent_style =
-    child.lua_get("bareline.components.indent_style:get_value()")
+  local indent_style = child.lua_get("bareline.components.indent_style:get()")
   eq(indent_style, expected_indent_style)
 end
 
@@ -161,27 +204,52 @@ T["components"]["end_of_line"] = new_set({
 
 T["components"]["end_of_line"]["success"] = function(keys, expected_eol_marker)
   child.type_keys(keys)
-  local eol = child.lua_get("bareline.components.end_of_line:get_value()")
+  local eol = child.lua_get("bareline.components.end_of_line:get()")
   eq(eol, expected_eol_marker)
 end
 
 -- GIT_HEAD
 
-T["components"]["git_head"] = new_set({
+T["components"]["git_head"] = new_set({})
+
+T["components"]["git_head"]["standard_repo"] = new_set({
   -- stylua: ignore start
   parametrize = {
-    { "/tests/resources/git_dir_branch/", "(main)" },
-    { "/tests/resources/git_dir_hash/",   "(b1a8f4a)" },
-    { "/tests/resources/git_dir_tag/",    "(b1a8f4a)" },
+    { "/git_dir_branch", "(main)" },
+    { "/git_dir_hash",   "(f8ac697)" },
+    { "/git_dir_tag",    "(03ffbf9)" },
   }
 ,
   -- stylua: ignore end
 })
 
-T["components"]["git_head"]["success"] = function(git_dir, expected_git_head)
-  child.cmd("cd " .. root .. git_dir)
-  local git_head = child.lua_get("bareline.components.git_head:get_value()")
+T["components"]["git_head"]["standard_repo"]["success"] = function(
+  git_dir,
+  expected_git_head
+)
+  child.cmd("cd " .. h.resources_dir .. git_dir)
+  local git_head = child.lua_get("bareline.components.git_head:get()")
   eq(git_head, expected_git_head)
+end
+
+T["components"]["git_head"]["detached working tree"] = function()
+  child.cmd("cd " .. tmp_dir_for_testing)
+  local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
+  local lua_code = [[bareline.components.git_head:config({
+    worktrees = {
+      {
+        toplevel = "]] .. tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
+      }
+    }
+  }):get()]]
+  local git_head = child.lua_get(lua_code)
+  eq(git_head, "(chasing-cars)")
+end
+
+T["components"]["git_head"]["added worktree"] = function()
+  child.cmd("cd " .. h.resources_dir .. "/git_dir_branch_worktree")
+  local git_head = child.lua_get("bareline.components.git_head:get()")
+  eq(git_head, "(hotfix)")
 end
 
 -- FILE_PATH_RELATIVE_TO_CWD
@@ -191,17 +259,17 @@ T["components"]["file_path_relative_to_cwd"] = new_set({})
 T["components"]["file_path_relative_to_cwd"]["%f"] = new_set({})
 
 T["components"]["file_path_relative_to_cwd"]["%f"]["[No Name]"] = function()
-  child.cmd("cd " .. resources)
+  child.cmd("cd " .. h.resources_dir)
   local file_path_relative_to_cwd =
-    child.lua_get("bareline.components.file_path_relative_to_cwd:get_value()")
+    child.lua_get("bareline.components.file_path_relative_to_cwd:get()")
   eq(file_path_relative_to_cwd, "%f")
 end
 
 T["components"]["file_path_relative_to_cwd"]["%f"]["help page"] = function()
-  child.cmd("cd " .. resources)
+  child.cmd("cd " .. h.resources_dir)
   child.cmd("help")
   local file_path_relative_to_cwd =
-    child.lua_get("bareline.components.file_path_relative_to_cwd:get_value()")
+    child.lua_get("bareline.components.file_path_relative_to_cwd:get()")
   eq(file_path_relative_to_cwd, "%f")
 end
 
@@ -209,44 +277,46 @@ T["components"]["file_path_relative_to_cwd"]["trim cwd"] = new_set({
   parametrize = {
     {
       {
-        cd = resources,
+        cd = h.resources_dir,
         edit = "test_file.txt",
       },
       "%<test_file.txt",
     },
     {
       {
-        cd = resources .. "/dir_a",
+        cd = h.resources_dir .. "/dir_a",
         edit = "dir_a_a/.gitkeep",
       },
       "%<dir_a_a/.gitkeep",
     },
     {
       {
-        cd = resources .. "/dir_b",
-        edit = resources .. "/dir_a/dir_a_a/.gitkeep",
+        cd = h.resources_dir .. "/dir_b",
+        edit = h.resources_dir .. "/dir_a/dir_a_a/.gitkeep",
       },
-      "%<"
-        .. string.gsub(resources, h.escape_lua_pattern(os.getenv("HOME")), "~")
-        .. "/dir_a/dir_a_a/.gitkeep",
+      "%<" .. string.gsub(
+        h.resources_dir,
+        h.escape_lua_pattern(os.getenv("HOME")),
+        "~"
+      ) .. "/dir_a/dir_a_a/.gitkeep",
     },
     -- An absolute file path is used for `:e`, but the file path displayed
     -- should be relative to the current working directory:
     {
       {
-        cd = resources .. "/dir_a",
-        edit = resources .. "/dir_a/dir_a_a/.gitkeep",
+        cd = h.resources_dir .. "/dir_a",
+        edit = h.resources_dir .. "/dir_a/dir_a_a/.gitkeep",
       },
-      "%<" .. "dir_a_a/.gitkeep",
+      "%<dir_a_a/.gitkeep",
     },
     -- If the cwd is not home and a file rooted at home is edited, then the home
     -- portion of the file path should be replaced by `~`.
     {
       {
-        cd = resources,
+        cd = h.resources_dir,
         edit = os.getenv("HOME") .. "/this_file_does_not_need_to_exist.txt",
       },
-      "%<" .. "~/this_file_does_not_need_to_exist.txt",
+      "%<~/this_file_does_not_need_to_exist.txt",
     },
   },
 })
@@ -258,23 +328,31 @@ T["components"]["file_path_relative_to_cwd"]["trim cwd"]["success"] = function(
   child.cmd("cd " .. setup.cd)
   child.cmd("edit " .. setup.edit)
   local file_path_relative_to_cwd =
-    child.lua_get("bareline.components.file_path_relative_to_cwd:get_value()")
+    child.lua_get("bareline.components.file_path_relative_to_cwd:get()")
   eq(file_path_relative_to_cwd, expected_file_path)
 end
 
 T["components"]["file_path_relative_to_cwd"]["sanitize"] = new_set({
   parametrize = {
-    { resources .. "/injection/%", " %<%% ", " % " },
-    { resources .. "/injection/%%", " %<%%%% ", " %% " },
-    { resources .. "/injection/%f%m", " %<%%f%%m ", " %f%m " },
-    { resources .. "/injection/%{0}", " %<%%{0} ", " %{0} " },
-    { resources .. "/injection/%{%0%}", " %<%%{%%0%%} ", " %{%0%} " },
-    { resources .. "/injection/%(0%)", " %<%%(0%%) ", " %(0%) " },
-    { resources .. "/injection/%@B@c.c%X", " %<%%@B@c.c%%X ", " %@B@c.c%X " },
-    { resources .. "/injection/%<", " %<%%< ", " %< " },
-    { resources .. "/injection/%=", " %<%%= ", " %= " },
-    { resources .. "/injection/%#Normal#", " %<%%#Normal# ", " %#Normal# " },
-    { resources .. "/injection/%1*%*", " %<%%1*%%* ", " %1*%* " },
+    { h.resources_dir .. "/injection/%", " %<%% ", " % " },
+    { h.resources_dir .. "/injection/%%", " %<%%%% ", " %% " },
+    { h.resources_dir .. "/injection/%f%m", " %<%%f%%m ", " %f%m " },
+    { h.resources_dir .. "/injection/%{0}", " %<%%{0} ", " %{0} " },
+    { h.resources_dir .. "/injection/%{%0%}", " %<%%{%%0%%} ", " %{%0%} " },
+    { h.resources_dir .. "/injection/%(0%)", " %<%%(0%%) ", " %(0%) " },
+    {
+      h.resources_dir .. "/injection/%@B@c.c%X",
+      " %<%%@B@c.c%%X ",
+      " %@B@c.c%X ",
+    },
+    { h.resources_dir .. "/injection/%<", " %<%%< ", " %< " },
+    { h.resources_dir .. "/injection/%=", " %<%%= ", " %= " },
+    {
+      h.resources_dir .. "/injection/%#Normal#",
+      " %<%%#Normal# ",
+      " %#Normal# ",
+    },
+    { h.resources_dir .. "/injection/%1*%*", " %<%%1*%%* ", " %1*%* " },
   },
 })
 
@@ -289,7 +367,7 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"]["success"] = function(
           active = {{ bareline.components.file_path_relative_to_cwd }}
         }
       })]])
-  child.cmd("cd " .. resources .. "/injection")
+  child.cmd("cd " .. h.resources_dir .. "/injection")
   child.cmd("edit " .. string.gsub(file, "[%%#]", [[\%0]]))
   eq(child.wo.statusline, expected_statusline)
   eq(
@@ -298,17 +376,17 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"]["success"] = function(
   )
 end
 
-T["components"]["file_path_relative_to_cwd"]["lua_special_chars"] = new_set({})
+T["components"]["file_path_relative_to_cwd"]["lua special chars"] = new_set({})
 
-T["components"]["file_path_relative_to_cwd"]["lua_special_chars"]["success"] = function()
-  local file = resources .. "/dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
+T["components"]["file_path_relative_to_cwd"]["lua special chars"]["success"] = function()
+  local file = h.resources_dir .. "/dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
   child.lua([[
       bareline.setup({
         statuslines = {
           active = {{ bareline.components.file_path_relative_to_cwd }}
         }
       })]])
-  child.cmd("cd " .. resources)
+  child.cmd("cd " .. h.resources_dir)
   child.cmd("edit " .. string.gsub(file, "[%%#]", [[\%0]]))
   eq(child.wo.statusline, " %<dir_lua_special_chars_^$()%%.[]*+-?/.gitkeep ")
   eq(
@@ -317,17 +395,17 @@ T["components"]["file_path_relative_to_cwd"]["lua_special_chars"]["success"] = f
   )
 end
 
-T["components"]["file_path_relative_to_cwd"]["truncate_long_path"] = new_set({})
+T["components"]["file_path_relative_to_cwd"]["truncate long path"] = new_set({})
 
-T["components"]["file_path_relative_to_cwd"]["truncate_long_path"]["success"] = function()
+T["components"]["file_path_relative_to_cwd"]["truncate long path"]["success"] = function()
   child.lua([[
       bareline.setup({
         statuslines = {
           active = {{ bareline.components.file_path_relative_to_cwd }}
         }
       })]])
-  child.cmd("cd " .. resources)
-  child.cmd("edit " .. "123456789012")
+  child.cmd("cd " .. h.resources_dir)
+  child.cmd("edit 123456789012")
   child.o.columns = 12
   eq(child.wo.statusline, " %<123456789012 ")
   eq(
@@ -389,7 +467,7 @@ T["components"]["diagnostics"]["success"] = function(
   local test_ns = child.api.nvim_get_namespaces().test
   child.diagnostic.set(test_ns, 0, diagnostics)
   eq(
-    child.lua_get("bareline.components.diagnostics:get_value()"),
+    child.lua_get("bareline.components.diagnostics:get()"),
     expected_diagnostics
   )
 end
@@ -399,10 +477,7 @@ end
 T["components"]["position"] = new_set({})
 
 T["components"]["position"]["success"] = function()
-  eq(
-    child.lua_get("bareline.components.position:get_value()"),
-    "%02l:%02c/%02L"
-  )
+  eq(child.lua_get("bareline.components.position:get()"), "%02l:%02c/%02L")
 end
 
 -- CWD
@@ -416,14 +491,14 @@ T["components"]["cwd"] = new_set({
 
 T["components"]["cwd"]["success"] = function(dir, expected_cwd)
   child.cmd("cd " .. dir)
-  eq(child.lua_get("bareline.components.cwd:get_value()"), expected_cwd)
+  eq(child.lua_get("bareline.components.cwd:get()"), expected_cwd)
 end
 
 -- SETUP
 
 T["setup"] = new_set({})
 
-T["setup"]["all"] = new_set({
+T["setup"]["fully_custom_statusline"] = new_set({
   hooks = {
     pre_case = function()
       child.lua([[
@@ -444,17 +519,17 @@ T["setup"]["all"] = new_set({
           }
         })
       ]])
-      child.cmd("cd " .. resources)
+      child.cmd("cd " .. h.resources_dir)
     end,
   },
 })
 
-T["setup"]["all"]["custom statusline active window success"] = function()
+T["setup"]["fully_custom_statusline"]["custom statusline active window success"] = function()
   local expected = " NOR%=%02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
-T["setup"]["all"]["custom statusline inactive window success"] = function()
+T["setup"]["fully_custom_statusline"]["custom statusline inactive window success"] = function()
   child.cmd("new")
   local expected = "    %=%02l:%02c/%02L "
   local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
@@ -463,14 +538,14 @@ T["setup"]["all"]["custom statusline inactive window success"] = function()
   eq(statusline_inactive_window, expected)
 end
 
-T["setup"]["all"]["custom statusline plugin window success"] = function()
+T["setup"]["fully_custom_statusline"]["custom statusline plugin window success"] = function()
   child.bo.filetype = "test"
   child.bo.buflisted = false
   local expected = " [test]%=%02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
-T["setup"]["partial"] = new_set({
+T["setup"]["partially_custom_statusline"] = new_set({
   hooks = {
     pre_case = function()
       child.lua([[
@@ -483,24 +558,73 @@ T["setup"]["partial"] = new_set({
           }
         })
       ]])
-      child.cmd("cd " .. resources)
+      child.cmd("cd " .. h.resources_dir)
     end,
   },
 })
 
--- Active statusline user-supplied config is honored.
-T["setup"]["partial"]["custom statusline active window success"] = function()
-  local expected = " NOR%=%02l:%02c/%02L "
-  eq(child.wo.statusline, expected)
+T["setup"]["partially_custom_statusline"]["custom statusline active window success"] = function()
+  eq(child.wo.statusline, " NOR%=%02l:%02c/%02L ")
 end
 
--- Plugin statusline default config is used as a fallback.
-T["setup"]["partial"]["default statusline plugin window success"] = function()
+T["setup"]["partially_custom_statusline"]["default statusline plugin window success"] = function()
   child.bo.filetype = "test"
   child.bo.buflisted = false
   child.bo.modifiable = false
-  local expected = " [test]  %m%=%02l:%02c/%02L "
-  eq(child.wo.statusline, expected)
+  eq(child.wo.statusline, " [test]  %m%=%02l:%02c/%02L ")
+end
+
+T["setup"]["components.git_head"] = function()
+  child.cmd("cd " .. tmp_dir_for_testing)
+  local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
+  child.lua([[bareline.setup({
+    components = {
+      git_head = {
+        worktrees = {
+          {
+            toplevel = "]] .. tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
+          }
+        }
+      }
+    }
+  })]])
+  eq(
+    child.wo.statusline,
+    " NOR  %f  %m  %h  %r%=  tabs:8  (chasing-cars)  tmp_dir_for_testing  %02l:%02c/%02L "
+  )
+end
+
+T["setup"]["configure non built-in component"] = function()
+  child.cmd("edit " .. h.resources_dir .. "/foo.txt")
+  child.lua(
+    [[component_transform_file_type = bareline.BareComponent:new(function(opts)
+      local transformer = opts.transformer
+      if transformer == nil then
+        transformer = bareline.config.components.transform_file_type.transformer
+      end
+      if type(transformer) == "function" then
+        return transformer(vim.bo.filetype)
+      end
+      return vim.bo.filetype
+    end, {})]]
+  )
+  child.lua([[bareline.setup({
+    statuslines = {
+      active = {
+        {
+          component_transform_file_type
+        }
+      },
+      inactive = {{}},
+      plugin = {{}}
+    },
+    components = {
+      transform_file_type = {
+        transformer = vim.fn.sha256
+      }
+    }
+  })]])
+  eq(child.wo.statusline, " " .. vim.fn.sha256("text") .. " ")
 end
 
 return T
