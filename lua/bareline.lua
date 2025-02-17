@@ -59,12 +59,104 @@ function bareline.setup(config)
     vim.api.nvim_clear_autocmds({ group = h.draw_methods_augroup })
   end
   h.close_uv_fs_events()
+
   -- Setup.
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
-  h.draw_methods.draw_active_inactive_plugin(
+
+  -- Create base autocmds.
+  -- DOCS: Keep in sync with |bareline-custom-components|.
+  vim.api.nvim_create_autocmd({
+    "BufNew",
+    "BufEnter",
+    "BufWinEnter",
+    "WinEnter",
+    "VimResume",
+    "FocusGained",
+    "DirChanged",
+    "TermLeave",
+  }, {
+    group = h.draw_methods_augroup,
+    callback = function()
+      h.draw_statusline_if_plugin_window(
+        bareline.config.statuslines.plugin,
+        bareline.config.statuslines.active
+      )
+    end,
+  })
+  vim.api.nvim_create_autocmd("OptionSet", {
+    group = h.draw_methods_augroup,
+    callback = function(event)
+      local options_blacklist = {
+        "statusline",
+        "laststatus",
+        "eventignore",
+        "winblend",
+        "winhighlight",
+      }
+      if vim.tbl_contains(options_blacklist, event.match) then
+        return
+      end
+      h.draw_statusline_if_plugin_window(
+        bareline.config.statuslines.plugin,
+        bareline.config.statuslines.active
+      )
+    end,
+  })
+
+  local statuslines = {
     bareline.config.statuslines.active,
     bareline.config.statuslines.inactive,
-    bareline.config.statuslines.plugin
+    bareline.config.statuslines.plugin,
+  }
+
+  -- Create component-specific autocmds.
+  h.create_bare_component_autocmds(statuslines, 2, function()
+    h.draw_statusline_if_plugin_window(
+      bareline.config.statuslines.plugin,
+      bareline.config.statuslines.active
+    )
+  end)
+
+  -- Create file watchers.
+  vim.api.nvim_create_autocmd({ "VimEnter", "DirChanged" }, {
+    group = h.draw_methods_augroup,
+    callback = function()
+      h.start_uv_fs_events(statuslines, 2, function()
+        h.draw_statusline_if_plugin_window(
+          bareline.config.statuslines.plugin,
+          bareline.config.statuslines.active
+        )
+      end)
+    end,
+  })
+
+  -- Close file watchers (cleanup on dir change).
+  vim.api.nvim_create_autocmd({ "VimLeave", "DirChangedPre" }, {
+    group = h.draw_methods_augroup,
+    callback = function()
+      h.close_uv_fs_events()
+    end,
+  })
+
+  -- Draw a different statusline for inactive windows. For inactive plugin
+  -- windows, use a special statusline, the same one as for active plugin windows.
+  vim.api.nvim_create_autocmd("WinLeave", {
+    group = h.draw_methods_augroup,
+    callback = function()
+      if vim.o.laststatus == 3 then
+        return
+      end
+      h.draw_statusline_if_plugin_window(
+        bareline.config.statuslines.plugin,
+        bareline.config.statuslines.inactive
+      )
+    end,
+  })
+
+  -- Initial draw. Useful when re-running `setup()` after Neovim's startup.
+  h.draw_statusline_if_plugin_window(
+    bareline.config.statuslines.plugin,
+    bareline.config.statuslines.active
   )
 end
 
@@ -512,102 +604,6 @@ assign_default_config()
 
 -- -----
 --- #end
-
--- DRAW METHODS
-
-h.draw_methods = {}
-
---- Draw distinct statuslines for active, inactive and plugin windows.
---- Relies on base |autocmd|s and user-supplied autocmds and file paths which are
---- watched using |uv_fs_event_t|s. The provided statuslines are handled in this
---- order by table index: [1] draw on the active window, [2] inactive window and
---- [3] plugin window (having precedence over the active window statusline).
----@param stl_window_active BareStatusline
----@param stl_window_inactive BareStatusline
----@param stl_window_plugin BareStatusline
-function h.draw_methods.draw_active_inactive_plugin(
-  stl_window_active,
-  stl_window_inactive,
-  stl_window_plugin
-)
-  -- Create base autocmds.
-  -- DOCS: Keep in sync with bareline-custom-components.
-  vim.api.nvim_create_autocmd({
-    "BufNew",
-    "BufEnter",
-    "BufWinEnter",
-    "WinEnter",
-    "VimResume",
-    "FocusGained",
-    "DirChanged",
-    "TermLeave",
-  }, {
-    group = h.draw_methods_augroup,
-    callback = function()
-      h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
-    end,
-  })
-  vim.api.nvim_create_autocmd("OptionSet", {
-    group = h.draw_methods_augroup,
-    callback = function(event)
-      local options_blacklist = {
-        "statusline",
-        "laststatus",
-        "eventignore",
-        "winblend",
-        "winhighlight",
-      }
-      if vim.tbl_contains(options_blacklist, event.match) then
-        return
-      end
-      h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
-    end,
-  })
-
-  local statuslines = {
-    stl_window_active,
-    stl_window_inactive,
-    stl_window_plugin,
-  }
-
-  -- Create component-specific autocmds.
-  h.create_bare_component_autocmds(statuslines, 2, function()
-    h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
-  end)
-
-  -- Create file watchers.
-  vim.api.nvim_create_autocmd({ "VimEnter", "DirChanged" }, {
-    group = h.draw_methods_augroup,
-    callback = function()
-      h.start_uv_fs_events(statuslines, 2, function()
-        h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
-      end)
-    end,
-  })
-
-  -- Close file watchers (cleanup on dir change).
-  vim.api.nvim_create_autocmd({ "VimLeave", "DirChangedPre" }, {
-    group = h.draw_methods_augroup,
-    callback = function()
-      h.close_uv_fs_events()
-    end,
-  })
-
-  -- Draw a different statusline for inactive windows. For inactive plugin
-  -- windows, use a special statusline, the same one as for active plugin windows.
-  vim.api.nvim_create_autocmd("WinLeave", {
-    group = h.draw_methods_augroup,
-    callback = function()
-      if vim.o.laststatus == 3 then
-        return
-      end
-      h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_inactive)
-    end,
-  })
-
-  -- Initial draw. Useful when re-running `setup()` after Neovim's startup.
-  h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
-end
 
 -- VALIDATORS
 
