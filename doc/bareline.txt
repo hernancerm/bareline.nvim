@@ -119,8 +119,8 @@ Below is the default config; `bareline` is the value of `require("bareline")`.
       },
     },
     logging = {
-      enabled = false
-    }
+      enabled = false,
+    },
   }
 <
                                                    *bareline.config.statuslines*

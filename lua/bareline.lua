@@ -166,11 +166,13 @@ function bareline.setup(config)
     end,
   })
 
-  -- Initial draw. Useful when re-running `setup()` after Neovim's startup.
-  h.draw_statusline_if_plugin_window(
-    bareline.config.statuslines.plugin,
-    bareline.config.statuslines.active
-  )
+  -- Useful when re-running `setup()` after Neovim's startup.
+  if vim.v.vim_did_enter == 1 then
+    h.draw_statusline_if_plugin_window(
+      bareline.config.statuslines.plugin,
+      bareline.config.statuslines.active
+    )
+  end
 end
 
 --- #delimiter
@@ -246,8 +248,8 @@ local function assign_default_config()
       },
     },
     logging = {
-      enabled = false
-    }
+      enabled = false,
+    },
   }
   --minidoc_afterlines_end
 end
