@@ -118,6 +118,9 @@ Below is the default config; `bareline` is the value of `require("bareline")`.
         worktrees = {},
       },
     },
+    logging = {
+      enabled = false
+    }
   }
 <
                                                    *bareline.config.statuslines*
@@ -151,6 +154,16 @@ Fields:
                                            *bareline.config.components.git_head*
     {git_head} `(table)`
 See |bareline.components.git_head|.
+
+                                                       *bareline.config.logging*
+Monitor statusline redraws. The log file is located at the data directory
+(`stdpath("data")`) in `bareline.nvim/bareline.log`.
+
+Fields:
+
+                                               *bareline.config.logging.enabled*
+    {enabled} `(boolean)`
+Whether to write to the log file. Default: false.
 
 ------------------------------------------------------------------------------
                                                     *bareline-custom-components*

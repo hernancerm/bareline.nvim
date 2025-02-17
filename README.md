@@ -130,6 +130,9 @@ bareline.setup({
       worktrees = {},
     },
   },
+  logging = {
+    enabled = false
+  }
 })
 ```
 

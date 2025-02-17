@@ -60,8 +60,21 @@ function bareline.setup(config)
   end
   h.close_uv_fs_events()
 
-  -- Setup.
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
+
+  -- Logger setup.
+  local data_stdpath = vim.fn.stdpath("data")
+  if type(data_stdpath) == "table" then
+    data_stdpath = data_stdpath[1]
+  end
+  vim.fn.mkdir(data_stdpath .. "/bareline.nvim", "p")
+  h.log_file = io.open(data_stdpath .. "/bareline.nvim/bareline.log", "a+")
+  vim.api.nvim_create_autocmd("VimLeave", {
+    group = h.draw_methods_augroup,
+    callback = function()
+      h.log_file:close()
+    end,
+  })
 
   -- Create base autocmds.
   -- DOCS: Keep in sync with |bareline-custom-components|.
@@ -232,6 +245,9 @@ local function assign_default_config()
         worktrees = {},
       },
     },
+    logging = {
+      enabled = false
+    }
   }
   --minidoc_afterlines_end
 end
@@ -269,10 +285,20 @@ end
 ---     {git_head} `(table)`
 --- See |bareline.components.git_head|.
 
+--- #tag bareline.config.logging
+--- Monitor statusline redraws. The log file is located at the data directory
+--- (`stdpath("data")`) in `bareline.nvim/bareline.log`.
+---
+--- Fields:
+---
+--- #tag bareline.config.logging.enabled
+---     {enabled} `(boolean)`
+--- Whether to write to the log file. Default: false.
+
 --- #delimiter
 --- #tag bareline-custom-components
 --- Custom components ~
-
+---
 --- Bareline comes with some components: |bareline-built-in-components|. If none
 --- provide what you want, you can create your own. A component can be a string,
 --- function or |bareline.BareComponent|:
@@ -821,7 +847,11 @@ end
 
 ---@param statusline BareStatusline
 function h.draw_window_statusline(statusline)
-  vim.wo.statusline = h.build_statusline(statusline)
+  local built_statusline = h.build_statusline(statusline)
+  if bareline.config.logging.enabled then
+    h.log(built_statusline, vim.log.levels.DEBUG)
+  end
+  vim.wo.statusline = built_statusline
 end
 
 ---@param statusline_1 BareStatusline Statusline for a plugin window.
@@ -1021,6 +1051,23 @@ end
 function h.escape_lua_pattern(string)
   string, _ = string:gsub("[%(%)%.%%%+%-%*%?%[%]%^%$]", "%%%0")
   return string
+end
+
+---@param message string
+---@param level integer As per |vim.log.levels|.
+function h.log(message, level)
+  if h.log_file ~= nil then
+    local level_to_label = { "D", "I", "W", "E" }
+    h.log_file:write(
+      string.format(
+        "%s %s - %s\n",
+        level_to_label[level],
+        vim.fn.strftime("%Y-%m-%dT%H:%M:%S"),
+        message
+      )
+    )
+    h.log_file:flush()
+  end
 end
 
 return bareline
