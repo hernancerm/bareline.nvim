@@ -202,14 +202,14 @@ argument `opts` from the field `opts` of the |bareline.BareComponent| object.
 This is powerful, as it allows configuring components after creation and
 setting options not present in |bareline-BareComponentCommonOpts|.
 See: |bareline.BareComponent:config()|
-{opts} BareComponentCommonOpts
+{opts} `(BareComponentCommonOpts)`
 
                                               *bareline-BareComponentCommonOpts*
 Options applicable to any |bareline.BareComponent|.
 Class ~
 {BareComponentCommonOpts}
 Fields ~
-{watcher} BareComponentWatcher Watcher. Triggers a statusline redraw.
+{watcher} `(BareComponentWatcher)` Watcher. Triggers a statusline redraw.
 {cache_on_vim_modes} `(string[]|fun():string[])` Use cache in these Vim modes.
 Each Vim mode is expected as the first char returned by |mode()|.
 
@@ -275,7 +275,7 @@ Vim mode.
 The Vim mode in 3 characters.
 Mockups: `NOR`, `VIS`
 Type ~
-BareComponent
+`(BareComponent)`
 
                                                *bareline.components.plugin_name*
                        `bareline.components.plugin_name`
@@ -283,7 +283,7 @@ Plugin name.
 When on a plugin window, the formatted name of the plugin window.
 Mockup: `[nvimtree]`
 Type ~
-BareComponent
+`(BareComponent)`
 
                                               *bareline.components.indent_style*
                        `bareline.components.indent_style`
@@ -291,7 +291,7 @@ Indent style.
 Relies on 'expandtab' and 'tabstop'. Omitted when the buf is 'nomodifiable'.
 Mockups: `spaces:2`, `tabs:4`
 Type ~
-BareComponent
+`(BareComponent)`
 
                                                *bareline.components.end_of_line*
                        `bareline.components.end_of_line`
@@ -299,7 +299,7 @@ End of line (EOL).
 Indicates when the buffer does not have an EOL on its last line. Return `noeol`
 in this case, nil otherwise. This uses the option 'eol'.
 Type ~
-BareComponent
+`(BareComponent)`
 
                                                   *bareline.components.git_head*
                          `bareline.components.git_head`
@@ -325,7 +325,7 @@ detached working trees; useful for bare repositories. Example:
 <
 Mockup: `(main)`
 Type ~
-BareComponent
+`(BareComponent)`
 
                                                *bareline.components.lsp_servers*
                        `bareline.components.lsp_servers`
@@ -333,7 +333,7 @@ LSP servers.
 The LSP servers attached to the current buffer.
 Mockup: `[lua_ls]`
 Type ~
-BareComponent
+`(BareComponent)`
 
                                  *bareline.components.file_path_relative_to_cwd*
                 `bareline.components.file_path_relative_to_cwd`
@@ -342,7 +342,7 @@ The file path relative to the current working directory (|:pwd|). When the
 user home directory appears in the file path, `~` is used to shorten the path.
 Mockup: `lua/bareline.lua`
 Type ~
-BareComponent
+`(BareComponent)`
 
                                                *bareline.components.diagnostics*
                        `bareline.components.diagnostics`
@@ -351,7 +351,7 @@ The diagnostics of the current buffer. Respects the value of:
 `update_in_insert` from |vim.diagnostic.config()|.
 Mockup: `e:2,w:1`
 Type ~
-BareComponent
+`(BareComponent)`
 
                                                   *bareline.components.position*
                          `bareline.components.position`
@@ -359,7 +359,7 @@ Cursor position.
 The current cursor position in the format: line,column/total-lines.
 Mockup: `181:43/329`
 Type ~
-BareComponent
+`(BareComponent)`
 
                                                        *bareline.components.cwd*
                            `bareline.components.cwd`
@@ -368,6 +368,6 @@ When the current working directory (cwd) is the home dir, then `~` is shown.
 Otherwise, the name of the directory is shown, excluding the path.
 Mockup: `bareline.nvim`
 Type ~
-BareComponent
+`(BareComponent)`
 
  vim:tw=78:ts=8:noet:ft=help:norl:
