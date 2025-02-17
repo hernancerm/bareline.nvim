@@ -3,7 +3,9 @@
 -- See: https://github.com/echasnovski/mini.nvim/blob/main/scripts/minidoc.lua
 
 local minidoc = MiniDoc
-if _G.MiniDoc == nil then minidoc.setup() end
+if _G.MiniDoc == nil then
+  minidoc.setup()
+end
 
 local hooks = vim.deepcopy(MiniDoc.default_hooks)
 
@@ -13,7 +15,9 @@ hooks.write_pre = function(lines)
 
   -- Remove auto-added `----` delimiters.
   lines = vim.tbl_filter(function(line)
-    if string.find(line, "^[-]+$") then return false end
+    if string.find(line, "^[-]+$") then
+      return false
+    end
     return true
   end, lines)
 
@@ -21,7 +25,9 @@ hooks.write_pre = function(lines)
   -- - `#delimiter`: Draw a simple section delimiter.
   -- - `#tag`: Add a |tag|, these are the right-aligned words.
   lines = vim.tbl_map(function(line)
-    if string.find(line, "^#delimiter$") then return string.rep("-", 78) end
+    if string.find(line, "^#delimiter$") then
+      return string.rep("-", 78)
+    end
     if string.find(line, "^#tag [%w%d._-]+$") then
       return string.format("%80s", "*" .. vim.fn.split(line, " ")[2] .. "*")
     end
@@ -30,7 +36,9 @@ hooks.write_pre = function(lines)
 
   -- If code block has no language, set Lua.
   lines = vim.tbl_map(function(line)
-    if string.find(line, "^>$") then return ">lua" end
+    if string.find(line, "^>$") then
+      return ">lua"
+    end
     return line
   end, lines)
 

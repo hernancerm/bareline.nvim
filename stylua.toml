@@ -1,6 +1,6 @@
 # .editorconfig has precedence
 
 column_width = 80
-collapse_simple_statement = "Always"
+collapse_simple_statement = "Never"
 indent_type = "Spaces"
 indent_width = 2

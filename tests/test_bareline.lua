@@ -108,7 +108,9 @@ end
 
 T["components"] = new_set({
   hooks = {
-    pre_case = function() child.lua("bareline.setup()") end,
+    pre_case = function()
+      child.lua("bareline.setup()")
+    end,
   },
 })
 
@@ -187,8 +189,12 @@ T["components"]["indent_style"]["success"] = function(
   tabstop,
   expected_indent_style
 )
-  if expandtab ~= vim.NIL then child.bo.expandtab = expandtab end
-  if tabstop ~= vim.NIL then child.bo.tabstop = tabstop end
+  if expandtab ~= vim.NIL then
+    child.bo.expandtab = expandtab
+  end
+  if tabstop ~= vim.NIL then
+    child.bo.tabstop = tabstop
+  end
   local indent_style = child.lua_get("bareline.components.indent_style:get()")
   eq(indent_style, expected_indent_style)
 end

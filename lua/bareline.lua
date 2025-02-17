@@ -289,7 +289,9 @@ function bareline.BareComponent:mask(char)
   local character = string.sub(char, 1, 1)
   return function()
     local component_value = h.build_user_supplied_component(self)
-    if component_value == nil then return nil end
+    if component_value == nil then
+      return nil
+    end
     return component_value:gsub(".", character)
   end
 end
@@ -299,8 +301,12 @@ end
 --- `(string?)`
 function bareline.BareComponent:get()
   local value = self.value
-  if type(value) == "string" then return value end
-  if type(value) == "function" then return value(self.opts) end
+  if type(value) == "string" then
+    return value
+  end
+  if type(value) == "function" then
+    return value(self.opts)
+  end
   return nil
 end
 
@@ -356,7 +362,9 @@ end)
 --- Mockups: `spaces:2`, `tabs:4`
 ---@type BareComponent
 bareline.components.indent_style = bareline.BareComponent:new(function()
-  if not vim.bo.modifiable then return nil end
+  if not vim.bo.modifiable then
+    return nil
+  end
   local whitespace_type = (vim.bo.expandtab and "spaces") or "tabs"
   return whitespace_type .. ":" .. vim.bo.tabstop
 end)
@@ -366,7 +374,9 @@ end)
 --- in this case, nil otherwise. This uses the option 'eol'.
 ---@type BareComponent
 bareline.components.end_of_line = bareline.BareComponent:new(function()
-  if vim.bo.eol then return nil end
+  if vim.bo.eol then
+    return nil
+  end
   return "noeol"
 end)
 
@@ -399,7 +409,9 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
   end
   h.validate_worktrees_for_git_head(worktrees)
   local git_head = h.provide_git_head(worktrees)
-  if git_head == nil then return nil end
+  if git_head == nil then
+    return nil
+  end
   local function format(head)
     local formatted_head
     if head:match("^ref: ") then
@@ -414,7 +426,9 @@ end, {
   watcher = {
     filepath = function()
       local git_dir = vim.fn.finddir(".git", (vim.uv.cwd() or "") .. ";")
-      if git_dir == "" then git_dir = nil end
+      if git_dir == "" then
+        git_dir = nil
+      end
       return git_dir
     end,
   },
@@ -426,7 +440,9 @@ end, {
 ---@type BareComponent
 bareline.components.lsp_servers = bareline.BareComponent:new(function()
   local lsp_servers = h.provide_lsp_server_names()
-  if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then return nil end
+  if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then
+    return nil
+  end
   return "[" .. vim.fn.join(lsp_servers, ",") .. "]"
 end, {
   weatcher = {
@@ -444,7 +460,9 @@ end, {
 bareline.components.file_path_relative_to_cwd = bareline.BareComponent:new(
   function()
     local buf_name = vim.api.nvim_buf_get_name(0)
-    if buf_name == "" or vim.bo.filetype == "help" then return "%f" end
+    if buf_name == "" or vim.bo.filetype == "help" then
+      return "%f"
+    end
     local file_path_sanitized =
       string.gsub(h.root_at_cwd(buf_name), "%%", "%%%0")
     return "%<" .. file_path_sanitized
@@ -474,7 +492,9 @@ end, {
     },
   },
   cache_on_vim_modes = function()
-    if vim.diagnostic.config().update_in_insert then return {} end
+    if vim.diagnostic.config().update_in_insert then
+      return {}
+    end
     return { "i" }
   end,
 })
@@ -492,7 +512,9 @@ bareline.components.position = bareline.BareComponent:new("%02l:%02c/%02L")
 ---@type BareComponent
 bareline.components.cwd = bareline.BareComponent:new(function()
   local cwd = vim.uv.cwd() or ""
-  if cwd == os.getenv("HOME") then return "~" end
+  if cwd == os.getenv("HOME") then
+    return "~"
+  end
   return vim.fn.fnamemodify(cwd, ":t")
 end)
 
@@ -546,7 +568,9 @@ function h.draw_methods.draw_active_inactive_plugin(
         "winblend",
         "winhighlight",
       }
-      if vim.tbl_contains(options_blacklist, event.match) then return end
+      if vim.tbl_contains(options_blacklist, event.match) then
+        return
+      end
       h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
     end,
   })
@@ -558,35 +582,26 @@ function h.draw_methods.draw_active_inactive_plugin(
   }
 
   -- Create component-specific autocmds.
-  h.create_bare_component_autocmds(
-    statuslines,
-    2,
-    function()
-      h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
-    end
-  )
+  h.create_bare_component_autocmds(statuslines, 2, function()
+    h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
+  end)
 
   -- Create file watchers.
   vim.api.nvim_create_autocmd({ "VimEnter", "DirChanged" }, {
     group = h.draw_methods_augroup,
     callback = function()
-      h.start_uv_fs_events(
-        statuslines,
-        2,
-        function()
-          h.draw_statusline_if_plugin_window(
-            stl_window_plugin,
-            stl_window_active
-          )
-        end
-      )
+      h.start_uv_fs_events(statuslines, 2, function()
+        h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_active)
+      end)
     end,
   })
 
   -- Close file watchers (cleanup on dir change).
   vim.api.nvim_create_autocmd({ "VimLeave", "DirChangedPre" }, {
     group = h.draw_methods_augroup,
-    callback = function() h.close_uv_fs_events() end,
+    callback = function()
+      h.close_uv_fs_events()
+    end,
   })
 
   -- Draw a different statusline for inactive windows. For inactive plugin
@@ -594,7 +609,9 @@ function h.draw_methods.draw_active_inactive_plugin(
   vim.api.nvim_create_autocmd("WinLeave", {
     group = h.draw_methods_augroup,
     callback = function()
-      if vim.o.laststatus == 3 then return end
+      if vim.o.laststatus == 3 then
+        return
+      end
       h.draw_statusline_if_plugin_window(stl_window_plugin, stl_window_inactive)
     end,
   })
@@ -633,9 +650,15 @@ end
 ---@return string
 function h.provide_vim_mode()
   local function standardize_mode(character)
-    if character == "V" then return "vl" end
-    if character == "" then return "vb" end
-    if character == "" then return "sb" end
+    if character == "V" then
+      return "vl"
+    end
+    if character == "" then
+      return "vb"
+    end
+    if character == "" then
+      return "sb"
+    end
     return character:lower()
   end
   return standardize_mode(vim.fn.mode())
@@ -673,10 +696,9 @@ end
 --- Example output: `{ "lua_ls" }`
 ---@return table
 function h.provide_lsp_server_names()
-  return vim.tbl_map(
-    function(client) return client.name end,
-    vim.lsp.get_clients({ bufnr = 0 })
-  )
+  return vim.tbl_map(function(client)
+    return client.name
+  end, vim.lsp.get_clients({ bufnr = 0 }))
 end
 
 -- BUILD
@@ -693,7 +715,9 @@ h.component_cache_by_win_id = {}
 ---@return ComponentValueCache|nil
 function h.get_component_cache(bare_component)
   local win_id = vim.fn.win_getid()
-  if h.component_cache_by_win_id[win_id] == nil then return nil end
+  if h.component_cache_by_win_id[win_id] == nil then
+    return nil
+  end
   return h.component_cache_by_win_id[win_id][tostring(bare_component.value)]
 end
 
@@ -711,8 +735,12 @@ end
 ---@param cache_on_vim_modes string[]|fun():string[]
 ---@return string[]
 function h.get_vim_modes_for_cache(cache_on_vim_modes)
-  if type(cache_on_vim_modes) == "function" then return cache_on_vim_modes() end
-  if type(cache_on_vim_modes) == "table" then return cache_on_vim_modes end
+  if type(cache_on_vim_modes) == "function" then
+    return cache_on_vim_modes()
+  end
+  if type(cache_on_vim_modes) == "table" then
+    return cache_on_vim_modes
+  end
   return {}
 end
 
@@ -767,10 +795,9 @@ function h.build_section(section)
     table.insert(built_components, h.build_user_supplied_component(component))
   end
   return table.concat(
-    vim.tbl_filter(
-      function(built_component) return built_component ~= nil end,
-      built_components
-    ),
+    vim.tbl_filter(function(built_component)
+      return built_component ~= nil
+    end, built_components),
     h.component_separator
   )
 end
@@ -799,7 +826,9 @@ function h.is_plugin_window(bufnr)
   local matched_filetype, _ = vim.filetype.match({ buf = bufnr })
   -- Although the quickfix and location lists are not plugin windows, using the
   -- plugin window format in these windows looks more sensible.
-  if vim.bo.filetype == "qf" then return true end
+  if vim.bo.filetype == "qf" then
+    return true
+  end
   return matched_filetype == nil
     and not vim.bo.buflisted
     and not vim.tbl_contains(special_non_plugin_filetypes, filetype)
@@ -833,28 +862,34 @@ function h.create_bare_component_autocmds(
     :flatten(depth)
     :map(function(bare_component)
       local bc = bare_component
-      if type(bc) ~= "table" then return nil end
+      if type(bc) ~= "table" then
+        return nil
+      end
       local autocmd = bc.opts and bc.opts.watcher and bc.opts.watcher.autocmd
-      if autocmd == nil then return end
+      if autocmd == nil then
+        return
+      end
       vim.validate({
         ["autocmd.event"] = {
           autocmd.event,
           { "string", "table" },
         },
       })
-      if autocmd.opts == nil then autocmd.opts = {} end
+      if autocmd.opts == nil then
+        autocmd.opts = {}
+      end
       autocmd.opts.group = h.draw_methods_augroup
       autocmd.opts.callback = callback
       return autocmd
     end)
     -- Remove duplicate autocmds.
     :fold({}, function(acc, v)
-      local is_duplicate_autocmd = vim.tbl_contains(
-        acc,
-        function(accv) return vim.deep_equal(accv, v) end,
-        { predicate = true }
-      )
-      if not is_duplicate_autocmd then table.insert(acc, v) end
+      local is_duplicate_autocmd = vim.tbl_contains(acc, function(accv)
+        return vim.deep_equal(accv, v)
+      end, { predicate = true })
+      if not is_duplicate_autocmd then
+        table.insert(acc, v)
+      end
       return acc
     end)
   -- Create autocmds.
@@ -875,7 +910,9 @@ function h.start_uv_fs_events(nested_components_list, depth, callback)
     local success, err_name = uv_fs_event:start(
       absolute_filepath,
       {},
-      vim.schedule_wrap(function() callback() end)
+      vim.schedule_wrap(function()
+        callback()
+      end)
     )
     assert(success, err_name)
     table.insert(h.uv_fs_event_handles, uv_fs_event)
@@ -886,9 +923,13 @@ function h.start_uv_fs_events(nested_components_list, depth, callback)
     :flatten(depth)
     :map(function(bare_component)
       local bc = bare_component
-      if type(bc) ~= "table" then return nil end
+      if type(bc) ~= "table" then
+        return nil
+      end
       local filepath = bc.opts and bc.opts.watcher and bc.opts.watcher.filepath
-      if filepath == nil then return end
+      if filepath == nil then
+        return
+      end
       vim.validate({
         filepath = {
           filepath,
@@ -900,16 +941,22 @@ function h.start_uv_fs_events(nested_components_list, depth, callback)
     :flatten()
     -- Map to absolute file paths.
     :map(function(filepath)
-      if filepath == nil then return nil end
+      if filepath == nil then
+        return nil
+      end
       if type(filepath) == "function" then
         local filepath_found = filepath()
-        if filepath_found == nil then return nil end
+        if filepath_found == nil then
+          return nil
+        end
         return vim.fn.fnamemodify(filepath_found, ":p")
       end
     end)
     -- Remove duplicate filepaths and nil.
     :fold({}, function(acc, v)
-      if v ~= nil and not vim.tbl_contains(acc, v) then table.insert(acc, v) end
+      if v ~= nil and not vim.tbl_contains(acc, v) then
+        table.insert(acc, v)
+      end
       return acc
     end)
   -- Start file watchers.
@@ -969,7 +1016,9 @@ function h.root_at_cwd(file_path_absolute)
   end
   -- File is rooted at user home.
   local home = os.getenv("HOME")
-  if home == nil then return file_path_absolute end
+  if home == nil then
+    return file_path_absolute
+  end
   local home_start_index, home_end_index =
     string.find(file_path_absolute, h.escape_lua_pattern(home))
   if home_start_index ~= nil and home_start_index == 1 then
