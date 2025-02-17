@@ -48,9 +48,8 @@ To enable the plugin with the defaults, call the `setup()` function. Usage:
                            `bareline.setup`({config})
 Module setup.
 Parameters ~
-{config} `(table?)` If a table is provided, it's merged with the default
-config (|bareline.default_config|) and the former takes precedence on
-duplicate keys.
+{config} `(table?)` Merged with the default config (|bareline.default_config|)
+and the former takes precedence on duplicate keys.
 
 ------------------------------------------------------------------------------
                                                                *bareline.config*

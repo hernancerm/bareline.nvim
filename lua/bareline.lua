@@ -51,9 +51,8 @@ local h = {}
 --- <
 
 --- Module setup.
----@param config table? If a table is provided, it's merged with the default
---- config (|bareline.default_config|) and the former takes precedence on
---- duplicate keys.
+---@param config table? Merged with the default config (|bareline.default_config|)
+--- and the former takes precedence on duplicate keys.
 function bareline.setup(config)
   -- Cleanup.
   if #vim.api.nvim_get_autocmds({ group = h.draw_methods_augroup }) > 0 then
