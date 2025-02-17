@@ -109,7 +109,7 @@ local function assign_default_config()
       -- Inactive windows.
       inactive = {
         { -- Section 1: Left.
-          bareline.components.vim_mode:mask(" "),
+          bareline.components.vim_mode:config({ mask = " " }),
           bareline.components.file_path_relative_to_cwd,
           bareline.components.lsp_servers,
           "%m",
@@ -237,25 +237,24 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- #tag bareline-BareComponentCommonOpts
 --- Options applicable to any |bareline.BareComponent|.
 ---@class BareComponentCommonOpts
----@field watcher BareComponentWatcher Watcher. Triggers a statusline redraw.
----@field cache_on_vim_modes string[]|fun():string[] Use cache in these Vim modes.
---- Each Vim mode is expected as the first char returned by |mode()|.
+---@field watcher BareComponentWatcher? Specifies when the statusline is redrawn.
+---@field cache_on_vim_modes (string[]|fun():string[])|nil Use cache in these Vim
+--- modes. Each Vim mode is expected as the first char returned by |mode()|.
+---@field mask string? Single character used to mask the value.
 
 --- #tag bareline-BareComponentWatcher
 --- Defines watcher configuration for a |bareline.BareComponent|.
 --- Since this plugin does not implement a timer-based statusline redraw, it needs
 --- a way to know when to do a redraw. That knowledge is provided here.
 ---@class BareComponentWatcher
----@field autocmd table Expects a table with the keys `event` and `opts`. These
+---@field autocmd table? Expects a table with the keys `event` and `opts`. These
 --- values are passed as-is to |vim.api.nvim_create_autocmd()|.
----@field filepath string|fun():string File or dir path to watch.
+---@field filepath (string|fun():string)|nil File or dir path to watch.
 
 --- Constructor.
---- Parameters ~
---- {value} `(string|fun(opts:table):any)` Initial value of the field `value`.
---- {common_opts} `(BareComponentCommonOpts)` Initial value of the field `opts`.
---- Return ~
---- Bareline.BareComponent
+---@param value (string|fun(opts:table):any)|nil Initial value of field `value`.
+---@param common_opts BareComponentCommonOpts? Initial value of field `opts`.
+---@return BareComponent
 function bareline.BareComponent:new(value, common_opts)
   local bare_component = {}
   setmetatable(bare_component, self)
@@ -265,49 +264,38 @@ function bareline.BareComponent:new(value, common_opts)
 end
 
 --- Update component opts.
---- Parameters ~
---- {opts} `(table)` The field `opts` from |bareline.BareComponent| is merged with
---- these opts. For built-in components, the option keys here have the highest
---- priority over what is set in either |bareline.BareComponent:new()| or at the
---- plugin setup, i.e. |bareline.config.components|. Built-in components have
---- their custom options documented which can be set using this method.
---- For an example see |bareline.components.git_head|.
---- Return ~
---- `(BareComponent)`
+---@param opts table The field `opts` from |bareline.BareComponent| is merged with
+--- these opts. For built-in components, the option keys here have priority over
+--- what is set in both |bareline.BareComponent:new()| and at the plugin setup,
+--- i.e. |bareline.config.components|. Built-in components have, if any, their
+--- custom opts documented, which can be set using this method.
+--- For an example, see |bareline.components.git_head|.
+---@return BareComponent
 function bareline.BareComponent:config(opts)
-  self.opts = vim.tbl_deep_extend("force", vim.deepcopy(self.opts), opts or {})
-  return self
-end
-
---- Mask with char.
---- Replace each character of the component with the provided character.
---- Parameters ~
---- {char} `(string)` Single character.
---- Return ~
---- `(function)` When called returns the masked value.
-function bareline.BareComponent:mask(char)
-  local character = string.sub(char, 1, 1)
-  return function()
-    local component_value = h.build_user_supplied_component(self)
-    if component_value == nil then
-      return nil
-    end
-    return component_value:gsub(".", character)
-  end
+  local component_copy = vim.deepcopy(self)
+  component_copy.opts =
+    vim.tbl_deep_extend("force", vim.deepcopy(component_copy.opts), opts or {})
+  return component_copy
 end
 
 --- Retrieve the value of the component.
---- Return ~
---- `(string?)`
+---@return string?
 function bareline.BareComponent:get()
-  local value = self.value
-  if type(value) == "string" then
-    return value
+  local value = nil
+  if type(self.value) == "string" then
+    value = self.value
   end
-  if type(value) == "function" then
-    return value(self.opts)
+  if type(self.value) == "function" then
+    value = self.value(self.opts)
   end
-  return nil
+  if value ~= nil and self.opts ~= nil and self.opts.mask then
+    vim.validate({
+      mask = { self.opts.mask, { "string" } },
+    })
+    local character = string.sub(self.opts.mask, 1, 1)
+    value = string.gsub(value, ".", character)
+  end
+  return value
 end
 
 --- #delimiter
@@ -387,7 +375,7 @@ end)
 ---
 --- Custom options:
 ---     {worktrees} `(table)`
---- Table with the same structure as what the gitsigns.nvim plugin expects:
+--- List with the same structure as what the gitsigns.nvim plugin expects:
 --- <https://github.com/lewis6991/gitsigns.nvim>. This provides support for
 --- detached working trees; useful for bare repositories. Example:
 --- >lua

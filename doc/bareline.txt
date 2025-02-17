@@ -87,7 +87,7 @@ Below is the default config; `bareline` is the value of `require("bareline")`.
       -- Inactive windows.
       inactive = {
         { -- Section 1: Left.
-          bareline.components.vim_mode:mask(" "),
+          bareline.components.vim_mode:config({ mask = " " }),
           bareline.components.file_path_relative_to_cwd,
           bareline.components.lsp_servers,
           "%m",
@@ -209,9 +209,10 @@ Options applicable to any |bareline.BareComponent|.
 Class ~
 {BareComponentCommonOpts}
 Fields ~
-{watcher} `(BareComponentWatcher)` Watcher. Triggers a statusline redraw.
-{cache_on_vim_modes} `(string[]|fun():string[])` Use cache in these Vim modes.
-Each Vim mode is expected as the first char returned by |mode()|.
+{watcher} `(BareComponentWatcher?)` Specifies when the statusline is redrawn.
+{cache_on_vim_modes} `((string[]|fun():string[])|nil)` Use cache in these Vim
+modes. Each Vim mode is expected as the first char returned by |mode()|.
+{mask} `(string?)` Single character used to mask the value.
 
                                                  *bareline-BareComponentWatcher*
 Defines watcher configuration for a |bareline.BareComponent|.
@@ -220,46 +221,37 @@ a way to know when to do a redraw. That knowledge is provided here.
 Class ~
 {BareComponentWatcher}
 Fields ~
-{autocmd} `(table)` Expects a table with the keys `event` and `opts`. These
+{autocmd} `(table?)` Expects a table with the keys `event` and `opts`. These
 values are passed as-is to |vim.api.nvim_create_autocmd()|.
-{filepath} `(string|fun():string)` File or dir path to watch.
+{filepath} `((string|fun():string)|nil)` File or dir path to watch.
 
                                                   *bareline.BareComponent:new()*
               `bareline.BareComponent:new`({value}, {common_opts})
 Constructor.
 Parameters ~
-{value} `(string|fun(opts:table):any)` Initial value of the field `value`.
-{common_opts} `(BareComponentCommonOpts)` Initial value of the field `opts`.
+{value} `((string|fun(opts:table):any)|nil)` Initial value of field `value`.
+{common_opts} `(BareComponentCommonOpts?)` Initial value of field `opts`.
 Return ~
-Bareline.BareComponent
+`(BareComponent)`
 
                                                *bareline.BareComponent:config()*
                     `bareline.BareComponent:config`({opts})
 Update component opts.
 Parameters ~
 {opts} `(table)` The field `opts` from |bareline.BareComponent| is merged with
-these opts. For built-in components, the option keys here have the highest
-priority over what is set in either |bareline.BareComponent:new()| or at the
-plugin setup, i.e. |bareline.config.components|. Built-in components have
-their custom options documented which can be set using this method.
-For an example see |bareline.components.git_head|.
+these opts. For built-in components, the option keys here have priority over
+what is set in both |bareline.BareComponent:new()| and at the plugin setup,
+i.e. |bareline.config.components|. Built-in components have, if any, their
+custom opts documented, which can be set using this method.
+For an example, see |bareline.components.git_head|.
 Return ~
 `(BareComponent)`
-
-                                                 *bareline.BareComponent:mask()*
-                     `bareline.BareComponent:mask`({char})
-Mask with char.
-Replace each character of the component with the provided character.
-Parameters ~
-{char} `(string)` Single character.
-Return ~
-`(function)` When called returns the masked value.
 
                                                   *bareline.BareComponent:get()*
                          `bareline.BareComponent:get`()
 Retrieve the value of the component.
 Return ~
-`(string?)`
+`(string)` `(optional)`
 
 ------------------------------------------------------------------------------
                                                   *bareline-built-in-components*
@@ -310,7 +302,7 @@ No need to have Git installed for this to work. Search order of the Git HEAD:
 
 Custom options:
     {worktrees} `(table)`
-Table with the same structure as what the gitsigns.nvim plugin expects:
+List with the same structure as what the gitsigns.nvim plugin expects:
 <https://github.com/lewis6991/gitsigns.nvim>. This provides support for
 detached working trees; useful for bare repositories. Example:
 >lua

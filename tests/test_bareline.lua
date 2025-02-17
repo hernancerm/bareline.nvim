@@ -73,7 +73,9 @@ end
 
 T["bare_component"] = new_set({})
 
-T["bare_component"][":config()"] = new_set({
+T["bare_component"][":config()"] = new_set({})
+
+T["bare_component"][":config()"]["user component option"] = new_set({
   hooks = {
     pre_case = function()
       child.lua(
@@ -93,7 +95,7 @@ T["bare_component"][":config()"] = new_set({
   },
 })
 
-T["bare_component"][":config()"]["success"] = function(
+T["bare_component"][":config()"]["user component option"]["success"] = function(
   transformer,
   expected_value
 )
@@ -101,6 +103,23 @@ T["bare_component"][":config()"]["success"] = function(
   local actual_value = child.lua_get([[component_transform_file_type
     :config({ transformer = ]] .. transformer .. [[})
     :get()]])
+  eq(actual_value, expected_value)
+end
+
+T["bare_component"][":config()"]["'mask' built-in option"] = new_set({
+  parametrize = {
+    { " ", "   " },
+    { "*", "***" },
+  },
+})
+
+T["bare_component"][":config()"]["'mask' built-in option"]["success"] = function(
+  char,
+  expected_value
+)
+  local actual_value = child.lua_get(
+    [[bareline.components.vim_mode:config({ mask = "]] .. char .. [[" }):get()]]
+  )
   eq(actual_value, expected_value)
 end
 
@@ -515,7 +534,7 @@ T["setup"]["fully_custom_statusline"] = new_set({
               { bareline.components.position }
             },
             inactive = {
-              { bareline.components.vim_mode:mask(" ") },
+              { bareline.components.vim_mode:config({ mask = " " }) },
               { bareline.components.position }
             },
             plugin = {
@@ -600,7 +619,7 @@ T["setup"]["components.git_head"] = function()
   )
 end
 
-T["setup"]["configure non built-in component"] = function()
+T["setup"]["configure user component"] = function()
   child.cmd("edit " .. h.resources_dir .. "/foo.txt")
   child.lua(
     [[component_transform_file_type = bareline.BareComponent:new(function(opts)

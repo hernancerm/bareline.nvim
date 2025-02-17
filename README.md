@@ -99,7 +99,7 @@ bareline.setup({
     -- Inactive windows.
     inactive = {
       { -- Section 1: Left.
-        bareline.components.vim_mode:mask(" "),
+        bareline.components.vim_mode:config({ mask = " " }),
         bareline.components.file_path_relative_to_cwd,
         bareline.components.lsp_servers,
         "%m",
