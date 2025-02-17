@@ -131,8 +131,8 @@ bareline.setup({
     },
   },
   logging = {
-    enabled = false
-  }
+    enabled = false,
+  },
 })
 ```
 
