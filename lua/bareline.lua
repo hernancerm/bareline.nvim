@@ -2,11 +2,11 @@
 ---
 --- MIT License Copyright (c) 2024 Hernán Cervera.
 ---
---- Contents ~
+--- Contents:
 ---
 --- 1. Introduction                                   |bareline-introduction|
 --- 2. Quickstart                                     |bareline-quickstart|
---- 3. Configuration                                  |bareline.config|
+--- 3. Configuration                                  |bareline-configuration|
 --- 4. Custom components                              |bareline-custom-components|
 --- 5. Built-in components                            |bareline-built-in-components|
 ---
@@ -71,6 +71,7 @@ end
 --- #delimiter
 --- #tag bareline.config
 --- #tag bareline.default_config
+--- #tag bareline-configuration
 --- Configuration ~
 
 --- The merged config (defaults with user overrides) is in `bareline.config`. The
@@ -150,34 +151,35 @@ end
 --- The lists are the sections (i.e. left, right) and the objects are the
 --- components (strings, functions or |BareComponent|s).
 ---
---- Fields: ~
+--- Fields:
 ---
 --- #tag bareline.config.statuslines.active
----     {active} (`table`)
+---     {active} `(table)`
 --- Definition for the statusline of the win focused by the cursor.
 ---
 --- #tag bareline.config.statuslines.inactive
----     {inactive} (`table`)
+---     {inactive} `(table)`
 --- Definition for the statuslines of the wins which are:
 --- 1. NOT focused by the cursor and
 --- 2. NOT displaying a plugin's UI.
 ---
 --- #tag bareline.config.statuslines.plugin
----     {plugin} (`table`)
+---     {plugin} `(table)`
 --- Definition for the statusline of the wins displaying a plugin's UI.
 
 --- #tag bareline.config.components
 --- The component options set in |bareline.BareComponent:new()| are merged with
 --- these options. The options here have precedence on duplicate keys.
 ---
---- Fields: ~
+--- Fields:
 ---
 --- #tag bareline.config.components.git_head
----     {git_head} (`table`)
+---     {git_head} `(table)`
 --- See |bareline.components.git_head|.
 
 --- #delimiter
 --- #tag bareline-custom-components
+--- Custom components ~
 
 --- Bareline comes with some components: |bareline-built-in-components|. If none
 --- provide what you want, you can create your own. A component can be a string,
