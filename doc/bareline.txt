@@ -2,7 +2,7 @@
 
 MIT License Copyright (c) 2024 Hernán Cervera.
 
- Contents ~
+Contents ~
 
 1. Introduction                                   |bareline-introduction|
 2. Quickstart                                     |bareline-quickstart|
@@ -241,8 +241,8 @@ Parameters ~
 {opts} `(table)` The field `opts` from |bareline.BareComponent| is merged with
 these opts. For built-in components, the option keys here have priority over
 what is set in both |bareline.BareComponent:new()| and at the plugin setup,
-i.e. |bareline.config.components|. Built-in components have, if any, their
-custom opts documented, which can be set using this method.
+i.e. |bareline.config.components|. Built-in components have their custom
+options documented, which can be set using this method.
 For an example, see |bareline.components.git_head|.
 Return ~
 `(BareComponent)`
