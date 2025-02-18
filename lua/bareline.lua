@@ -85,6 +85,7 @@ function bareline.setup(config)
     "BufEnter",
     "BufWinEnter",
     "WinEnter",
+    "VimEnter",
     "VimResume",
     "FocusGained",
     "DirChanged",
@@ -92,10 +93,12 @@ function bareline.setup(config)
   }, {
     group = h.draw_methods_augroup,
     callback = function()
-      h.draw_statusline_if_plugin_window(
-        bareline.config.statuslines.plugin,
-        bareline.config.statuslines.active
-      )
+      if vim.v.vim_did_enter == 1 then
+        h.draw_statusline_if_plugin_window(
+          bareline.config.statuslines.plugin,
+          bareline.config.statuslines.active
+        )
+      end
     end,
   })
   vim.api.nvim_create_autocmd("OptionSet", {
@@ -331,7 +334,7 @@ end
 --- get away with a string or function component. The autocommands configured by
 --- default might be enough to monitor what is displayed in your statusline:
 ---
----   |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|,
+---   |BufEnter|, |BufWinEnter|, |WinEnter|, |VimEnter|, |VimResume|,
 ---   |FocusGained|, |OptionSet|, |DirChanged|, |TermLeave|.
 
 ---@alias UserSuppliedComponent any|fun():any|BareComponent
