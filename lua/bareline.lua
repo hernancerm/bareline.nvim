@@ -63,18 +63,20 @@ function bareline.setup(config)
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
 
   -- Logger setup.
-  local data_stdpath = vim.fn.stdpath("data")
-  if type(data_stdpath) == "table" then
-    data_stdpath = data_stdpath[1]
+  if bareline.config.logging.enabled and h.log_file == nil then
+    local data_stdpath = vim.fn.stdpath("data")
+    if type(data_stdpath) == "table" then
+      data_stdpath = data_stdpath[1]
+    end
+    vim.fn.mkdir(data_stdpath .. "/bareline.nvim", "p")
+    h.log_file = io.open(data_stdpath .. "/bareline.nvim/bareline.log", "a+")
+    vim.api.nvim_create_autocmd("VimLeave", {
+      group = h.draw_methods_augroup,
+      callback = function()
+        h.log_file:close()
+      end,
+    })
   end
-  vim.fn.mkdir(data_stdpath .. "/bareline.nvim", "p")
-  h.log_file = io.open(data_stdpath .. "/bareline.nvim/bareline.log", "a+")
-  vim.api.nvim_create_autocmd("VimLeave", {
-    group = h.draw_methods_augroup,
-    callback = function()
-      h.log_file:close()
-    end,
-  })
 
   -- Create base autocmds.
   -- DOCS: Keep in sync with |bareline-custom-components|.
