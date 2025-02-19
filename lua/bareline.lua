@@ -577,9 +577,20 @@ bareline.components.file_path_relative_to_cwd = bareline.BareComponent:new(
     if buf_name == "" or vim.bo.filetype == "help" then
       return "%f"
     end
-    local file_path_sanitized =
-      string.gsub(h.root_at_cwd(buf_name), "%%", "%%%0")
-    return "%<" .. file_path_sanitized
+    local cwd = vim.uv.cwd() .. ""
+    if cwd ~= h.state.system_root_dir then
+      cwd = cwd .. h.state.file_path_sep
+    end
+    local sanitized_file_path_relative_to_cwd = string.gsub(
+      h.replace_prefix(
+        h.replace_prefix(buf_name, cwd, ""),
+        vim.uv.os_homedir() or "",
+        "~"
+      ),
+      "%%",
+      "%%%0"
+    )
+    return "%<" .. sanitized_file_path_relative_to_cwd
   end
 )
 
@@ -1027,37 +1038,44 @@ function h.get_config_with_fallback(config, default_config)
   return config
 end
 
----@param file_path_absolute string
-function h.root_at_cwd(file_path_absolute)
-  -- File is rooted at the cwd.
-  local cwd = vim.fn.getcwd()
-  local cwd_start_index, cwd_end_index =
-    string.find(file_path_absolute, h.escape_lua_pattern(cwd .. "/"))
-  if cwd_start_index ~= nil and cwd_start_index == 1 then
-    return string.sub(file_path_absolute, cwd_end_index + 1)
+--- If `prefix` matches the beginning of `value`, then return `value` with the
+--- matched portion substituted by `replacement`; otherwise, return `value` as-is.
+---@param value string
+---@param prefix string
+---@param replacement string
+---@return string
+function h.replace_prefix(value, prefix, replacement)
+  local result = value
+  local index_of_last_matching_char = 0
+  for i = 1, #prefix do
+    if string.sub(value, i, i) == string.sub(prefix, i, i) then
+      index_of_last_matching_char = i
+    else
+      break
+    end
   end
-  -- File is rooted at user home.
-  local home = os.getenv("HOME")
-  if home == nil then
-    return file_path_absolute
+  if index_of_last_matching_char == #prefix then
+    result = replacement .. string.sub(result, #prefix + 1, -1)
   end
-  local home_start_index, home_end_index =
-    string.find(file_path_absolute, h.escape_lua_pattern(home))
-  if home_start_index ~= nil and home_start_index == 1 then
-    return "~" .. string.sub(file_path_absolute, home_end_index + 1)
-  end
-  -- Otherwise.
-  return file_path_absolute
+  return result
 end
 
---- Given a string, escape the Lua magic pattern characters so that the string can
---- be used for an exact match, e.g. as the pattern supplied to 'string.gsub'.
---- See: https://www.lua.org/manual/5.1/manual.html#5.4.1
----@param string string
 ---@return string
-function h.escape_lua_pattern(string)
-  string, _ = string:gsub("[%(%)%.%%%+%-%*%?%[%]%^%$]", "%%%0")
-  return string
+function h.get_file_path_sep()
+  local file_path_sep = "/"
+  if string.sub(vim.uv.os_uname().sysname, 1, 7) == "Windows" then
+    file_path_sep = "\\"
+  end
+  return file_path_sep
+end
+
+---@return string
+function h.get_system_root_dir()
+  local system_root_dir = "/"
+  if string.sub(vim.uv.os_uname().sysname, 1, 7) == "Windows" then
+    system_root_dir = "C:\\"
+  end
+  return system_root_dir
 end
 
 ---@param message string
@@ -1076,5 +1094,10 @@ function h.log(message, level)
     h.log_file:flush()
   end
 end
+
+h.state = {
+  file_path_sep = h.get_file_path_sep(),
+  system_root_dir = h.get_system_root_dir(),
+}
 
 return bareline
