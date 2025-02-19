@@ -95,7 +95,7 @@ T["bare_component"][":config()"]["user component option"] = new_set({
   },
 })
 
-T["bare_component"][":config()"]["user component option"]["success"] = function(
+T["bare_component"][":config()"]["user component option"]["parameterized"] = function(
   transformer,
   expected_value
 )
@@ -113,7 +113,7 @@ T["bare_component"][":config()"]["'mask' built-in option"] = new_set({
   },
 })
 
-T["bare_component"][":config()"]["'mask' built-in option"]["success"] = function(
+T["bare_component"][":config()"]["'mask' built-in option"]["parameterized"] = function(
   char,
   expected_value
 )
@@ -150,7 +150,7 @@ T["components"]["vim_mode"] = new_set({
   -- stylua: ignore end
 })
 
-T["components"]["vim_mode"]["success"] = function(keys, expected_vim_mode)
+T["components"]["vim_mode"]["parameterized"] = function(keys, expected_vim_mode)
   child.type_keys(keys)
   local vim_mode = child.lua_get("bareline.components.vim_mode:get()")
   eq(vim_mode, expected_vim_mode)
@@ -203,7 +203,7 @@ T["components"]["indent_style"] = new_set({
   -- stylua: ignore end
 })
 
-T["components"]["indent_style"]["success"] = function(
+T["components"]["indent_style"]["parameterized"] = function(
   expandtab,
   tabstop,
   expected_indent_style
@@ -227,7 +227,7 @@ T["components"]["end_of_line"] = new_set({
   },
 })
 
-T["components"]["end_of_line"]["success"] = function(keys, expected_eol_marker)
+T["components"]["end_of_line"]["parameterized"] = function(keys, expected_eol_marker)
   child.type_keys(keys)
   local eol = child.lua_get("bareline.components.end_of_line:get()")
   eq(eol, expected_eol_marker)
@@ -248,7 +248,7 @@ T["components"]["git_head"]["standard_repo"] = new_set({
   -- stylua: ignore end
 })
 
-T["components"]["git_head"]["standard_repo"]["success"] = function(
+T["components"]["git_head"]["standard_repo"]["parameterized"] = function(
   git_dir,
   expected_git_head
 )
@@ -346,7 +346,7 @@ T["components"]["file_path_relative_to_cwd"]["trim cwd"] = new_set({
   },
 })
 
-T["components"]["file_path_relative_to_cwd"]["trim cwd"]["success"] = function(
+T["components"]["file_path_relative_to_cwd"]["trim cwd"]["parameterized"] = function(
   setup,
   expected_file_path
 )
@@ -381,7 +381,7 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"] = new_set({
   },
 })
 
-T["components"]["file_path_relative_to_cwd"]["sanitize"]["success"] = function(
+T["components"]["file_path_relative_to_cwd"]["sanitize"]["parameterized"] = function(
   file,
   expected_statusline,
   expected_evaluated_statusline
@@ -403,7 +403,7 @@ end
 
 T["components"]["file_path_relative_to_cwd"]["lua special chars"] = new_set({})
 
-T["components"]["file_path_relative_to_cwd"]["lua special chars"]["success"] = function()
+T["components"]["file_path_relative_to_cwd"]["lua special chars"]["parameterized"] = function()
   local file = h.resources_dir .. "/dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
   child.lua([[
       bareline.setup({
@@ -422,7 +422,7 @@ end
 
 T["components"]["file_path_relative_to_cwd"]["truncate long path"] = new_set({})
 
-T["components"]["file_path_relative_to_cwd"]["truncate long path"]["success"] = function()
+T["components"]["file_path_relative_to_cwd"]["truncate long path"]["parameterized"] = function()
   child.lua([[
       bareline.setup({
         statuslines = {
@@ -484,7 +484,7 @@ T["components"]["diagnostics"] = new_set({
   },
 })
 
-T["components"]["diagnostics"]["success"] = function(
+T["components"]["diagnostics"]["parameterized"] = function(
   diagnostics,
   expected_diagnostics
 )
@@ -501,7 +501,7 @@ end
 
 T["components"]["position"] = new_set({})
 
-T["components"]["position"]["success"] = function()
+T["components"]["position"]["parameterized"] = function()
   eq(child.lua_get("bareline.components.position:get()"), "%02l:%02c/%02L")
 end
 
@@ -514,7 +514,7 @@ T["components"]["cwd"] = new_set({
   },
 })
 
-T["components"]["cwd"]["success"] = function(dir, expected_cwd)
+T["components"]["cwd"]["parameterized"] = function(dir, expected_cwd)
   child.cmd("cd " .. dir)
   eq(child.lua_get("bareline.components.cwd:get()"), expected_cwd)
 end
