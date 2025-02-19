@@ -211,8 +211,8 @@ local function assign_default_config()
         },
         { -- Section 2: Right.
           bareline.components.diagnostics,
-          bareline.components.indent_style,
           bareline.components.end_of_line,
+          bareline.components.indent_style,
           bareline.components.git_head,
           bareline.components.cwd,
           bareline.components.position,
@@ -230,8 +230,8 @@ local function assign_default_config()
         },
         { -- Section 2: Right.
           bareline.components.diagnostics,
-          bareline.components.indent_style,
           bareline.components.end_of_line,
+          bareline.components.indent_style,
           bareline.components.cwd,
           bareline.components.position,
         },
@@ -637,10 +637,16 @@ bareline.components.position = bareline.BareComponent:new("%02l:%02c/%02L")
 ---@type BareComponent
 bareline.components.cwd = bareline.BareComponent:new(function()
   local cwd = vim.uv.cwd() or ""
-  if cwd == os.getenv("HOME") then
-    return "~"
+  local buf_name = vim.api.nvim_buf_get_name(0)
+  local cwd_tail = nil
+  if cwd == vim.uv.os_homedir() then
+    cwd_tail = "~"
+  elseif
+    buf_name == "" or #buf_name ~= #h.replace_prefix(buf_name, cwd, "")
+  then
+    cwd_tail = vim.fn.fnamemodify(cwd, ":t")
   end
-  return vim.fn.fnamemodify(cwd, ":t")
+  return cwd_tail
 end)
 
 -- Set module default config.

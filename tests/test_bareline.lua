@@ -227,7 +227,10 @@ T["components"]["end_of_line"] = new_set({
   },
 })
 
-T["components"]["end_of_line"]["parameterized"] = function(keys, expected_eol_marker)
+T["components"]["end_of_line"]["parameterized"] = function(
+  keys,
+  expected_eol_marker
+)
   child.type_keys(keys)
   local eol = child.lua_get("bareline.components.end_of_line:get()")
   eq(eol, expected_eol_marker)
@@ -290,7 +293,7 @@ T["components"]["file_path_relative_to_cwd"]["%f"]["[No Name]"] = function()
   eq(file_path_relative_to_cwd, "%f")
 end
 
-T["components"]["file_path_relative_to_cwd"]["%f"]["help page"] = function()
+T["components"]["file_path_relative_to_cwd"]["%f"]["[Help]"] = function()
   child.cmd("cd " .. h.resources_dir)
   child.cmd("help")
   local file_path_relative_to_cwd =
@@ -401,9 +404,7 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"]["parameterized"] = func
   )
 end
 
-T["components"]["file_path_relative_to_cwd"]["lua special chars"] = new_set({})
-
-T["components"]["file_path_relative_to_cwd"]["lua special chars"]["parameterized"] = function()
+T["components"]["file_path_relative_to_cwd"]["lua special chars"] = function()
   local file = h.resources_dir .. "/dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
   child.lua([[
       bareline.setup({
@@ -420,9 +421,7 @@ T["components"]["file_path_relative_to_cwd"]["lua special chars"]["parameterized
   )
 end
 
-T["components"]["file_path_relative_to_cwd"]["truncate long path"] = new_set({})
-
-T["components"]["file_path_relative_to_cwd"]["truncate long path"]["parameterized"] = function()
+T["components"]["file_path_relative_to_cwd"]["truncate long path"] = function()
   child.lua([[
       bareline.setup({
         statuslines = {
@@ -507,16 +506,29 @@ end
 
 -- CWD
 
-T["components"]["cwd"] = new_set({
+T["components"]["cwd"] = new_set({})
+
+T["components"]["cwd"]["parameterized"] = new_set({
   parametrize = {
     { "tests/resources/dir_a", "dir_a" },
     { os.getenv("HOME"), "~" },
   },
 })
 
-T["components"]["cwd"]["parameterized"] = function(dir, expected_cwd)
+T["components"]["cwd"]["parameterized"]["success"] = function(dir, expected_cwd)
   child.cmd("cd " .. dir)
   eq(child.lua_get("bareline.components.cwd:get()"), expected_cwd)
+end
+
+T["components"]["cwd"]["omit when file is out of the cwd"] = function()
+  child.cmd("cd " .. h.resources_dir .. "/dir_b")
+  child.cmd("edit " .. h.resources_dir .. "/dir_a/dir_a_a/.gitkeep")
+  eq(child.lua_get("bareline.components.cwd:get()"), vim.NIL)
+end
+
+T["components"]["cwd"]["show when there is no file name"] = function()
+  child.cmd("cd " .. h.resources_dir .. "/dir_b")
+  eq(child.lua_get("bareline.components.cwd:get()"), "dir_b")
 end
 
 -- SETUP

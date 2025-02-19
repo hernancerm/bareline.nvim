@@ -89,8 +89,8 @@ bareline.setup({
       },
       { -- Section 2: Right.
         bareline.components.diagnostics,
-        bareline.components.indent_style,
         bareline.components.end_of_line,
+        bareline.components.indent_style,
         bareline.components.git_head,
         bareline.components.cwd,
         bareline.components.position,
@@ -108,8 +108,8 @@ bareline.setup({
       },
       { -- Section 2: Right.
         bareline.components.diagnostics,
-        bareline.components.indent_style,
         bareline.components.end_of_line,
+        bareline.components.indent_style,
         bareline.components.cwd,
         bareline.components.position,
       },

@@ -77,8 +77,8 @@ Below is the default config; `bareline` is the value of `require("bareline")`.
         },
         { -- Section 2: Right.
           bareline.components.diagnostics,
-          bareline.components.indent_style,
           bareline.components.end_of_line,
+          bareline.components.indent_style,
           bareline.components.git_head,
           bareline.components.cwd,
           bareline.components.position,
@@ -96,8 +96,8 @@ Below is the default config; `bareline` is the value of `require("bareline")`.
         },
         { -- Section 2: Right.
           bareline.components.diagnostics,
-          bareline.components.indent_style,
           bareline.components.end_of_line,
+          bareline.components.indent_style,
           bareline.components.cwd,
           bareline.components.position,
         },
