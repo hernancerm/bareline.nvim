@@ -63,17 +63,18 @@ function bareline.setup(config)
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
 
   -- Logger setup.
-  if bareline.config.logging.enabled and h.log_file == nil then
+  if bareline.config.logging.enabled and h.state.log_file == nil then
     local data_stdpath = vim.fn.stdpath("data")
     if type(data_stdpath) == "table" then
       data_stdpath = data_stdpath[1]
     end
     vim.fn.mkdir(data_stdpath .. "/bareline.nvim", "p")
-    h.log_file = io.open(data_stdpath .. "/bareline.nvim/bareline.log", "a+")
+    h.state.log_file =
+      io.open(data_stdpath .. "/bareline.nvim/bareline.log", "a+")
     vim.api.nvim_create_autocmd("VimLeave", {
       group = h.draw_methods_augroup,
       callback = function()
-        h.log_file:close()
+        h.state.log_file:close()
       end,
     })
   end
@@ -1087,9 +1088,9 @@ end
 ---@param message string
 ---@param level integer As per |vim.log.levels|.
 function h.log(message, level)
-  if h.log_file ~= nil then
+  if h.state.log_file ~= nil then
     local level_to_label = { "D", "I", "W", "E" }
-    h.log_file:write(
+    h.state.log_file:write(
       string.format(
         "%s %s - %s\n",
         level_to_label[level],
@@ -1097,11 +1098,12 @@ function h.log(message, level)
         message
       )
     )
-    h.log_file:flush()
+    h.state.log_file:flush()
   end
 end
 
 h.state = {
+  log_file = nil,
   file_path_sep = h.get_file_path_sep(),
   system_root_dir = h.get_system_root_dir(),
 }
