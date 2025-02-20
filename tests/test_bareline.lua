@@ -47,15 +47,13 @@ T["smoke"] = new_set({
 -- SMOKE
 
 T["smoke"]["active window success"] = function()
-  local expected =
-    " NOR  %f  %m  %h  %r%=  tabs:8  (main)  git_dir_branch  %02l:%02c/%02L "
+  local expected = " NOR  %f  %m  %h  %r%=  tabs:8  (main)  %02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
 T["smoke"]["inactive window success"] = function()
   child.cmd("new")
-  local expected =
-    "      %f  %m  %h  %r%=  tabs:8  git_dir_branch  %02l:%02c/%02L "
+  local expected = "      %f  %m  %h  %r%=  tabs:8  %02l:%02c/%02L "
   local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
   local statusline_window_inactive =
     child.lua_get("vim.wo[" .. window_ids[2] .. "].statusline")
@@ -508,27 +506,27 @@ end
 
 T["components"]["cwd"] = new_set({})
 
-T["components"]["cwd"]["parameterized"] = new_set({
-  parametrize = {
-    { "tests/resources/dir_a", "dir_a" },
-    { os.getenv("HOME"), "~" },
-  },
-})
-
-T["components"]["cwd"]["parameterized"]["success"] = function(dir, expected_cwd)
-  child.cmd("cd " .. dir)
-  eq(child.lua_get("bareline.components.cwd:get()"), expected_cwd)
+T["components"]["cwd"]["include when file belongs under cwd"] = function()
+  child.cmd("cd " .. h.resources_dir .. "/dir_b")
+  child.cmd("edit .gitkeep")
+  eq(child.lua_get("bareline.components.cwd:get()"), "dir_b")
 end
 
-T["components"]["cwd"]["omit when file is out of the cwd"] = function()
+T["components"]["cwd"]["display '~' when file belongs under cwd being user home"] = function()
+  child.cmd("cd ~")
+  child.cmd("edit i2o_tye8ieowiu-e8_yroi9ur.txt")
+  eq(child.lua_get("bareline.components.cwd:get()"), "~")
+end
+
+T["components"]["cwd"]["omit when file does not belong under cwd"] = function()
   child.cmd("cd " .. h.resources_dir .. "/dir_b")
   child.cmd("edit " .. h.resources_dir .. "/dir_a/dir_a_a/.gitkeep")
   eq(child.lua_get("bareline.components.cwd:get()"), vim.NIL)
 end
 
-T["components"]["cwd"]["show when there is no file name"] = function()
+T["components"]["cwd"]["omit when there is no file name"] = function()
   child.cmd("cd " .. h.resources_dir .. "/dir_b")
-  eq(child.lua_get("bareline.components.cwd:get()"), "dir_b")
+  eq(child.lua_get("bareline.components.cwd:get()"), vim.NIL)
 end
 
 -- SETUP
@@ -627,7 +625,7 @@ T["setup"]["components.git_head"] = function()
   })]])
   eq(
     child.wo.statusline,
-    " NOR  %f  %m  %h  %r%=  tabs:8  (chasing-cars)  tmp_dir_for_testing  %02l:%02c/%02L "
+    " NOR  %f  %m  %h  %r%=  tabs:8  (chasing-cars)  %02l:%02c/%02L "
   )
 end
 

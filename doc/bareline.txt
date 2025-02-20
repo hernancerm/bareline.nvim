@@ -370,8 +370,9 @@ Type ~
                                                        *bareline.components.cwd*
                            `bareline.components.cwd`
 Current working directory.
-When the current working directory (cwd) is the home dir, then `~` is shown.
-Otherwise, the name of the directory is shown, excluding the path.
+When the current working directory (cwd) is the home dir then `~` is shown,
+otherwise the tail of the cwd is displayed. When the buffer's name is not
+under the cwd, the component is omitted.
 Mockup: `bareline.nvim`
 Type ~
 `(BareComponent)`
