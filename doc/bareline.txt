@@ -71,9 +71,7 @@ Below is the default config; `bareline` is the value of `require("bareline")`.
           bareline.components.vim_mode,
           bareline.components.file_path_relative_to_cwd,
           bareline.components.lsp_servers,
-          "%m",
-          "%h",
-          "%r",
+          bareline.components.mhr,
         },
         { -- Section 2: Right.
           bareline.components.diagnostics,
@@ -90,9 +88,7 @@ Below is the default config; `bareline` is the value of `require("bareline")`.
           bareline.components.vim_mode:config({ mask = " " }),
           bareline.components.file_path_relative_to_cwd,
           bareline.components.lsp_servers,
-          "%m",
-          "%h",
-          "%r",
+          bareline.components.mhr,
         },
         { -- Section 2: Right.
           bareline.components.diagnostics,
@@ -116,6 +112,9 @@ Below is the default config; `bareline` is the value of `require("bareline")`.
     components = {
       git_head = {
         worktrees = {},
+      },
+      mhr = {
+        display_modified = true,
       },
     },
     logging = {
@@ -154,6 +153,10 @@ Fields:
                                            *bareline.config.components.git_head*
     {git_head} `(table)`
 See |bareline.components.git_head|.
+
+                                                *bareline.config.components.mhr*
+    {mhr} `(boolean|fun():boolean)`
+See |bareline.components.mhr|.
 
                                                        *bareline.config.logging*
 Monitor statusline redraws. The log file is located at the data directory
@@ -244,7 +247,7 @@ values are passed as-is to |vim.api.nvim_create_autocmd()|.
 Constructor.
 Parameters ~
 {value} `((string|fun(opts:table):any)|nil)` Initial value of field `value`.
-{common_opts} `(BareComponentCommonOpts?)` Initial value of field `opts`.
+{common_opts} `(BareComponentCommonOpts)` Initial value of field `opts`.
 Return ~
 `(BareComponent)`
 
@@ -374,6 +377,20 @@ When the current working directory (cwd) is the home dir then `~` is shown,
 otherwise the tail of the cwd is displayed. When the buffer's name is not
 under the cwd, the component is omitted.
 Mockup: `bareline.nvim`
+Type ~
+`(BareComponent)`
+
+                                                       *bareline.components.mhr*
+                           `bareline.components.mhr`
+%m%h%r
+Display the modified, help and read-only markers using the built-in statusline
+fields, see 'statusline' for a list of fields where these are included.
+
+Custom options:
+    {display_modified} `(boolean|fun():boolean)`
+Control when the modified field (`%m`) is included in the statusline. Default:
+true; meaning to always include the field. The only exception to the inclusion
+is when the buffer has set 'nomodifiable'.
 Type ~
 `(BareComponent)`
 

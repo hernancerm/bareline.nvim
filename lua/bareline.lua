@@ -206,9 +206,7 @@ local function assign_default_config()
           bareline.components.vim_mode,
           bareline.components.file_path_relative_to_cwd,
           bareline.components.lsp_servers,
-          "%m",
-          "%h",
-          "%r",
+          bareline.components.mhr,
         },
         { -- Section 2: Right.
           bareline.components.diagnostics,
@@ -225,9 +223,7 @@ local function assign_default_config()
           bareline.components.vim_mode:config({ mask = " " }),
           bareline.components.file_path_relative_to_cwd,
           bareline.components.lsp_servers,
-          "%m",
-          "%h",
-          "%r",
+          bareline.components.mhr,
         },
         { -- Section 2: Right.
           bareline.components.diagnostics,
@@ -241,7 +237,7 @@ local function assign_default_config()
       plugin = {
         { -- Section 1: Left.
           bareline.components.plugin_name,
-          "%m",
+          bareline.components.mhr,
         },
         { -- Section 2: Right.
           bareline.components.position,
@@ -251,6 +247,9 @@ local function assign_default_config()
     components = {
       git_head = {
         worktrees = {},
+      },
+      mhr = {
+        display_modified = true,
       },
     },
     logging = {
@@ -292,6 +291,10 @@ end
 --- #tag bareline.config.components.git_head
 ---     {git_head} `(table)`
 --- See |bareline.components.git_head|.
+---
+--- #tag bareline.config.components.mhr
+---     {mhr} `(boolean|fun():boolean)`
+--- See |bareline.components.mhr|.
 
 --- #tag bareline.config.logging
 --- Monitor statusline redraws. The log file is located at the data directory
@@ -380,7 +383,7 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 
 --- Constructor.
 ---@param value (string|fun(opts:table):any)|nil Initial value of field `value`.
----@param common_opts BareComponentCommonOpts? Initial value of field `opts`.
+---@param common_opts BareComponentCommonOpts Initial value of field `opts`.
 ---@return BareComponent
 function bareline.BareComponent:new(value, common_opts)
   local bare_component = {}
@@ -409,18 +412,16 @@ end
 ---@return string?
 function bareline.BareComponent:get()
   local value = nil
-  if type(self.value) == "string" then
-    value = self.value
-  end
   if type(self.value) == "function" then
     value = self.value(self.opts)
+  elseif type(self.value) == "string" then
+    value = self.value
   end
   if value ~= nil and self.opts ~= nil and self.opts.mask then
     vim.validate({
       mask = { self.opts.mask, { "string" } },
     })
-    local character = string.sub(self.opts.mask, 1, 1)
-    value = string.gsub(value, ".", character)
+    value = string.gsub(value, ".", string.sub(self.opts.mask, 1, 1))
   end
   return value
 end
@@ -470,7 +471,7 @@ bareline.components.plugin_name = bareline.BareComponent:new(function()
     return "%t%{exists('w:quickfix_title')? ' '.w:quickfix_title : ''}"
   end
   return string.format("[%s]", vim.bo.filetype:lower():gsub("%s", ""))
-end)
+end, {})
 
 --- Indent style.
 --- Relies on 'expandtab' and 'tabstop'. Omitted when the buf is 'nomodifiable'.
@@ -482,7 +483,7 @@ bareline.components.indent_style = bareline.BareComponent:new(function()
   end
   local whitespace_type = (vim.bo.expandtab and "spaces") or "tabs"
   return whitespace_type .. ":" .. vim.bo.tabstop
-end)
+end, {})
 
 --- End of line (EOL).
 --- Indicates when the buffer does not have an EOL on its last line. Return `noeol`
@@ -493,7 +494,7 @@ bareline.components.end_of_line = bareline.BareComponent:new(function()
     return nil
   end
   return "noeol"
-end)
+end, {})
 
 --- Git HEAD.
 --- No need to have Git installed for this to work. Search order of the Git HEAD:
@@ -592,7 +593,8 @@ bareline.components.file_path_relative_to_cwd = bareline.BareComponent:new(
       "%%%0"
     )
     return "%<" .. sanitized_file_path_relative_to_cwd
-  end
+  end,
+  {}
 )
 
 --- Diagnostics.
@@ -629,7 +631,7 @@ end, {
 --- The current cursor position in the format: line,column/total-lines.
 --- Mockup: `181:43/329`
 ---@type BareComponent
-bareline.components.position = bareline.BareComponent:new("%02l:%02c/%02L")
+bareline.components.position = bareline.BareComponent:new("%02l:%02c/%02L", {})
 
 --- Current working directory.
 --- When the current working directory (cwd) is the home dir then `~` is shown,
@@ -652,7 +654,32 @@ bareline.components.cwd = bareline.BareComponent:new(function()
     cwd_tail = vim.fn.fnamemodify(cwd, ":t")
   end
   return cwd_tail
-end)
+end, {})
+
+--- %m%h%r
+--- Display the modified, help and read-only markers using the built-in statusline
+--- fields, see 'statusline' for a list of fields where these are included.
+---
+--- Custom options:
+---     {display_modified} `(boolean|fun():boolean)`
+--- Control when the modified field (`%m`) is included in the statusline. Default:
+--- true; meaning to always include the field. The only exception to the inclusion
+--- is when the buffer has set 'nomodifiable'.
+---@type BareComponent
+bareline.components.mhr = bareline.BareComponent:new(function(opts)
+  local display_modified = opts.display_modified
+  if display_modified == nil then
+    display_modified = bareline.config.components.mhr.display_modified
+  end
+  if type(display_modified) == "function" then
+    display_modified = display_modified()
+  end
+  local value = "%h%r"
+  if display_modified and vim.bo.modifiable then
+    value = "%m" .. value
+  end
+  return value
+end, {})
 
 -- Set module default config.
 assign_default_config()
@@ -790,11 +817,10 @@ function h.standardize_component(component)
   vim.validate({
     component = { component, { "string", "function", "table" }, true },
   })
-  if type(component) == "string" or type(component) == "function" then
-    return bareline.BareComponent:new(component, {})
-  end
   if type(component) == "table" then
-    return bareline.BareComponent:new(component.value, (component.opts or {}))
+    return bareline.BareComponent:new(component.value, component.opts or {})
+  elseif type(component) == "string" or type(component) == "function" then
+    return bareline.BareComponent:new(component, {})
   end
   return bareline.BareComponent:new(nil, {})
 end

@@ -83,9 +83,7 @@ bareline.setup({
         bareline.components.vim_mode,
         bareline.components.file_path_relative_to_cwd,
         bareline.components.lsp_servers,
-        "%m",
-        "%h",
-        "%r",
+        bareline.components.mhr,
       },
       { -- Section 2: Right.
         bareline.components.diagnostics,
@@ -102,9 +100,7 @@ bareline.setup({
         bareline.components.vim_mode:config({ mask = " " }),
         bareline.components.file_path_relative_to_cwd,
         bareline.components.lsp_servers,
-        "%m",
-        "%h",
-        "%r",
+        bareline.components.mhr,
       },
       { -- Section 2: Right.
         bareline.components.diagnostics,
@@ -128,6 +124,9 @@ bareline.setup({
   components = {
     git_head = {
       worktrees = {},
+    },
+    mhr = {
+      display_modified = true,
     },
   },
   logging = {

@@ -46,24 +46,24 @@ T["smoke"] = new_set({
 
 -- SMOKE
 
-T["smoke"]["active window success"] = function()
-  local expected = " NOR  %f  %m  %h  %r%=  tabs:8  (main)  %02l:%02c/%02L "
+T["smoke"]["active window"] = function()
+  local expected = " NOR  %f  %m%h%r%=  tabs:8  (main)  %02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
-T["smoke"]["inactive window success"] = function()
+T["smoke"]["inactive window"] = function()
   child.cmd("new")
-  local expected = "      %f  %m  %h  %r%=  tabs:8  %02l:%02c/%02L "
+  local expected = "      %f  %m%h%r%=  tabs:8  %02l:%02c/%02L "
   local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
   local statusline_window_inactive =
     child.lua_get("vim.wo[" .. window_ids[2] .. "].statusline")
   eq(statusline_window_inactive, expected)
 end
 
-T["smoke"]["plugin window success"] = function()
+T["smoke"]["plugin window"] = function()
   child.bo.filetype = "test"
   child.bo.buflisted = false
-  local expected = " [test]  %m%=%02l:%02c/%02L "
+  local expected = " [test]  %m%h%r%=%02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
@@ -166,13 +166,13 @@ T["components"]["plugin_name"] = new_set({
   },
 })
 
-T["components"]["plugin_name"]["quickfix list success"] = function()
+T["components"]["plugin_name"]["quickfix list"] = function()
   child.cmd("copen")
   local plugin_name = child.lua_get("bareline.components.plugin_name:get()")
   eq(plugin_name, child.lua_get("qf"))
 end
 
-T["components"]["plugin_name"]["location list success"] = function()
+T["components"]["plugin_name"]["location list"] = function()
   child.cmd("edit " .. h.resources_dir .. "/foo.txt")
   child.cmd("lvimgrep 'foo' %")
   child.cmd("cd " .. h.resources_dir)
@@ -181,7 +181,7 @@ T["components"]["plugin_name"]["location list success"] = function()
   eq(plugin_name, child.lua_get("qf"))
 end
 
-T["components"]["plugin_name"]["fallback success"] = function()
+T["components"]["plugin_name"]["fallback"] = function()
   child.bo.filetype = "NvimTree"
   local plugin_name = child.lua_get("bareline.components.plugin_name:get()")
   eq(plugin_name, "[nvimtree]")
@@ -529,11 +529,66 @@ T["components"]["cwd"]["omit when there is no file name"] = function()
   eq(child.lua_get("bareline.components.cwd:get()"), vim.NIL)
 end
 
+-- MHR
+
+T["components"]["mhr"] = new_set({})
+
+T["components"]["mhr"]["include %m%h%r in unnamed buf"] = function()
+  eq(child.lua_get("bareline.components.mhr:get()"), "%m%h%r")
+end
+
+T["components"]["mhr"]["include %m%h%r in buf with file"] = function()
+  child.cmd("edit " .. h.resources_dir .. "/foo.txt")
+  eq(child.lua_get("bareline.components.mhr:get()"), "%m%h%r")
+end
+
+T["components"]["mhr"]["include %h%r in vim help"] = function()
+  child.cmd("help")
+  eq(child.lua_get("bareline.components.mhr:get()"), "%h%r")
+end
+
+T["components"]["mhr"]["exclude %m in 'nomodifiable' buf"] = function()
+  child.cmd("edit " .. h.resources_dir .. "/foo.txt")
+  child.cmd("set nomodifiable")
+  eq(child.lua_get("bareline.components.mhr:get()"), "%h%r")
+end
+
+T["components"]["mhr"]["exclude %m as per boolean config"] = function()
+  eq(
+    child.lua_get(
+      "bareline.components.mhr:config({ display_modified = false }):get()"
+    ),
+    "%h%r"
+  )
+end
+
+T["components"]["mhr"]["exclude %m as per function config"] = function()
+  eq(
+    child.lua_get([[bareline.components.mhr:config({
+          display_modified = function()
+            return false
+          end
+        }):get()]]),
+    "%h%r"
+  )
+end
+
+T["components"]["mhr"]["include %m as per function config"] = function()
+  eq(
+    child.lua_get([[bareline.components.mhr:config({
+          display_modified = function()
+            return true
+          end
+        }):get()]]),
+    "%m%h%r"
+  )
+end
+
 -- SETUP
 
 T["setup"] = new_set({})
 
-T["setup"]["fully_custom_statusline"] = new_set({
+T["setup"]["fully custom statusline"] = new_set({
   hooks = {
     pre_case = function()
       child.lua([[
@@ -559,12 +614,12 @@ T["setup"]["fully_custom_statusline"] = new_set({
   },
 })
 
-T["setup"]["fully_custom_statusline"]["custom statusline active window success"] = function()
+T["setup"]["fully custom statusline"]["custom statusline active window"] = function()
   local expected = " NOR%=%02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
-T["setup"]["fully_custom_statusline"]["custom statusline inactive window success"] = function()
+T["setup"]["fully custom statusline"]["custom statusline inactive window"] = function()
   child.cmd("new")
   local expected = "    %=%02l:%02c/%02L "
   local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
@@ -573,14 +628,14 @@ T["setup"]["fully_custom_statusline"]["custom statusline inactive window success
   eq(statusline_inactive_window, expected)
 end
 
-T["setup"]["fully_custom_statusline"]["custom statusline plugin window success"] = function()
+T["setup"]["fully custom statusline"]["custom statusline plugin window"] = function()
   child.bo.filetype = "test"
   child.bo.buflisted = false
   local expected = " [test]%=%02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
-T["setup"]["partially_custom_statusline"] = new_set({
+T["setup"]["partially custom statusline"] = new_set({
   hooks = {
     pre_case = function()
       child.lua([[
@@ -598,15 +653,15 @@ T["setup"]["partially_custom_statusline"] = new_set({
   },
 })
 
-T["setup"]["partially_custom_statusline"]["custom statusline active window success"] = function()
+T["setup"]["partially custom statusline"]["custom statusline active window"] = function()
   eq(child.wo.statusline, " NOR%=%02l:%02c/%02L ")
 end
 
-T["setup"]["partially_custom_statusline"]["default statusline plugin window success"] = function()
+T["setup"]["partially custom statusline"]["default statusline plugin window"] = function()
   child.bo.filetype = "test"
   child.bo.buflisted = false
   child.bo.modifiable = false
-  eq(child.wo.statusline, " [test]  %m%=%02l:%02c/%02L ")
+  eq(child.wo.statusline, " [test]  %h%r%=%02l:%02c/%02L ")
 end
 
 T["setup"]["components.git_head"] = function()
@@ -625,8 +680,73 @@ T["setup"]["components.git_head"] = function()
   })]])
   eq(
     child.wo.statusline,
-    " NOR  %f  %m  %h  %r%=  tabs:8  (chasing-cars)  %02l:%02c/%02L "
+    " NOR  %f  %m%h%r%=  tabs:8  (chasing-cars)  %02l:%02c/%02L "
   )
+end
+
+T["setup"]["components.git_head `:config()` overrides `bareline.config.components`"] = function()
+  child.cmd("cd " .. tmp_dir_for_testing)
+  local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
+  child.lua([[bareline.setup({
+    statuslines = {
+      active = {
+        {
+          bareline.components.git_head:config({ worktrees = {} }),
+          bareline.components.position,
+        }
+      }
+    },
+    components = {
+      git_head = {
+        worktrees = {
+          {
+            toplevel = "]] .. tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
+          }
+        }
+      }
+    }
+  })]])
+  eq(child.wo.statusline, " %02l:%02c/%02L ")
+end
+
+T["setup"]["components.mhr"] = function()
+  child.lua([[bareline.setup({
+    statuslines = {
+      active = {
+        {
+          bareline.components.vim_mode,
+          bareline.components.file_path_relative_to_cwd,
+          bareline.components.mhr,
+        }
+      }
+    },
+    components = {
+      mhr = {
+        display_modified = false
+      }
+    }
+  })]])
+  eq(child.wo.statusline, " NOR  %f  %h%r ")
+end
+
+T["setup"]["components.mhr `:config()` overrides `bareline.config.components`"] = function()
+  child.lua([[bareline.setup({
+    statuslines = {
+      active = {
+        {
+          bareline.components.vim_mode,
+          bareline.components.file_path_relative_to_cwd,
+          bareline.components.mhr:config({ display_modified = true }),
+        }
+      }
+    },
+    components = {
+      mhr = {
+        display_modified = false
+      }
+    }
+  })]])
+  eq(child.wo.statusline, " NOR  %f  %m%h%r ")
 end
 
 T["setup"]["configure user component"] = function()
