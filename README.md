@@ -114,7 +114,7 @@ bareline.setup({
     plugin = {
       { -- Section 1: Left.
         bareline.components.plugin_name,
-        "%m",
+        bareline.components.mhr,
       },
       { -- Section 2: Right.
         bareline.components.position,
