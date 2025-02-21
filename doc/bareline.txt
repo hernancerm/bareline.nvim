@@ -200,7 +200,7 @@ For several use cases, you don't need to specify a watching config, so you can
 get away with a string or function component. The autocommands configured by
 default might be enough to monitor what is displayed in your statusline:
 
-  |BufEnter|, |BufWinEnter|, |WinEnter|, |VimEnter|, |VimResume|,
+  |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|,
   |FocusGained|, |OptionSet|, |DirChanged|, |TermLeave|.
 
 ------------------------------------------------------------------------------

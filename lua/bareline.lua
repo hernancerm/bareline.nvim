@@ -86,7 +86,6 @@ function bareline.setup(config)
     "BufEnter",
     "BufWinEnter",
     "WinEnter",
-    "VimEnter",
     "VimResume",
     "FocusGained",
     "DirChanged",
@@ -338,7 +337,7 @@ end
 --- get away with a string or function component. The autocommands configured by
 --- default might be enough to monitor what is displayed in your statusline:
 ---
----   |BufEnter|, |BufWinEnter|, |WinEnter|, |VimEnter|, |VimResume|,
+---   |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|,
 ---   |FocusGained|, |OptionSet|, |DirChanged|, |TermLeave|.
 
 ---@alias UserSuppliedComponent any|fun():any|BareComponent
