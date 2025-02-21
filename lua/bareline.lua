@@ -664,6 +664,8 @@ end, {})
 --- Control when the modified field (`%m`) is included in the statusline. Default:
 --- true; meaning to always include the field. The only exception to the inclusion
 --- is when the buffer has set 'nomodifiable'.
+---
+--- Mockups: `[+]`, `[Help][RO]`
 ---@type BareComponent
 bareline.components.mhr = bareline.BareComponent:new(function(opts)
   local display_modified = opts.display_modified
