@@ -8,7 +8,8 @@
 --- 2. Quickstart                                     |bareline-quickstart|
 --- 3. Configuration                                  |bareline-configuration|
 --- 4. Custom components                              |bareline-custom-components|
---- 5. Built-in components                            |bareline-built-in-components|
+--- 5. Control statusline redraws                     |bareline-control-stl-redraws|
+--- 6. Built-in components                            |bareline-built-in-components|
 ---
 ---                   Press `gO` to load the table of contents in the location list.
 --- ==============================================================================
@@ -44,7 +45,8 @@ local h = {}
 --- #tag bareline-quickstart
 --- Quickstart ~
 
---- To enable the plugin with the defaults, call the `setup()` function. Usage:
+--- To enable the plugin you need to call the |bareline.setup()| function. To use
+--- the defaults, call it without arguments:
 --- >lua
 ---   require("bareline").setup()
 ---   vim.o.showmode = false -- Optional, recommended.
@@ -58,7 +60,7 @@ function bareline.setup(config)
   if #vim.api.nvim_get_autocmds({ group = h.draw_methods_augroup }) > 0 then
     vim.api.nvim_clear_autocmds({ group = h.draw_methods_augroup })
   end
-  h.close_uv_fs_events()
+  h.close_all_uv_fs_event_handles()
 
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
 
@@ -135,24 +137,11 @@ function bareline.setup(config)
     )
   end)
 
-  -- Create file watchers.
-  vim.api.nvim_create_autocmd({ "VimEnter", "DirChanged" }, {
+  -- Close all luv fs event handles.
+  vim.api.nvim_create_autocmd("VimLeave", {
     group = h.draw_methods_augroup,
     callback = function()
-      h.start_uv_fs_events(statuslines, 2, function()
-        h.draw_statusline_if_plugin_window(
-          bareline.config.statuslines.plugin,
-          bareline.config.statuslines.active
-        )
-      end)
-    end,
-  })
-
-  -- Close file watchers (cleanup on dir change).
-  vim.api.nvim_create_autocmd({ "VimLeave", "DirChangedPre" }, {
-    group = h.draw_methods_augroup,
-    callback = function()
-      h.close_uv_fs_events()
+      h.close_all_uv_fs_event_handles()
     end,
   })
 
@@ -324,23 +313,69 @@ end
 ---    -- Get the tail of the current working directory.
 ---    local component_cwd = function ()
 ---      local cwd = vim.uv.cwd() or ""
----      if cwd == vim.uv.os_getenv("HOME", 60) then return "~" end
+---      if cwd == (vim.uv.os_homedir() or "") then
+---        return "~"
+---      end
 ---      return vim.fn.fnamemodify(cwd, ":t")
 ---    end
 --- <
---- 3. |bareline.BareComponent|: Create one of this type if you need to specify a
----    watching config on when to redraw the statusline to keep the component
----    up-to-date. This is for when you need to watch a file or directory or
----    register autocommands.
+--- 3. |bareline.BareComponent|: This allows the most granular customization.
 ---
---- For several use cases, you don't need to specify a watching config, so you can
---- get away with a string or function component. The autocommands configured by
---- default might be enough to monitor what is displayed in your statusline:
----
----   |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|,
----   |FocusGained|, |OptionSet|, |DirChanged|, |TermLeave|.
+--- For several use cases you don't need to use a |bareline.BareComponent| since
+--- out of the box the statusline gets redrawn on several autocmds.
+--- See: |bareline-control-stl-redraws|.
 
 ---@alias UserSuppliedComponent any|fun():any|BareComponent
+
+--- #delimiter
+--- #tag bareline-control-stl-redraws
+---
+--- Control statusline redraws ~
+---
+--- Bareline does not use a timer to redraw the statusline, instead it uses:
+--- 1. |autocmd|s. See `redraw_on_autocmd` in |bareline-BareComponentCommonOpts|.
+--- 2. |uv| file watchers. See |bareline.redraw_on_fs_event()|.
+---
+--- These are the base autocmds used to redraw the stl:
+--- * |BufEnter|
+--- * |BufWinEnter|
+--- * |WinEnter|
+--- * |VimResume|
+--- * |FocusGained|
+--- * |OptionSet|
+--- * |DirChanged|
+--- * |TermLeave|
+---
+--- With the default config, these are the fs paths watched to redraw the stl:
+--- * Git repository directories to fulfill |bareline.components.git_head|.
+
+--- Conditionally create a |uv_fs_event_t| to monitor `fs_path` for changes. When
+--- a change is detected, redraw the statusline of the current window. If a luv fs
+--- event handle already exists for the `fs_path`, then do nothing.
+---@param fs_path string Relative or absolute path to a dir or file.
+function bareline.redraw_on_fs_event(fs_path)
+  if fs_path == nil then
+    return
+  end
+  local fs_path_absolute = vim.uv.fs_realpath(fs_path)
+  if
+    h.fs_path_to_uv_fs_event_handle[fs_path_absolute] == nil
+    and fs_path_absolute ~= nil
+  then
+    local uv_fs_event_handle = h.create_uv_fs_event(fs_path_absolute, function()
+      h.draw_statusline_if_plugin_window(
+        bareline.config.statuslines.plugin,
+        bareline.config.statuslines.active
+      )
+    end)
+    h.fs_path_to_uv_fs_event_handle[fs_path_absolute] = uv_fs_event_handle
+    h.log(
+      "Added to fs_path_to_uv_fs_event_handle. Resulting table: "
+        .. vim.inspect(h.fs_path_to_uv_fs_event_handle),
+      vim.log.levels.DEBUG
+    )
+  end
+end
 
 -- COMPONENTS
 
@@ -366,19 +401,11 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- #tag bareline-BareComponentCommonOpts
 --- Options applicable to any |bareline.BareComponent|.
 ---@class BareComponentCommonOpts
----@field watcher BareComponentWatcher? Specifies when the statusline is redrawn.
+---@field redraw_on_autocmd table? Expects a table with the keys `event` and
+--- `opts`. These values are passed as-is to |vim.api.nvim_create_autocmd()|.
 ---@field cache_on_vim_modes (string[]|fun():string[])|nil Use cache in these Vim
 --- modes. Each Vim mode is expected as the first char returned by |mode()|.
 ---@field mask string? Single character used to mask the value.
-
---- #tag bareline-BareComponentWatcher
---- Defines watcher configuration for a |bareline.BareComponent|.
---- Since this plugin does not implement a timer-based statusline redraw, it needs
---- a way to know when to do a redraw. That knowledge is provided here.
----@class BareComponentWatcher
----@field autocmd table? Expects a table with the keys `event` and `opts`. These
---- values are passed as-is to |vim.api.nvim_create_autocmd()|.
----@field filepath (string|fun():string)|nil File or dir path to watch.
 
 --- Constructor.
 ---@param value (string|fun(opts:table):any)|nil Initial value of field `value`.
@@ -454,10 +481,8 @@ bareline.components.vim_mode = bareline.BareComponent:new(function()
   }
   return mode_labels[vim_mode]:upper()
 end, {
-  watcher = {
-    autocmd = {
-      event = { "ModeChanged", "InsertLeave" },
-    },
+  redraw_on_autocmd = {
+    event = { "ModeChanged", "InsertLeave" },
   },
 })
 
@@ -496,9 +521,11 @@ bareline.components.end_of_line = bareline.BareComponent:new(function()
 end, {})
 
 --- Git HEAD.
---- No need to have Git installed for this to work. Search order of the Git HEAD:
---- 1. Dir or file `.git` in the current working dir. If none, search it upwards.
---- 2. List `worktrees` from `opts` of |bareline.BareComponent|.
+--- No need to have Git installed for this to work. The search for the Git HEAD is
+--- done in relationship to the name of the current buffer. Search order:
+--- 1. Dir or file `.git`. Search upwards.
+--- 2. List `worktrees` from `opts` of |bareline.BareComponent|. Search upwards.
+--- The first match is used.
 ---
 --- Custom options:
 ---     {worktrees} `(table)`
@@ -518,36 +545,25 @@ end, {})
 --- Mockup: `(main)`
 ---@type BareComponent
 bareline.components.git_head = bareline.BareComponent:new(function(opts)
+  local git_head = nil
   local worktrees = opts.worktrees
   if worktrees == nil then
     worktrees = bareline.config.components.git_head.worktrees
   end
   h.validate_worktrees_for_git_head(worktrees)
-  local git_head = h.provide_git_head(worktrees)
-  if git_head == nil then
+  local git_head_file_path = h.provide_git_head_file_path(worktrees)
+  if git_head_file_path == nil then
     return nil
   end
-  local function format(head)
-    local formatted_head
-    if head:match("^ref: ") then
-      formatted_head = head:gsub("^ref: refs/%w+/", "")
-    else
-      formatted_head = head:sub(1, 7)
-    end
-    return formatted_head
+  bareline.redraw_on_fs_event(vim.fn.fnamemodify(git_head_file_path, ":h"))
+  local git_head_file_first_line = vim.fn.readfile(git_head_file_path)[1]
+  if git_head_file_first_line:match("^ref: ") then
+    git_head = git_head_file_first_line:gsub("^ref: refs/%w+/", "")
+  else
+    git_head = git_head_file_first_line:sub(1, 7)
   end
-  return string.format("(%s)", format(git_head))
-end, {
-  watcher = {
-    filepath = function()
-      local git_dir = vim.fn.finddir(".git", (vim.uv.cwd() or "") .. ";")
-      if git_dir == "" then
-        git_dir = nil
-      end
-      return git_dir
-    end,
-  },
-})
+  return "(" .. git_head .. ")"
+end, {})
 
 --- LSP servers.
 --- The LSP servers attached to the current buffer.
@@ -560,10 +576,8 @@ bareline.components.lsp_servers = bareline.BareComponent:new(function()
   end
   return "[" .. vim.fn.join(lsp_servers, ",") .. "]"
 end, {
-  weatcher = {
-    autocmd = {
-      event = { "LspAttach", "LspDetach" },
-    },
+  redraw_on_autocmd = {
+    event = { "LspAttach", "LspDetach" },
   },
 })
 
@@ -613,10 +627,8 @@ bareline.components.diagnostics = bareline.BareComponent:new(function()
   end
   return string.sub(output, 1, #output - 1)
 end, {
-  watcher = {
-    autocmd = {
-      event = "DiagnosticChanged",
-    },
+  redraw_on_autocmd = {
+    event = "DiagnosticChanged",
   },
   cache_on_vim_modes = function()
     if vim.diagnostic.config().update_in_insert then
@@ -732,31 +744,41 @@ function h.provide_vim_mode()
   return standardize_mode(vim.fn.mode())
 end
 
---- Git HEAD.
+--- Git HEAD file path.
 --- The Git HEAD search is done as documented for |bareline.components.git_head|.
----@param worktrees table[]
----@return string|nil
-function h.provide_git_head(worktrees)
-  local git_head = nil
-  local git_file_or_dir = vim.fs.find(".git", { upward = true })
-  if #git_file_or_dir == 1 then
-    if vim.fn.isdirectory(git_file_or_dir[1]) > 0 then
-      git_head = vim.fn.readfile(git_file_or_dir[1] .. "/HEAD")[1]
-    elseif vim.fn.filereadable(git_file_or_dir[1]) > 0 then
-      git_head = vim.fn.readfile(
-        string.gsub(vim.fn.readfile(git_file_or_dir[1])[1], "^gitdir:[ ]*", "")
-          .. "/HEAD"
-      )[1]
+---@return string?
+function h.provide_git_head_file_path(worktrees)
+  local git_head_file_path = nil
+  local buf_name = vim.api.nvim_buf_get_name(0)
+  if buf_name == "" then
+    return nil
+  end
+  for dir in vim.fs.parents(buf_name) do
+    if vim.fn.isdirectory(dir .. "/.git") > 0 then
+      git_head_file_path = dir .. "/.git/HEAD"
+      break
+    elseif vim.fn.filereadable(dir .. "/.git") > 0 then
+      git_head_file_path = string.gsub(
+        vim.fn.readfile(dir .. "/.git")[1],
+        "^gitdir:[ ]*",
+        ""
+      ) .. "/HEAD"
+      break
     end
-  else
+  end
+  if git_head_file_path == nil then
     for _, worktree in ipairs(worktrees) do
-      if vim.uv.cwd() == worktree.toplevel then
-        git_head = vim.fn.readfile(worktree.gitdir .. "/HEAD")[1]
+      local toplevel_absolute = vim.uv.fs_realpath(worktree.toplevel)
+      if
+        toplevel_absolute ~= nil
+        and #buf_name ~= #h.replace_prefix(buf_name, toplevel_absolute, "")
+      then
+        git_head_file_path = worktree.gitdir .. "/HEAD"
         break
       end
     end
   end
-  return git_head
+  return git_head_file_path
 end
 
 --- LSP attached servers.
@@ -904,9 +926,7 @@ end
 ---@param statusline BareStatusline
 function h.draw_window_statusline(statusline)
   local built_statusline = h.build_statusline(statusline)
-  if bareline.config.logging.enabled then
-    h.log(built_statusline, vim.log.levels.DEBUG)
-  end
+  h.log(built_statusline, vim.log.levels.DEBUG)
   vim.wo.statusline = built_statusline
 end
 
@@ -936,7 +956,7 @@ function h.create_bare_component_autocmds(
       if type(bc) ~= "table" then
         return nil
       end
-      local autocmd = bc.opts and bc.opts.watcher and bc.opts.watcher.autocmd
+      local autocmd = bc.opts and bc.opts.redraw_on_autocmd
       if autocmd == nil then
         return
       end
@@ -969,79 +989,30 @@ function h.create_bare_component_autocmds(
   end
 end
 
-h.uv_fs_event_handles = {}
+h.fs_path_to_uv_fs_event_handle = {}
 
----@param nested_components_list BareComponent[] Statusline(s) definition(s).
----@param depth number Depth at which the components exist in the list.
----@param callback fun() Callback for |uv.fs_event_start()|.
-function h.start_uv_fs_events(nested_components_list, depth, callback)
-  local function watch_file(absolute_filepath)
-    local uv_fs_event, error = vim.uv.new_fs_event()
-    assert(uv_fs_event, error)
-    local success, err_name = uv_fs_event:start(
-      absolute_filepath,
-      {},
-      vim.schedule_wrap(function()
-        callback()
-      end)
-    )
-    assert(success, err_name)
-    table.insert(h.uv_fs_event_handles, uv_fs_event)
-  end
-
-  local absolute_filepaths = vim
-    .iter(nested_components_list)
-    :flatten(depth)
-    :map(function(bare_component)
-      local bc = bare_component
-      if type(bc) ~= "table" then
-        return nil
-      end
-      local filepath = bc.opts and bc.opts.watcher and bc.opts.watcher.filepath
-      if filepath == nil then
-        return
-      end
-      vim.validate({
-        filepath = {
-          filepath,
-          { "string", "function" },
-        },
-      })
-      return filepath
+---@param fs_path string
+---@param callback fun()
+---@return uv_fs_event_t
+function h.create_uv_fs_event(fs_path, callback)
+  local uv_fs_event, error = vim.uv.new_fs_event()
+  assert(uv_fs_event, error)
+  local success, err_name = uv_fs_event:start(
+    fs_path,
+    {},
+    vim.schedule_wrap(function()
+      callback()
     end)
-    :flatten()
-    -- Map to absolute file paths.
-    :map(function(filepath)
-      if filepath == nil then
-        return nil
-      end
-      if type(filepath) == "function" then
-        local filepath_found = filepath()
-        if filepath_found == nil then
-          return nil
-        end
-        return vim.fn.fnamemodify(filepath_found, ":p")
-      end
-    end)
-    -- Remove duplicate filepaths and nil.
-    :fold({}, function(acc, v)
-      if v ~= nil and not vim.tbl_contains(acc, v) then
-        table.insert(acc, v)
-      end
-      return acc
-    end)
-  -- Start file watchers.
-  for _, absolute_filepath in ipairs(absolute_filepaths) do
-    watch_file(absolute_filepath)
-  end
+  )
+  assert(success, err_name)
+  return uv_fs_event
 end
 
--- Close all fs_event handles.
-function h.close_uv_fs_events()
-  for _, handle in ipairs(h.uv_fs_event_handles) do
+function h.close_all_uv_fs_event_handles()
+  for _, handle in pairs(h.fs_path_to_uv_fs_event_handle) do
     handle:close()
   end
-  h.uv_fs_event_handles = {}
+  h.fs_path_to_uv_fs_event_handle = {}
 end
 
 -- Cleanup components cache.
@@ -1119,6 +1090,9 @@ end
 ---@param message string
 ---@param level integer As per |vim.log.levels|.
 function h.log(message, level)
+  if not bareline.config.logging.enabled then
+    return
+  end
   if h.state.log_file ~= nil then
     local level_to_label = { "D", "I", "W", "E" }
     h.state.log_file:write(

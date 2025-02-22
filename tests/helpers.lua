@@ -1,6 +1,8 @@
 local h = {}
 
 h.resources_dir = vim.uv.cwd() .. "/tests/resources"
+h.tmp_dir_for_testing = vim.fn.stdpath("data")
+  .. "/bareline.nvim/tmp_dir_for_testing"
 
 function h.rename_gitdir_to_dotdir()
   vim.uv.fs_rename(
@@ -58,6 +60,37 @@ function h.remove_git_worktree()
       h.resources_dir .. "/git_dir_branch_worktree",
     })
     :wait()
+end
+
+function h.create_tmp_dir_with_contents_for_testing()
+  vim.fn.mkdir(h.tmp_dir_for_testing, "p")
+  -- Sub-dirs and files.
+  vim.fn.mkdir(
+    h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a/sub_dir_a_a_a",
+    "p"
+  )
+  vim.fn.mkdir(
+    h.tmp_dir_for_testing .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b",
+    "p"
+  )
+  vim.fn.writefile({ "text" }, h.tmp_dir_for_testing .. "/file.txt")
+  vim.fn.writefile(
+    { "text" },
+    h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a/file.txt"
+  )
+  vim.fn.writefile(
+    { "text" },
+    h.tmp_dir_for_testing .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt"
+  )
+end
+
+function h.delete_tmp_dir_for_testing()
+  vim.fn.delete(h.tmp_dir_for_testing .. "/file.txt")
+  vim.fn.delete(h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a/file.txt")
+  vim.fn.delete(
+    h.tmp_dir_for_testing .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt"
+  )
+  vim.fn.delete(h.tmp_dir_for_testing, "d")
 end
 
 --- Given a string, escape the Lua magic pattern characters so that the string can

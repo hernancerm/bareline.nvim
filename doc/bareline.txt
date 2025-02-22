@@ -8,7 +8,8 @@ Contents:
 2. Quickstart                                     |bareline-quickstart|
 3. Configuration                                  |bareline-configuration|
 4. Custom components                              |bareline-custom-components|
-5. Built-in components                            |bareline-built-in-components|
+5. Control statusline redraws                     |bareline-control-stl-redraws|
+6. Built-in components                            |bareline-built-in-components|
 
                   Press `gO` to load the table of contents in the location list.
 ==============================================================================
@@ -39,7 +40,8 @@ Statusline: | NOR  lua/bareline.lua                        (main)  22,74/454 |
                                                            *bareline-quickstart*
 Quickstart ~
 
-To enable the plugin with the defaults, call the `setup()` function. Usage:
+To enable the plugin you need to call the |bareline.setup()| function. To use
+the defaults, call it without arguments:
 >lua
   require("bareline").setup()
   vim.o.showmode = false -- Optional, recommended.
@@ -187,21 +189,47 @@ function or |bareline.BareComponent|:
    -- Get the tail of the current working directory.
    local component_cwd = function ()
      local cwd = vim.uv.cwd() or ""
-     if cwd == vim.uv.os_getenv("HOME", 60) then return "~" end
+     if cwd == (vim.uv.os_homedir() or "") then
+       return "~"
+     end
      return vim.fn.fnamemodify(cwd, ":t")
    end
 <
-3. |bareline.BareComponent|: Create one of this type if you need to specify a
-   watching config on when to redraw the statusline to keep the component
-   up-to-date. This is for when you need to watch a file or directory or
-   register autocommands.
+3. |bareline.BareComponent|: This allows the most granular customization.
 
-For several use cases, you don't need to specify a watching config, so you can
-get away with a string or function component. The autocommands configured by
-default might be enough to monitor what is displayed in your statusline:
+For several use cases you don't need to use a |bareline.BareComponent| since
+out of the box the statusline gets redrawn on several autocmds.
+See: |bareline-control-stl-redraws|.
 
-  |BufEnter|, |BufWinEnter|, |WinEnter|, |VimResume|,
-  |FocusGained|, |OptionSet|, |DirChanged|, |TermLeave|.
+------------------------------------------------------------------------------
+                                                  *bareline-control-stl-redraws*
+
+Control statusline redraws ~
+
+Bareline does not use a timer to redraw the statusline, instead it uses:
+1. |autocmd|s. See `redraw_on_autocmd` in |bareline-BareComponentCommonOpts|.
+2. |uv| file watchers. See |bareline.redraw_on_fs_event()|.
+
+These are the base autocmds used to redraw the stl:
+• |BufEnter|
+• |BufWinEnter|
+• |WinEnter|
+• |VimResume|
+• |FocusGained|
+• |OptionSet|
+• |DirChanged|
+• |TermLeave|
+
+With the default config, these are the fs paths watched to redraw the stl:
+• Git repository directories to fulfill |bareline.components.git_head|.
+
+                                                 *bareline.redraw_on_fs_event()*
+                    `bareline.redraw_on_fs_event`({fs_path})
+Conditionally create a |uv_fs_event_t| to monitor `fs_path` for changes. When
+a change is detected, redraw the statusline of the current window. If a luv fs
+event handle already exists for the `fs_path`, then do nothing.
+Parameters ~
+{fs_path} `(string)` Relative or absolute path to a dir or file.
 
 ------------------------------------------------------------------------------
                                                         *bareline.BareComponent*
@@ -226,21 +254,11 @@ Options applicable to any |bareline.BareComponent|.
 Class ~
 {BareComponentCommonOpts}
 Fields ~
-{watcher} `(BareComponentWatcher?)` Specifies when the statusline is redrawn.
+{redraw_on_autocmd} `(table?)` Expects a table with the keys `event` and
+`opts`. These values are passed as-is to |vim.api.nvim_create_autocmd()|.
 {cache_on_vim_modes} `((string[]|fun():string[])|nil)` Use cache in these Vim
 modes. Each Vim mode is expected as the first char returned by |mode()|.
 {mask} `(string?)` Single character used to mask the value.
-
-                                                 *bareline-BareComponentWatcher*
-Defines watcher configuration for a |bareline.BareComponent|.
-Since this plugin does not implement a timer-based statusline redraw, it needs
-a way to know when to do a redraw. That knowledge is provided here.
-Class ~
-{BareComponentWatcher}
-Fields ~
-{autocmd} `(table?)` Expects a table with the keys `event` and `opts`. These
-values are passed as-is to |vim.api.nvim_create_autocmd()|.
-{filepath} `((string|fun():string)|nil)` File or dir path to watch.
 
                                                   *bareline.BareComponent:new()*
               `bareline.BareComponent:new`({value}, {common_opts})
@@ -313,9 +331,11 @@ Type ~
                                                   *bareline.components.git_head*
                          `bareline.components.git_head`
 Git HEAD.
-No need to have Git installed for this to work. Search order of the Git HEAD:
-1. Dir or file `.git` in the current working dir. If none, search it upwards.
-2. List `worktrees` from `opts` of |bareline.BareComponent|.
+No need to have Git installed for this to work. The search for the Git HEAD is
+done in relationship to the name of the current buffer. Search order:
+1. Dir or file `.git`. Search upwards.
+2. List `worktrees` from `opts` of |bareline.BareComponent|. Search upwards.
+The first match is used.
 
 Custom options:
     {worktrees} `(table)`

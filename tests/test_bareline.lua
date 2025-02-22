@@ -7,8 +7,6 @@ if not vim.fn.executable("git") then
   os.exit(1)
 end
 
-local tmp_dir_for_testing = vim.fn.stdpath("data")
-  .. "/bareline.nvim/tmp_dir_for_testing"
 local h = dofile("tests/helpers.lua")
 
 local new_set = MiniTest.new_set
@@ -20,7 +18,7 @@ local T = new_set({
     pre_once = function()
       h.rename_gitdir_to_dotdir()
       h.create_git_worktree()
-      vim.fn.mkdir(tmp_dir_for_testing, "p")
+      h.create_tmp_dir_with_contents_for_testing()
     end,
     pre_case = function()
       child.restart({ "-u", "scripts/minimal_init.lua" })
@@ -29,7 +27,7 @@ local T = new_set({
     post_once = function()
       h.remove_git_worktree()
       h.rename_dotdir_to_gitdir()
-      vim.fn.delete(tmp_dir_for_testing, "d")
+      h.delete_tmp_dir_for_testing()
       child.stop()
     end,
   },
@@ -47,7 +45,7 @@ T["smoke"] = new_set({
 -- SMOKE
 
 T["smoke"]["active window"] = function()
-  local expected = " NOR  %f  %m%h%r%=  tabs:8  (main)  %02l:%02c/%02L "
+  local expected = " NOR  %f  %m%h%r%=  tabs:8  %02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
@@ -238,42 +236,73 @@ end
 
 T["components"]["git_head"] = new_set({})
 
+T["components"]["git_head"]["omit head when buf name is empty"] = function()
+  child.cmd("cd " .. h.resources_dir .. "/git_dir_branch")
+  eq(child.lua_get("bareline.components.git_head:get()"), vim.NIL)
+end
+
 T["components"]["git_head"]["standard_repo"] = new_set({
-  -- stylua: ignore start
   parametrize = {
-    { "/git_dir_branch", "(main)" },
-    { "/git_dir_hash",   "(f8ac697)" },
-    { "/git_dir_tag",    "(03ffbf9)" },
-  }
-,
-  -- stylua: ignore end
+    { "/git_dir_branch", "(trunk)" },
+    { "/git_dir_hash", "(d6656f5)" },
+    { "/git_dir_hash/sub_dir_a/sub_dir_a_a", "(d6656f5)" },
+    { "/git_dir_hash/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b", "(d6656f5)" },
+    { "/git_dir_tag", "(03ffbf9)" },
+  },
 })
 
 T["components"]["git_head"]["standard_repo"]["parameterized"] = function(
   git_dir,
   expected_git_head
 )
-  child.cmd("cd " .. h.resources_dir .. git_dir)
+  child.cmd("edit " .. h.resources_dir .. git_dir .. "/file.txt")
   local git_head = child.lua_get("bareline.components.git_head:get()")
   eq(git_head, expected_git_head)
 end
 
-T["components"]["git_head"]["detached working tree"] = function()
-  child.cmd("cd " .. tmp_dir_for_testing)
+-- This also tests finding the *first* match for the Git HEAD.
+T["components"]["git_head"]["head taken from buf name instead of cwd"] = function()
+  child.cmd("cd " .. h.tmp_dir_for_testing)
+  child.cmd("edit " .. h.resources_dir .. "/git_dir_hash/file.txt")
+  eq(child.lua_get("bareline.components.git_head:get()"), "(d6656f5)")
+  child.cmd("edit " .. h.resources_dir .. "/git_dir_branch/file.txt")
+  eq(child.lua_get("bareline.components.git_head:get()"), "(trunk)")
+end
+
+T["components"]["git_head"]["detached working tree"] = new_set({
+  parametrize = {
+    { h.tmp_dir_for_testing .. "/file.txt", "(chasing-cars)" },
+    { h.tmp_dir_for_testing .. "/file_is_not_written.txt", "(chasing-cars)" },
+    {
+      h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a/file.txt",
+      "(chasing-cars)",
+    },
+    {
+      h.tmp_dir_for_testing .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt",
+      "(chasing-cars)",
+    },
+  },
+})
+
+T["components"]["git_head"]["detached working tree"]["parameterized"] = function(
+  file_path,
+  expected_git_head
+)
+  child.cmd("edit " .. file_path)
   local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
-  local lua_code = [[bareline.components.git_head:config({
+  local git_head = child.lua_get([[bareline.components.git_head:config({
     worktrees = {
       {
-        toplevel = "]] .. tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
+        toplevel = "]] .. h.tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
       }
     }
-  }):get()]]
-  local git_head = child.lua_get(lua_code)
-  eq(git_head, "(chasing-cars)")
+  }):get()]])
+  eq(git_head, expected_git_head)
 end
 
 T["components"]["git_head"]["added worktree"] = function()
   child.cmd("cd " .. h.resources_dir .. "/git_dir_branch_worktree")
+  child.cmd("edit file.txt")
   local git_head = child.lua_get("bareline.components.git_head:get()")
   eq(git_head, "(hotfix)")
 end
@@ -665,14 +694,15 @@ T["setup"]["partially custom statusline"]["default statusline plugin window"] = 
 end
 
 T["setup"]["components.git_head"] = function()
-  child.cmd("cd " .. tmp_dir_for_testing)
+  child.cmd("cd " .. h.tmp_dir_for_testing)
+  child.cmd("edit file.txt")
   local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
   child.lua([[bareline.setup({
     components = {
       git_head = {
         worktrees = {
           {
-            toplevel = "]] .. tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
+            toplevel = "]] .. h.tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
           }
         }
       }
@@ -680,12 +710,12 @@ T["setup"]["components.git_head"] = function()
   })]])
   eq(
     child.wo.statusline,
-    " NOR  %f  %m%h%r%=  tabs:8  (chasing-cars)  %02l:%02c/%02L "
+    " NOR  %<file.txt  %m%h%r%=  tabs:8  (chasing-cars)  tmp_dir_for_testing  %02l:%02c/%02L "
   )
 end
 
 T["setup"]["components.git_head `:config()` overrides `bareline.config.components`"] = function()
-  child.cmd("cd " .. tmp_dir_for_testing)
+  child.cmd("cd " .. h.tmp_dir_for_testing)
   local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
   child.lua([[bareline.setup({
     statuslines = {
@@ -700,7 +730,7 @@ T["setup"]["components.git_head `:config()` overrides `bareline.config.component
       git_head = {
         worktrees = {
           {
-            toplevel = "]] .. tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
+            toplevel = "]] .. h.tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
           }
         }
       }
