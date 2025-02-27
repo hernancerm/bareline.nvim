@@ -354,7 +354,6 @@ end
 --- event handle already exists for the `fs_path`, then do nothing.
 ---@param fs_path string Relative or absolute path to a dir or file.
 function bareline.redraw_on_fs_event(fs_path)
-  assert("Arg fs_path is falsy", fs_path)
   local fs_path_absolute = vim.uv.fs_realpath(fs_path)
   if
     h.fs_path_to_uv_fs_event_handle[fs_path_absolute] == nil
@@ -587,14 +586,16 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
           local config_wt_o = vim.system({
             "git", "-C", worktree.gitdir, "config", "status.showUntrackedFiles",
           }, { text = true }):wait()
+          -- print(vim.json.encode(config_wt_o))
           if ls_files_wt_o.code ~= 0
-              and config_wt_o.code == 0
+              -- If the config file is unreadable `git config` returns a non-zero
+              -- exit code. In this case, the exit code is not important.
               -- Substring to remove the ending newline character.
               and string.sub(config_wt_o.stdout, 1, -2) ~= "no"
               and string.sub(config_wt_o.stdout, 1, -2) ~= "false" then
             -- File is untracked, but should be shown.
-            print(vim.json.encode(config_wt_o))
             gitdir = worktree.gitdir
+            print(gitdir)
             bareline.redraw_on_fs_event(gitdir)
             git_head = h.provide_pretty_git_head(gitdir)
           end

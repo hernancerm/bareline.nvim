@@ -271,22 +271,19 @@ end
 
 T["components"]["git_head"]["detached working tree"] = new_set({
   parametrize = {
-    { h.tmp_dir_for_testing .. "/file.txt", "(chasing-cars)" },
-    { h.tmp_dir_for_testing .. "/file_is_not_written.txt", "(chasing-cars)" },
+    { h.tmp_dir_for_testing .. "/file.txt" },
+    { h.tmp_dir_for_testing .. "/file_is_not_written.txt" },
     {
       h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a/file.txt",
-      "(chasing-cars)",
     },
     {
       h.tmp_dir_for_testing .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt",
-      "(chasing-cars)",
     },
   },
 })
 
 T["components"]["git_head"]["detached working tree"]["parameterized"] = function(
-  file_path,
-  expected_git_head
+  file_path
 )
   child.cmd("edit " .. file_path)
   local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
@@ -297,7 +294,7 @@ T["components"]["git_head"]["detached working tree"]["parameterized"] = function
       }
     }
   }):get()]])
-  eq(git_head, expected_git_head)
+  eq(git_head, "(bare-repo-test)")
 end
 
 T["components"]["git_head"]["added worktree"] = function()
@@ -710,7 +707,7 @@ T["setup"]["components.git_head"] = function()
   })]])
   eq(
     child.wo.statusline,
-    " NOR  %<file.txt  %m%h%r%=  tabs:8  (chasing-cars)  tmp_dir_for_testing  %02l:%02c/%02L "
+    " NOR  %<file.txt  %m%h%r%=  tabs:8  (bare-repo-test)  tmp_dir_for_testing  %02l:%02c/%02L "
   )
 end
 
