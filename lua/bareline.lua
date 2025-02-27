@@ -354,9 +354,7 @@ end
 --- event handle already exists for the `fs_path`, then do nothing.
 ---@param fs_path string Relative or absolute path to a dir or file.
 function bareline.redraw_on_fs_event(fs_path)
-  if fs_path == nil then
-    return
-  end
+  assert("Arg fs_path is falsy", fs_path)
   local fs_path_absolute = vim.uv.fs_realpath(fs_path)
   if
     h.fs_path_to_uv_fs_event_handle[fs_path_absolute] == nil
@@ -545,24 +543,76 @@ end, {})
 --- Mockup: `(main)`
 ---@type BareComponent
 bareline.components.git_head = bareline.BareComponent:new(function(opts)
-  local git_head = nil
+  -- stylua: ignore start
   local worktrees = opts.worktrees
   if worktrees == nil then
     worktrees = bareline.config.components.git_head.worktrees
   end
   h.validate_worktrees_for_git_head(worktrees)
-  local git_head_file_path = h.provide_git_head_file_path(worktrees)
-  if git_head_file_path == nil then
+  local file_full_path = vim.api.nvim_buf_get_name(0)
+  if file_full_path == "" then
     return nil
   end
-  bareline.redraw_on_fs_event(vim.fn.fnamemodify(git_head_file_path, ":h"))
-  local git_head_file_first_line = vim.fn.readfile(git_head_file_path)[1]
-  if git_head_file_first_line:match("^ref: ") then
-    git_head = git_head_file_first_line:gsub("^ref: refs/%w+/", "")
-  else
-    git_head = git_head_file_first_line:sub(1, 7)
+  local file_name = vim.fn.fnamemodify(file_full_path, ":t")
+  local dir_path = vim.fn.fnamemodify(file_full_path, ":h")
+  local ls_files_o = vim.system({
+    "git", "-C", dir_path, "ls-files", "--error-unmatch", file_name,
+  }):wait()
+  local rev_parse_o = vim.system({
+    "git", "-C", dir_path, "rev-parse", "--path-format=full", "--git-dir",
+  }, { text = true }):wait()
+  local gitdir = nil
+  local git_head = nil
+  if rev_parse_o.code == 0 then
+    gitdir = rev_parse_o.stdout
   end
-  return "(" .. git_head .. ")"
+  if ls_files_o.code == 0 and gitdir ~= nil then
+    -- Found standard repo or work tree from `git worktree add`, file tracked.
+    bareline.redraw_on_fs_event(gitdir)
+    git_head = h.provide_pretty_git_head(gitdir)
+  elseif ls_files_o.code ~= 0 and gitdir ~= nil then
+    -- Found standard repo or work tree from `git worktree add`, file untracked.
+    bareline.redraw_on_fs_event(gitdir)
+    git_head = h.provide_pretty_git_head(gitdir)
+  elseif ls_files_o.code ~= 0 and gitdir == nil then
+    -- Search the work trees specified in the config.
+    for _, worktree in ipairs(worktrees) do
+      if gitdir ~= nil then
+        break
+      end
+      if vim.startswith(dir_path, worktree.toplevel) then
+        local ls_files_wt_o = vim.system({
+          "git", "--git-dir", worktree.gitdir, "--work-tree", worktree.toplevel,
+              "ls-files", "--error-unmatch", file_full_path,
+        }):wait()
+        if ls_files_wt_o.code == 0 then
+          -- File is tracked.
+          gitdir = worktree.gitdir
+          bareline.redraw_on_fs_event(gitdir)
+          git_head = h.provide_pretty_git_head(gitdir)
+        else
+          local config_wt_o = vim.system({
+            "git", "--git-dir", worktree.gitdir, "-C", dir_path,
+                "config", "status.showUntrackedFiles",
+          }, { text = true }):wait()
+          if ls_files_wt_o.code ~= 0 and config_wt_o.code == 0
+              and not vim.tbl_contains({ "no", "false" }, config_wt_o.stdout)
+          then
+            -- File is untracked, but should be shown.
+            gitdir = worktree.gitdir
+            bareline.redraw_on_fs_event(gitdir)
+            git_head = h.provide_pretty_git_head(gitdir)
+          end
+        end
+      end
+    end
+  end
+  if git_head == nil then
+    return nil
+  else
+    return "(" .. git_head .. ")"
+  end
+  -- stylua: ignore end
 end, {})
 
 --- LSP servers.
@@ -744,41 +794,23 @@ function h.provide_vim_mode()
   return standardize_mode(vim.fn.mode())
 end
 
---- Git HEAD file path.
---- The Git HEAD search is done as documented for |bareline.components.git_head|.
----@return string?
-function h.provide_git_head_file_path(worktrees)
-  local git_head_file_path = nil
-  local buf_name = vim.api.nvim_buf_get_name(0)
-  if buf_name == "" then
-    return nil
+--- Pretty Git HEAD.
+---@param gitdir string Git directory.
+---@return string
+function h.provide_pretty_git_head(gitdir)
+  local git_head = nil
+  assert("Arg gitdir is falsy", gitdir)
+  -- stylua: ignore start
+  local output = vim.system({
+    "git", "-C", gitdir, "rev-parse", "--abbrev-ref", "HEAD"
+  }, { text = true }):wait()
+  if output.code == 0 then
+    git_head = output.stdout
   end
-  for dir in vim.fs.parents(buf_name) do
-    if vim.fn.isdirectory(dir .. "/.git") > 0 then
-      git_head_file_path = dir .. "/.git/HEAD"
-      break
-    elseif vim.fn.filereadable(dir .. "/.git") > 0 then
-      git_head_file_path = string.gsub(
-        vim.fn.readfile(dir .. "/.git")[1],
-        "^gitdir:[ ]*",
-        ""
-      ) .. "/HEAD"
-      break
-    end
-  end
-  if git_head_file_path == nil then
-    for _, worktree in ipairs(worktrees) do
-      local toplevel_absolute = vim.uv.fs_realpath(worktree.toplevel)
-      if
-        toplevel_absolute ~= nil
-        and #buf_name ~= #h.replace_prefix(buf_name, toplevel_absolute, "")
-      then
-        git_head_file_path = worktree.gitdir .. "/HEAD"
-        break
-      end
-    end
-  end
-  return git_head_file_path
+  -- stylua: ignore end
+  assert("Return val git_head is falsy", git_head)
+  ---@diagnostic disable-next-line: return-type-mismatch
+  return git_head
 end
 
 --- LSP attached servers.
