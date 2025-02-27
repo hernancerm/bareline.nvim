@@ -586,13 +586,11 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
           local config_wt_o = vim.system({
             "git", "-C", worktree.gitdir, "config", "status.showUntrackedFiles",
           }, { text = true }):wait()
-          -- print(vim.json.encode(config_wt_o))
-          if ls_files_wt_o.code ~= 0
-              -- If the config file is unreadable `git config` returns a non-zero
-              -- exit code. In this case, the exit code is not important.
-              -- Substring to remove the ending newline character.
-              and string.sub(config_wt_o.stdout, 1, -2) ~= "no"
+          -- Substring to remove the ending newline character.
+          if string.sub(config_wt_o.stdout, 1, -2) ~= "no"
               and string.sub(config_wt_o.stdout, 1, -2) ~= "false" then
+            -- If the config file is unreadable `git config` returns a non-zero
+            -- exit code. In this case for this cmd the exit code is not relevant.
             -- File is untracked, but should be shown.
             gitdir = worktree.gitdir
             print(gitdir)
