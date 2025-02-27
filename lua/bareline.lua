@@ -553,28 +553,21 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
   if file_full_path == "" then
     return nil
   end
-  local file_name = vim.fn.fnamemodify(file_full_path, ":t")
   local dir_path = vim.fn.fnamemodify(file_full_path, ":h")
-  local ls_files_o = vim.system({
-    "git", "-C", dir_path, "ls-files", "--error-unmatch", file_name,
-  }):wait()
   local rev_parse_o = vim.system({
-    "git", "-C", dir_path, "rev-parse", "--path-format=full", "--git-dir",
+    "git", "-C", dir_path, "rev-parse", "--absolute-git-dir",
   }, { text = true }):wait()
   local gitdir = nil
   local git_head = nil
   if rev_parse_o.code == 0 then
-    gitdir = rev_parse_o.stdout
+    -- Substring to remove the ending newline character.
+    gitdir = string.sub(rev_parse_o.stdout, 1, -2)
   end
-  if ls_files_o.code == 0 and gitdir ~= nil then
-    -- Found standard repo or work tree from `git worktree add`, file tracked.
+  if gitdir ~= nil then
+    -- Found standard repo or work tree from `git worktree add`.
     bareline.redraw_on_fs_event(gitdir)
     git_head = h.provide_pretty_git_head(gitdir)
-  elseif ls_files_o.code ~= 0 and gitdir ~= nil then
-    -- Found standard repo or work tree from `git worktree add`, file untracked.
-    bareline.redraw_on_fs_event(gitdir)
-    git_head = h.provide_pretty_git_head(gitdir)
-  elseif ls_files_o.code ~= 0 and gitdir == nil then
+  else
     -- Search the work trees specified in the config.
     for _, worktree in ipairs(worktrees) do
       if gitdir ~= nil then
@@ -592,13 +585,15 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
           git_head = h.provide_pretty_git_head(gitdir)
         else
           local config_wt_o = vim.system({
-            "git", "--git-dir", worktree.gitdir, "-C", dir_path,
-                "config", "status.showUntrackedFiles",
+            "git", "-C", worktree.gitdir, "config", "status.showUntrackedFiles",
           }, { text = true }):wait()
-          if ls_files_wt_o.code ~= 0 and config_wt_o.code == 0
-              and not vim.tbl_contains({ "no", "false" }, config_wt_o.stdout)
-          then
+          if ls_files_wt_o.code ~= 0
+              and config_wt_o.code == 0
+              -- Substring to remove the ending newline character.
+              and string.sub(config_wt_o.stdout, 1, -2) ~= "no"
+              and string.sub(config_wt_o.stdout, 1, -2) ~= "false" then
             -- File is untracked, but should be shown.
+            print(vim.json.encode(config_wt_o))
             gitdir = worktree.gitdir
             bareline.redraw_on_fs_event(gitdir)
             git_head = h.provide_pretty_git_head(gitdir)
@@ -607,11 +602,7 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
       end
     end
   end
-  if git_head == nil then
-    return nil
-  else
-    return "(" .. git_head .. ")"
-  end
+  return git_head
   -- stylua: ignore end
 end, {})
 
@@ -796,20 +787,30 @@ end
 
 --- Pretty Git HEAD.
 ---@param gitdir string Git directory.
----@return string
+---@return string?
 function h.provide_pretty_git_head(gitdir)
   local git_head = nil
-  assert("Arg gitdir is falsy", gitdir)
   -- stylua: ignore start
-  local output = vim.system({
+  local rev_parse_o = vim.system({
     "git", "-C", gitdir, "rev-parse", "--abbrev-ref", "HEAD"
   }, { text = true }):wait()
-  if output.code == 0 then
-    git_head = output.stdout
+  if rev_parse_o.code == 0 then
+    -- Substring to remove the ending newline character.
+    git_head = string.sub(rev_parse_o.stdout, 1, -2)
+  end
+  if git_head == "HEAD" then
+    local rev_parse_short_o = vim.system({
+      "git", "-C", gitdir, "rev-parse", "--short", "HEAD"
+    }, { text = true }):wait()
+    if rev_parse_short_o.code == 0 then
+      -- Substring to remove the ending newline character.
+      git_head = string.sub(rev_parse_short_o.stdout, 1, -2)
+    end
   end
   -- stylua: ignore end
-  assert("Return val git_head is falsy", git_head)
-  ---@diagnostic disable-next-line: return-type-mismatch
+  if git_head ~= nil then
+    return "(" .. git_head .. ")"
+  end
   return git_head
 end
 
