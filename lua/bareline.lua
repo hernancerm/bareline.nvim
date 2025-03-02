@@ -534,7 +534,7 @@ end, {})
 ---     worktrees = {
 ---       {
 ---         toplevel = vim.env.HOME,
----         gitdir = vim.env.HOME .. "/projects/dotfiles.git"
+---         gitdir = vim.env.HOME .. "/dotfiles.git"
 ---       }
 ---     }
 ---   })
@@ -548,11 +548,11 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
     worktrees = bareline.config.components.git_head.worktrees
   end
   h.validate_worktrees_for_git_head(worktrees)
-  local file_full_path = vim.api.nvim_buf_get_name(0)
-  if file_full_path == "" then
+  local file_path = vim.api.nvim_buf_get_name(0)
+  if file_path == "" then
     return nil
   end
-  local dir_path = vim.fn.fnamemodify(file_full_path, ":h")
+  local dir_path = vim.fn.fnamemodify(file_path, ":h")
   local rev_parse_o = vim.system({
     "git", "-C", dir_path, "rev-parse", "--absolute-git-dir",
   }, { text = true }):wait()
@@ -565,40 +565,12 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
   if gitdir ~= nil then
     -- Found standard repo or work tree from `git worktree add`.
     bareline.redraw_on_fs_event(gitdir)
-    git_head = h.provide_pretty_git_head(gitdir)
+    git_head = h.provide_git_pretty_head(gitdir)
   else
-    -- Search the work trees specified in the config.
-    for _, worktree in ipairs(worktrees) do
-      if gitdir ~= nil then
-        break
-      end
-      if vim.startswith(dir_path, worktree.toplevel) then
-        local ls_files_wt_o = vim.system({
-          "git", "--git-dir", worktree.gitdir, "--work-tree", worktree.toplevel,
-              "ls-files", "--error-unmatch", file_full_path,
-        }):wait()
-        if ls_files_wt_o.code == 0 then
-          -- File is tracked.
-          gitdir = worktree.gitdir
-          bareline.redraw_on_fs_event(gitdir)
-          git_head = h.provide_pretty_git_head(gitdir)
-        else
-          local config_wt_o = vim.system({
-            "git", "-C", worktree.gitdir, "config", "status.showUntrackedFiles",
-          }, { text = true }):wait()
-          -- Substring to remove the ending newline character.
-          if string.sub(config_wt_o.stdout, 1, -2) ~= "no"
-              and string.sub(config_wt_o.stdout, 1, -2) ~= "false" then
-            -- If the config file is unreadable `git config` returns a non-zero
-            -- exit code. In this case for this cmd the exit code is not relevant.
-            -- File is untracked, but should be shown.
-            gitdir = worktree.gitdir
-            print(gitdir)
-            bareline.redraw_on_fs_event(gitdir)
-            git_head = h.provide_pretty_git_head(gitdir)
-          end
-        end
-      end
+    local matched_worktree = h.provide_git_matching_worktree(worktrees, file_path)
+    if matched_worktree ~= nil then
+      bareline.redraw_on_fs_event(matched_worktree.gitdir)
+      git_head = h.provide_git_pretty_head(matched_worktree.gitdir)
     end
   end
   return git_head
@@ -784,10 +756,9 @@ function h.provide_vim_mode()
   return standardize_mode(vim.fn.mode())
 end
 
---- Pretty Git HEAD.
 ---@param gitdir string Git directory.
 ---@return string?
-function h.provide_pretty_git_head(gitdir)
+function h.provide_git_pretty_head(gitdir)
   local git_head = nil
   -- stylua: ignore start
   local rev_parse_o = vim.system({
@@ -811,6 +782,44 @@ function h.provide_pretty_git_head(gitdir)
     return "(" .. git_head .. ")"
   end
   return git_head
+end
+
+---@param worktrees table Custom opt for the `git_head` component.
+---@param file_path string Absolute file path of the file in the current buf.
+---@return table? Matched worktree.
+function h.provide_git_matching_worktree(worktrees, file_path)
+  -- stylua: ignore start
+  local matched_worktree = nil
+  for _, worktree in ipairs(worktrees) do
+    if matched_worktree ~= nil then
+      break
+    end
+    if vim.startswith(vim.fn.fnamemodify(file_path, ":h"), worktree.toplevel) then
+      local ls_files_wt_o = vim.system({
+        "git", "--git-dir", worktree.gitdir, "--work-tree", worktree.toplevel,
+        "ls-files", "--error-unmatch", file_path,
+      }):wait()
+      if ls_files_wt_o.code == 0 then
+        -- File is tracked.
+        -- bareline.redraw_on_fs_event(gitdir)
+        matched_worktree = worktree
+      else
+        local config_wt_o = vim.system({
+          "git", "-C", worktree.gitdir, "config", "status.showUntrackedFiles",
+        }, { text = true }):wait()
+        -- Substring to remove the ending newline character.
+        if string.sub(config_wt_o.stdout, 1, -2) ~= "no"
+          and string.sub(config_wt_o.stdout, 1, -2) ~= "false" then
+          -- If the config file is unreadable `git config` returns a non-zero
+          -- exit code. In this case for this cmd the exit code is not relevant.
+          -- File is untracked, but should be shown.
+          matched_worktree = worktree
+        end
+      end
+    end
+  end
+  return matched_worktree
+  -- stylua: ignore end
 end
 
 --- LSP attached servers.
