@@ -518,15 +518,18 @@ bareline.components.end_of_line = bareline.BareComponent:new(function()
 end, {})
 
 --- Git HEAD.
---- Git needs to be installed for this comopnent to work. The search for the HEAD
+--- Git needs to be installed for this component to work. The search for the HEAD
 --- is done in relationship to the name of the current buffer, Neovim's cwd is
---- irrelevant. To learn the HEAD, first a repo needs to be found. This is the
---- search algorithm for a Git repo:
+--- irrelevant. To learn the HEAD, first a repo needs to be found.
+---
+--- Steps to find a Git repo:
 --- 1. If the buf name is empty, do nothing.
 --- 2. Else, search with: `git -C {parent dir} rev-parse --absolute-git-dir`.
 --- 3. Else, search through `worktrees` in the order they are provided.
 ---
---- TODO: Respect `status.showUntrackedFiles` always.
+--- When the found repo has the option `status.showUntrackedFiles` disabled, the
+--- HEAD is not shown on untracked files. When a file is added to the staging area
+--- (even if not committed yet) it stops being considered as untracked.
 ---
 --- Custom options:
 ---     {worktrees} `(table)`
@@ -554,7 +557,7 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
   -- stylua: ignore start
   local rev_parse_o = vim.system({
     "git", "-C", vim.fn.fnamemodify(filepath, ":h"),
-        "rev-parse", "--absolute-git-dir",
+      "rev-parse", "--absolute-git-dir",
   }, { text = true }):wait()
   -- stylua: ignore end
   local gitdir = nil
@@ -564,14 +567,20 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
   local git_head = nil
   if gitdir ~= nil then
     -- Found standard repo or work tree from `git worktree add`.
-    bareline.redraw_on_fs_event(gitdir)
-    git_head = h.providers.git_head.get_pretty_head(gitdir)
+    local is_filepath_tracked =
+      h.providers.git_head.is_filepath_tracked(filepath, gitdir)
+    if is_filepath_tracked then
+      bareline.redraw_on_fs_event(gitdir)
+      git_head = h.providers.git_head.get_pretty_head(gitdir)
+    elseif h.providers.git_head.should_show_untracked(gitdir) then
+      bareline.redraw_on_fs_event(gitdir)
+      git_head = h.providers.git_head.get_pretty_head(gitdir)
+    end
   else
     local matched_worktree =
       h.providers.git_head.get_matching_worktree(worktrees, filepath)
     if matched_worktree ~= nil then
       -- Found work tree from `worktrees` custom component opt.
-      -- Useful for bare repositories.
       bareline.redraw_on_fs_event(matched_worktree.gitdir)
       git_head = h.providers.git_head.get_pretty_head(matched_worktree.gitdir)
     end
@@ -737,6 +746,7 @@ end
 
 h.providers.git_head = {}
 
+--- Retrieve all, pick with highest precedence, validate, return.
 ---@param opts table `opts` field of the component.
 ---@return table Valid worktrees config.
 function h.providers.git_head.get_opt_worktrees(opts)
@@ -792,40 +802,51 @@ function h.providers.git_head.get_pretty_head(gitdir)
   return git_head
 end
 
+---@param filepath string
+---@param gitdir string
+---@return boolean
+function h.providers.git_head.is_filepath_tracked(filepath, gitdir)
+  -- stylua: ignore start
+  local ls_files_o = vim.system({
+    "git", "--git-dir", gitdir, "--work-tree", vim.fn.fnamemodify(filepath, ":h"),
+    "ls-files", "--error-unmatch", filepath,
+  }):wait()
+  -- stylua: ignore end
+  return ls_files_o.code == 0
+end
+
+---@param gitdir string Git directory.
+---@return boolean
+function h.providers.git_head.should_show_untracked(gitdir)
+  -- stylua: ignore start
+  local config_o = vim.system({
+    "git", "-C", gitdir, "config", "status.showUntrackedFiles",
+  }, { text = true }):wait()
+  -- stylua: ignore end
+  local config_o_stdout = vim.trim(vim.fn.trim(config_o.stdout, "\n", 2))
+  return config_o_stdout ~= "no" and config_o_stdout ~= "false"
+end
+
 ---@param worktrees table Custom opt for the `git_head` component.
 ---@param filepath string Absolute file path of the file in the current buf.
 ---@return table? Matched worktree.
 function h.providers.git_head.get_matching_worktree(worktrees, filepath)
-  -- stylua: ignore start
   local matched_worktree = nil
-  for _, worktree in ipairs(worktrees) do
+  for _, wt in ipairs(worktrees) do
     if matched_worktree ~= nil then
       break
     end
-    if vim.startswith(vim.fn.fnamemodify(filepath, ":h"), worktree.toplevel) then
-      local ls_files_wt_o = vim.system({
-        "git", "--git-dir", worktree.gitdir, "--work-tree", worktree.toplevel,
-        "ls-files", "--error-unmatch", filepath,
-      }):wait()
-      if ls_files_wt_o.code == 0 then
-        -- File is tracked.
-        -- bareline.redraw_on_fs_event(gitdir)
-        matched_worktree = worktree
-      else
-        local config_wt_o = vim.system({
-          "git", "-C", worktree.gitdir, "config", "status.showUntrackedFiles",
-        }, { text = true }):wait()
-        if vim.fn.trim(config_wt_o.stdout, "\n", 2) ~= "no"
-          and vim.fn.trim(config_wt_o.stdout, "\n", 2) ~= "false" then
-          -- File is untracked, but should be shown. If the config file is
-          -- unreadable, `git config` returns a non-zero exit code.
-          matched_worktree = worktree
-        end
+    if vim.startswith(vim.fn.fnamemodify(filepath, ":h"), wt.toplevel) then
+      local is_filepath_tracked =
+        h.providers.git_head.is_filepath_tracked(filepath, wt.gitdir)
+      if is_filepath_tracked then
+        matched_worktree = wt
+      elseif h.providers.git_head.should_show_untracked(wt.gitdir) then
+        matched_worktree = wt
       end
     end
   end
   return matched_worktree
-  -- stylua: ignore end
 end
 
 h.providers.lsp_servers = {}
@@ -842,6 +863,7 @@ end
 
 h.providers.mhr = {}
 
+--- Retrieve all, pick with highest precedence, validate, return.
 ---@param opts table `opts` field of the component.
 ---@return boolean Valid option value.
 function h.providers.mhr.get_opt_display_modified(opts)
@@ -849,6 +871,9 @@ function h.providers.mhr.get_opt_display_modified(opts)
   if display_modified == nil then
     display_modified = bareline.config.components.mhr.display_modified
   end
+  vim.validate({
+    ["opts.display_modified"] = { display_modified, "boolean" },
+  })
   return display_modified
 end
 

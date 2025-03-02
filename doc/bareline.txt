@@ -331,11 +331,18 @@ Type ~
                                                   *bareline.components.git_head*
                          `bareline.components.git_head`
 Git HEAD.
-No need to have Git installed for this to work. The search for the Git HEAD is
-done in relationship to the name of the current buffer. Search order:
-1. Dir or file `.git`. Search upwards.
-2. List `worktrees` from `opts` of |bareline.BareComponent|. Search upwards.
-The first match is used.
+Git needs to be installed for this component to work. The search for the HEAD
+is done in relationship to the name of the current buffer, Neovim's cwd is
+irrelevant. To learn the HEAD, first a repo needs to be found.
+
+Steps to find a Git repo:
+1. If the buf name is empty, do nothing.
+2. Else, search with: `git -C {parent dir} rev-parse --absolute-git-dir`.
+3. Else, search through `worktrees` in the order they are provided.
+
+When the found repo has the option `status.showUntrackedFiles` disabled, the
+HEAD is not shown on untracked files. When a file is added to the staging area
+(even if not committed yet) it stops being considered as untracked.
 
 Custom options:
     {worktrees} `(table)`
@@ -347,7 +354,7 @@ detached working trees; useful for bare repositories. Example:
     worktrees = {
       {
         toplevel = vim.env.HOME,
-        gitdir = vim.env.HOME .. "/projects/dotfiles.git"
+        gitdir = vim.env.HOME .. "/dotfiles.git"
       }
     }
   })
