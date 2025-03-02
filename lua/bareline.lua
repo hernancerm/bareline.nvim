@@ -872,7 +872,7 @@ function h.providers.mhr.get_opt_display_modified(opts)
     display_modified = bareline.config.components.mhr.display_modified
   end
   vim.validate({
-    ["opts.display_modified"] = { display_modified, "boolean" },
+    ["opts.display_modified"] = { display_modified, { "boolean", "function" } },
   })
   return display_modified
 end
