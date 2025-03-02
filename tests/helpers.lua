@@ -10,6 +10,10 @@ function h.rename_gitdir_to_dotdir()
     h.resources_dir .. "/git_dir_branch/.git"
   )
   vim.uv.fs_rename(
+    h.resources_dir .. "/git_dir_branch_no_showUntrackedFiles/gitdir",
+    h.resources_dir .. "/git_dir_branch_no_showUntrackedFiles/.git"
+  )
+  vim.uv.fs_rename(
     h.resources_dir .. "/git_dir_hash/gitdir",
     h.resources_dir .. "/git_dir_hash/.git"
   )
@@ -23,6 +27,10 @@ function h.rename_dotdir_to_gitdir()
   vim.uv.fs_rename(
     h.resources_dir .. "/git_dir_branch/.git",
     h.resources_dir .. "/git_dir_branch/gitdir"
+  )
+  vim.uv.fs_rename(
+    h.resources_dir .. "/git_dir_branch_no_showUntrackedFiles/.git",
+    h.resources_dir .. "/git_dir_branch_no_showUntrackedFiles/gitdir"
   )
   vim.uv.fs_rename(
     h.resources_dir .. "/git_dir_hash/.git",
@@ -64,7 +72,6 @@ end
 
 function h.create_tmp_dir_with_contents_for_testing()
   vim.fn.mkdir(h.tmp_dir_for_testing, "p")
-  -- Sub-dirs and files.
   vim.fn.mkdir(
     h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a/sub_dir_a_a_a",
     "p"
@@ -73,22 +80,36 @@ function h.create_tmp_dir_with_contents_for_testing()
     h.tmp_dir_for_testing .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b",
     "p"
   )
-  vim.fn.writefile({ "text" }, h.tmp_dir_for_testing .. "/file.txt")
+  vim.fn.writefile({}, h.tmp_dir_for_testing .. "/file.txt")
+  vim.fn.writefile({}, h.tmp_dir_for_testing .. "/untracked.txt")
   vim.fn.writefile(
-    { "text" },
+    {},
     h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a/file.txt"
   )
   vim.fn.writefile(
-    { "text" },
+    {},
     h.tmp_dir_for_testing .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt"
   )
 end
 
 function h.delete_tmp_dir_for_testing()
   vim.fn.delete(h.tmp_dir_for_testing .. "/file.txt")
+  vim.fn.delete(h.tmp_dir_for_testing .. "/untracked.txt")
   vim.fn.delete(h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a/file.txt")
   vim.fn.delete(
     h.tmp_dir_for_testing .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt"
+  )
+  vim.fn.delete(h.tmp_dir_for_testing .. "/sub_dir_a", "d")
+  vim.fn.delete(h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a", "d")
+  vim.fn.delete(
+    h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a/sub_dir_a_a_a",
+    "d"
+  )
+  vim.fn.delete(h.tmp_dir_for_testing .. "/sub_dir_b", "d")
+  vim.fn.delete(h.tmp_dir_for_testing .. "/sub_dir_b/sub_dir_b_b", "d")
+  vim.fn.delete(
+    h.tmp_dir_for_testing .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b",
+    "d"
   )
   vim.fn.delete(h.tmp_dir_for_testing, "d")
 end

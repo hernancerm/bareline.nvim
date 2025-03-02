@@ -243,19 +243,27 @@ end
 
 T["components"]["git_head"]["standard_repo"] = new_set({
   parametrize = {
-    { "/git_dir_branch", "(trunk)" },
-    { "/git_dir_hash", "(d6656f5)" },
-    { "/git_dir_hash/sub_dir_a/sub_dir_a_a", "(d6656f5)" },
-    { "/git_dir_hash/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b", "(d6656f5)" },
-    { "/git_dir_tag", "(03ffbf9)" },
+    { "/git_dir_branch/file.txt", "(trunk)" },
+    { "/git_dir_branch_no_showUntrackedFiles/untracked.txt", vim.NIL },
+    {
+      "/git_dir_branch_no_showUntrackedFiles/file_is_not_written.txt",
+      vim.NIL,
+    },
+    { "/git_dir_hash/file.txt", "(d6656f5)" },
+    { "/git_dir_hash/sub_dir_a/sub_dir_a_a/file.txt", "(d6656f5)" },
+    {
+      "/git_dir_hash/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt",
+      "(d6656f5)",
+    },
+    { "/git_dir_tag/file.txt", "(03ffbf9)" },
   },
 })
 
 T["components"]["git_head"]["standard_repo"]["parameterized"] = function(
-  git_dir,
+  relative_filepath,
   expected_git_head
 )
-  child.cmd("edit " .. h.resources_dir .. git_dir .. "/file.txt")
+  child.cmd("edit " .. h.resources_dir .. relative_filepath)
   local git_head = child.lua_get("bareline.components.git_head:get()")
   eq(git_head, expected_git_head)
 end
@@ -271,22 +279,45 @@ end
 
 T["components"]["git_head"]["detached working tree"] = new_set({
   parametrize = {
-    { h.tmp_dir_for_testing .. "/file.txt" },
-    { h.tmp_dir_for_testing .. "/file_is_not_written.txt" },
     {
-      h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a/file.txt",
+      h.resources_dir .. "/git_dir_bare.git",
+      h.tmp_dir_for_testing .. "/file.txt",
+      "(bare-repo-test)",
     },
     {
+      h.resources_dir .. "/git_dir_bare.git",
+      h.tmp_dir_for_testing .. "/file_is_not_written.txt",
+      "(bare-repo-test)",
+    },
+    {
+      h.resources_dir .. "/git_dir_bare.git",
+      h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a/file.txt",
+      "(bare-repo-test)",
+    },
+    {
+      h.resources_dir .. "/git_dir_bare.git",
       h.tmp_dir_for_testing .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt",
+      "(bare-repo-test)",
+    },
+    {
+      h.resources_dir .. "/git_dir_bare_no_showUntrackedFiles.git",
+      h.tmp_dir_for_testing .. "/untracked.txt",
+      vim.NIL,
+    },
+    {
+      h.resources_dir .. "/git_dir_bare_no_showUntrackedFiles.git",
+      h.tmp_dir_for_testing .. "/file_is_not_written.txt",
+      vim.NIL,
     },
   },
 })
 
 T["components"]["git_head"]["detached working tree"]["parameterized"] = function(
-  file_path
+  git_bare_repo_dir,
+  filepath,
+  expected_git_head
 )
-  child.cmd("edit " .. file_path)
-  local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
+  child.cmd("edit " .. filepath)
   local git_head = child.lua_get([[bareline.components.git_head:config({
     worktrees = {
       {
@@ -294,10 +325,10 @@ T["components"]["git_head"]["detached working tree"]["parameterized"] = function
       }
     }
   }):get()]])
-  eq(git_head, "(bare-repo-test)")
+  eq(git_head, expected_git_head)
 end
 
-T["components"]["git_head"]["added worktree"] = function()
+T["components"]["git_head"]["git worktree add"] = function()
   child.cmd("cd " .. h.resources_dir .. "/git_dir_branch_worktree")
   child.cmd("edit file.txt")
   local git_head = child.lua_get("bareline.components.git_head:get()")
