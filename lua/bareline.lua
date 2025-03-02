@@ -462,7 +462,7 @@ end
 --- Mockups: `NOR`, `VIS`
 ---@type BareComponent
 bareline.components.vim_mode = bareline.BareComponent:new(function()
-  local vim_mode = h.provide_vim_mode()
+  local vim_mode = h.providers.vim_mode.get_mode()
   local mode_labels = {
     n = "nor",
     i = "ins",
@@ -518,11 +518,15 @@ bareline.components.end_of_line = bareline.BareComponent:new(function()
 end, {})
 
 --- Git HEAD.
---- No need to have Git installed for this to work. The search for the Git HEAD is
---- done in relationship to the name of the current buffer. Search order:
---- 1. Dir or file `.git`. Search upwards.
---- 2. List `worktrees` from `opts` of |bareline.BareComponent|. Search upwards.
---- The first match is used.
+--- Git needs to be installed for this comopnent to work. The search for the HEAD
+--- is done in relationship to the name of the current buffer, Neovim's cwd is
+--- irrelevant. To learn the HEAD, first a repo needs to be found. This is the
+--- search algorithm for a Git repo:
+--- 1. If the buf name is empty, do nothing.
+--- 2. Else, search with: `git -C {parent dir} rev-parse --absolute-git-dir`.
+--- 3. Else, search through `worktrees` in the order they are provided.
+---
+--- TODO: Respect `status.showUntrackedFiles` always.
 ---
 --- Custom options:
 ---     {worktrees} `(table)`
@@ -542,39 +546,37 @@ end, {})
 --- Mockup: `(main)`
 ---@type BareComponent
 bareline.components.git_head = bareline.BareComponent:new(function(opts)
-  -- stylua: ignore start
-  local worktrees = opts.worktrees
-  if worktrees == nil then
-    worktrees = bareline.config.components.git_head.worktrees
-  end
-  h.validate_worktrees_for_git_head(worktrees)
-  local file_path = vim.api.nvim_buf_get_name(0)
-  if file_path == "" then
+  local worktrees = h.providers.git_head.get_opt_worktrees(opts)
+  local filepath = vim.api.nvim_buf_get_name(0)
+  if filepath == "" then
     return nil
   end
-  local dir_path = vim.fn.fnamemodify(file_path, ":h")
+  -- stylua: ignore start
   local rev_parse_o = vim.system({
-    "git", "-C", dir_path, "rev-parse", "--absolute-git-dir",
+    "git", "-C", vim.fn.fnamemodify(filepath, ":h"),
+        "rev-parse", "--absolute-git-dir",
   }, { text = true }):wait()
+  -- stylua: ignore end
   local gitdir = nil
-  local git_head = nil
   if rev_parse_o.code == 0 then
-    -- Substring to remove the ending newline character.
-    gitdir = string.sub(rev_parse_o.stdout, 1, -2)
+    gitdir = vim.fn.trim(rev_parse_o.stdout, "\n", 2)
   end
+  local git_head = nil
   if gitdir ~= nil then
     -- Found standard repo or work tree from `git worktree add`.
     bareline.redraw_on_fs_event(gitdir)
-    git_head = h.provide_git_pretty_head(gitdir)
+    git_head = h.providers.git_head.get_pretty_head(gitdir)
   else
-    local matched_worktree = h.provide_git_matching_worktree(worktrees, file_path)
+    local matched_worktree =
+      h.providers.git_head.get_matching_worktree(worktrees, filepath)
     if matched_worktree ~= nil then
+      -- Found work tree from `worktrees` custom component opt.
+      -- Useful for bare repositories.
       bareline.redraw_on_fs_event(matched_worktree.gitdir)
-      git_head = h.provide_git_pretty_head(matched_worktree.gitdir)
+      git_head = h.providers.git_head.get_pretty_head(matched_worktree.gitdir)
     end
   end
   return git_head
-  -- stylua: ignore end
 end, {})
 
 --- LSP servers.
@@ -582,7 +584,7 @@ end, {})
 --- Mockup: `[lua_ls]`
 ---@type BareComponent
 bareline.components.lsp_servers = bareline.BareComponent:new(function()
-  local lsp_servers = h.provide_lsp_server_names()
+  local lsp_servers = h.providers.lsp_servers.get_names()
   if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then
     return nil
   end
@@ -692,10 +694,7 @@ end, {})
 --- Mockups: `[+]`, `[Help][RO]`
 ---@type BareComponent
 bareline.components.mhr = bareline.BareComponent:new(function(opts)
-  local display_modified = opts.display_modified
-  if display_modified == nil then
-    display_modified = bareline.config.components.mhr.display_modified
-  end
+  local display_modified = h.providers.mhr.get_opt_display_modified(opts)
   if type(display_modified) == "function" then
     display_modified = display_modified()
   end
@@ -712,9 +711,39 @@ assign_default_config()
 -- -----
 --- #end
 
--- VALIDATORS
+-- PROVIDERS
 
-function h.validate_worktrees_for_git_head(worktrees)
+h.providers = {}
+
+h.providers.vim_mode = {}
+
+--- Vim mode.
+---@return string
+function h.providers.vim_mode.get_mode()
+  local function standardize_mode(character)
+    if character == "V" then
+      return "vl"
+    end
+    if character == "" then
+      return "vb"
+    end
+    if character == "" then
+      return "sb"
+    end
+    return character:lower()
+  end
+  return standardize_mode(vim.fn.mode())
+end
+
+h.providers.git_head = {}
+
+---@param opts table `opts` field of the component.
+---@return table Valid worktrees config.
+function h.providers.git_head.get_opt_worktrees(opts)
+  local worktrees = opts.worktrees
+  if worktrees == nil then
+    worktrees = bareline.config.components.git_head.worktrees
+  end
   vim.validate({
     ["worktrees"] = { worktrees, { "table" }, true },
   })
@@ -732,52 +761,31 @@ function h.validate_worktrees_for_git_head(worktrees)
       })
     end
   end
-end
-
--- PROVIDERS
-
--- A provider is a function which provides the base data to implement a component.
-
---- Vim mode.
----@return string
-function h.provide_vim_mode()
-  local function standardize_mode(character)
-    if character == "V" then
-      return "vl"
-    end
-    if character == "" then
-      return "vb"
-    end
-    if character == "" then
-      return "sb"
-    end
-    return character:lower()
-  end
-  return standardize_mode(vim.fn.mode())
+  return worktrees
 end
 
 ---@param gitdir string Git directory.
 ---@return string?
-function h.provide_git_pretty_head(gitdir)
+function h.providers.git_head.get_pretty_head(gitdir)
   local git_head = nil
   -- stylua: ignore start
   local rev_parse_o = vim.system({
     "git", "-C", gitdir, "rev-parse", "--abbrev-ref", "HEAD"
   }, { text = true }):wait()
+  -- stylua: ignore end
   if rev_parse_o.code == 0 then
-    -- Substring to remove the ending newline character.
-    git_head = string.sub(rev_parse_o.stdout, 1, -2)
+    git_head = vim.fn.trim(rev_parse_o.stdout, "\n", 2)
   end
   if git_head == "HEAD" then
+    -- stylua: ignore start
     local rev_parse_short_o = vim.system({
       "git", "-C", gitdir, "rev-parse", "--short", "HEAD"
     }, { text = true }):wait()
+    -- stylua: ignore end
     if rev_parse_short_o.code == 0 then
-      -- Substring to remove the ending newline character.
-      git_head = string.sub(rev_parse_short_o.stdout, 1, -2)
+      git_head = vim.fn.trim(rev_parse_short_o.stdout, "\n", 2)
     end
   end
-  -- stylua: ignore end
   if git_head ~= nil then
     return "(" .. git_head .. ")"
   end
@@ -785,19 +793,19 @@ function h.provide_git_pretty_head(gitdir)
 end
 
 ---@param worktrees table Custom opt for the `git_head` component.
----@param file_path string Absolute file path of the file in the current buf.
+---@param filepath string Absolute file path of the file in the current buf.
 ---@return table? Matched worktree.
-function h.provide_git_matching_worktree(worktrees, file_path)
+function h.providers.git_head.get_matching_worktree(worktrees, filepath)
   -- stylua: ignore start
   local matched_worktree = nil
   for _, worktree in ipairs(worktrees) do
     if matched_worktree ~= nil then
       break
     end
-    if vim.startswith(vim.fn.fnamemodify(file_path, ":h"), worktree.toplevel) then
+    if vim.startswith(vim.fn.fnamemodify(filepath, ":h"), worktree.toplevel) then
       local ls_files_wt_o = vim.system({
         "git", "--git-dir", worktree.gitdir, "--work-tree", worktree.toplevel,
-        "ls-files", "--error-unmatch", file_path,
+        "ls-files", "--error-unmatch", filepath,
       }):wait()
       if ls_files_wt_o.code == 0 then
         -- File is tracked.
@@ -807,12 +815,10 @@ function h.provide_git_matching_worktree(worktrees, file_path)
         local config_wt_o = vim.system({
           "git", "-C", worktree.gitdir, "config", "status.showUntrackedFiles",
         }, { text = true }):wait()
-        -- Substring to remove the ending newline character.
-        if string.sub(config_wt_o.stdout, 1, -2) ~= "no"
-          and string.sub(config_wt_o.stdout, 1, -2) ~= "false" then
-          -- If the config file is unreadable `git config` returns a non-zero
-          -- exit code. In this case for this cmd the exit code is not relevant.
-          -- File is untracked, but should be shown.
+        if vim.fn.trim(config_wt_o.stdout, "\n", 2) ~= "no"
+          and vim.fn.trim(config_wt_o.stdout, "\n", 2) ~= "false" then
+          -- File is untracked, but should be shown. If the config file is
+          -- unreadable, `git config` returns a non-zero exit code.
           matched_worktree = worktree
         end
       end
@@ -822,14 +828,28 @@ function h.provide_git_matching_worktree(worktrees, file_path)
   -- stylua: ignore end
 end
 
+h.providers.lsp_servers = {}
+
 --- LSP attached servers.
 --- Returns the names of the LSP servers attached to the current buffer.
 --- Example output: `{ "lua_ls" }`
 ---@return table
-function h.provide_lsp_server_names()
+function h.providers.lsp_servers.get_names()
   return vim.tbl_map(function(client)
     return client.name
   end, vim.lsp.get_clients({ bufnr = 0 }))
+end
+
+h.providers.mhr = {}
+
+---@param opts table `opts` field of the component.
+---@return boolean Valid option value.
+function h.providers.mhr.get_opt_display_modified(opts)
+  local display_modified = opts.display_modified
+  if display_modified == nil then
+    display_modified = bareline.config.components.mhr.display_modified
+  end
+  return display_modified
 end
 
 -- BUILD
