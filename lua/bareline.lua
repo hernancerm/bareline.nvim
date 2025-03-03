@@ -402,6 +402,8 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- function returning a statusline expression as follows: `%{bareline_async_<>}`,
 --- where `<>` is the name of the component, e.g. `%{bareline_async_git_head}`.
 --- To show the actual value, the component is responsible of setting the var.
+---@field skip_async boolean? Whether to skip the async logic in async components.
+--- The component author is responsible for respecting this option.
 ---@field redraw_on_autocmd table? Expects a table with the keys `event` and
 --- `opts`. These values are passed as-is to |vim.api.nvim_create_autocmd()|.
 ---@field cache_on_vim_modes (string[]|fun():string[])|nil Use cache in these Vim
@@ -436,10 +438,14 @@ function bareline.BareComponent:config(opts)
 end
 
 --- Retrieve the value of the component.
+---@param skip_async? boolean
 ---@return string?
-function bareline.BareComponent:get()
+function bareline.BareComponent:get(skip_async)
   local value = nil
   if type(self.value) == "function" then
+    if skip_async then
+      self.opts.skip_async = skip_async
+    end
     value = self.value(self.opts)
     if value ~= nil and self.opts.async then
       local success, result = pcall(vim.api.nvim_eval_statusline, value, {})
@@ -568,39 +574,40 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
     return nil
   end
   -- stylua: ignore start
-  vim.system({
-    "git", "-C", vim.fn.fnamemodify(filepath, ":h"),
-    "rev-parse", "--absolute-git-dir",
-  }, { text = true }, vim.schedule_wrap(function(rev_parse_o)
-    local gitdir = nil
-    if rev_parse_o.code == 0 then
-      gitdir = vim.fn.trim(rev_parse_o.stdout, "\n", 2)
-    end
-    if gitdir ~= nil then
-      -- Found standard repo or work tree from `git worktree add`.
-      if h.providers.git_head.is_filepath_tracked(filepath, gitdir)
-          or h.providers.git_head.should_show_untracked(gitdir) then
-        bareline.redraw_on_fs_event(gitdir)
-        vim.g.bareline_async_git_head =
-          h.providers.git_head.get_pretty_head(gitdir)
-        -- Refresh.
-        vim.wo.statusline = vim.wo.statusline
+  -- print(vim.json.encode(opts.skip_async))
+  if not opts.skip_async then
+    vim.system({
+      "git", "-C", vim.fn.fnamemodify(filepath, ":h"),
+      "rev-parse", "--absolute-git-dir",
+    }, { text = true }, vim.schedule_wrap(function(rev_parse_o)
+      local gitdir = nil
+      if rev_parse_o.code == 0 then
+        gitdir = vim.fn.trim(rev_parse_o.stdout, "\n", 2)
       end
-    else
-      local matched_worktree = h.providers.git_head.get_matching_worktree(
-        h.providers.git_head.get_opt_worktrees(opts),
-        filepath
-      )
-      if matched_worktree ~= nil then
-        -- Found work tree from `worktrees` custom component opt.
-        bareline.redraw_on_fs_event(matched_worktree.gitdir)
-        vim.g.bareline_async_git_head =
-          h.providers.git_head.get_pretty_head(matched_worktree.gitdir)
-        -- Refresh.
-        vim.wo.statusline = vim.wo.statusline
+      if gitdir ~= nil then
+        -- Found standard repo or work tree from `git worktree add`.
+        if h.providers.git_head.is_filepath_tracked(filepath, gitdir)
+            or h.providers.git_head.should_show_untracked(gitdir) then
+          bareline.redraw_on_fs_event(gitdir)
+          vim.g.bareline_async_git_head =
+            h.providers.git_head.get_pretty_head(gitdir)
+          h.draw_statusline_from_async_component()
+        end
+      else
+        local matched_worktree = h.providers.git_head.get_matching_worktree(
+          h.providers.git_head.get_opt_worktrees(opts),
+          filepath
+        )
+        if matched_worktree ~= nil then
+          -- Found work tree from `worktrees` custom component opt.
+          bareline.redraw_on_fs_event(matched_worktree.gitdir)
+          vim.g.bareline_async_git_head =
+            h.providers.git_head.get_pretty_head(matched_worktree.gitdir)
+          h.draw_statusline_from_async_component()
+        end
       end
-    end
-  end))
+    end))
+  end
   -- stylua: ignore end
   if vim.g.bareline_async_git_head == nil then
     vim.g.bareline_async_git_head = "{{NIL}}"
@@ -956,8 +963,9 @@ function h.standardize_component(component)
 end
 
 ---@param component UserSuppliedComponent
+---@param skip_async boolean
 ---@return ComponentValue
-function h.build_user_supplied_component(component)
+function h.build_user_supplied_component(component, skip_async)
   local bare_component = h.standardize_component(component)
   local component_cache = h.get_component_cache(bare_component)
   local opts = bare_component.opts
@@ -971,7 +979,7 @@ function h.build_user_supplied_component(component)
     end
   end
 
-  local value = bare_component:get()
+  local value = bare_component:get(skip_async)
   h.store_bare_component_cache(bare_component, value)
 
   return value
@@ -984,11 +992,15 @@ h.component_separator = "  "
 
 --- At least one component is expected to be built into a non-nil value.
 ---@param section table Statusline section, as may be provided by a user.
+---@param skip_async boolean
 ---@return string
-function h.build_section(section)
+function h.build_section(section, skip_async)
   local built_components = {}
   for _, component in ipairs(section) do
-    table.insert(built_components, h.build_user_supplied_component(component))
+    table.insert(
+      built_components,
+      h.build_user_supplied_component(component, skip_async)
+    )
   end
   return table.concat(
     vim.tbl_filter(function(built_component)
@@ -1001,11 +1013,12 @@ end
 --- Use this function when implementing a custom draw method.
 --- See |bareline.draw_methods|.
 ---@param sections table
+---@param skip_async boolean
 ---@return string _ String assignable to 'statusline'.
-function h.build_statusline(sections)
+function h.build_statusline(sections, skip_async)
   local built_sections = {}
   for _, section in ipairs(sections) do
-    table.insert(built_sections, h.build_section(section))
+    table.insert(built_sections, h.build_section(section, skip_async))
   end
   return string.format(" %s ", table.concat(built_sections, "%="))
 end
@@ -1031,19 +1044,34 @@ function h.is_plugin_window(bufnr)
 end
 
 ---@param statusline BareStatusline
-function h.draw_window_statusline(statusline)
-  local built_statusline = h.build_statusline(statusline)
+---@param skip_async boolean
+function h.draw_window_statusline(statusline, skip_async)
+  local built_statusline = h.build_statusline(statusline, skip_async)
   h.log(built_statusline, vim.log.levels.DEBUG)
   vim.wo.statusline = built_statusline
 end
 
+--- Draw the stl of the current window but skip the logic of all async components.
+function h.draw_statusline_from_async_component()
+  h.draw_statusline_if_plugin_window(
+    bareline.config.statuslines.plugin,
+    bareline.config.statuslines.active,
+    true
+  )
+end
+
 ---@param statusline_1 BareStatusline Statusline for a plugin window.
 ---@param statusline_2 BareStatusline Statusline drawn otherwise.
-function h.draw_statusline_if_plugin_window(statusline_1, statusline_2)
+function h.draw_statusline_if_plugin_window(
+  statusline_1,
+  statusline_2,
+  skip_async
+)
+  skip_async = skip_async or false
   if h.is_plugin_window(vim.fn.bufnr()) then
-    h.draw_window_statusline(statusline_1)
+    h.draw_window_statusline(statusline_1, skip_async)
   else
-    h.draw_window_statusline(statusline_2)
+    h.draw_window_statusline(statusline_2, skip_async)
   end
 end
 
