@@ -91,7 +91,7 @@ T["bare_component"][":config()"]["user component option"] = new_set({
   },
 })
 
-T["bare_component"][":config()"]["user component option"]["parameterized"] = function(
+T["bare_component"][":config()"]["user component option"]["p"] = function(
   transformer,
   expected_value
 )
@@ -109,7 +109,7 @@ T["bare_component"][":config()"]["'mask' built-in option"] = new_set({
   },
 })
 
-T["bare_component"][":config()"]["'mask' built-in option"]["parameterized"] = function(
+T["bare_component"][":config()"]["'mask' built-in option"]["p"] = function(
   char,
   expected_value
 )
@@ -131,22 +131,21 @@ T["components"] = new_set({
 
 -- VIM_MODE
 
+-- stylua: ignore start
 T["components"]["vim_mode"] = new_set({
-  -- stylua: ignore start
   parametrize = {
-    { "",           "NOR" }, -- Normal.
-    { "i",          "INS" }, -- Insert.
-    { ":",          "CMD" }, -- Command.
-    { "v",          "V:C" }, -- Charwise Visual.
-    { "V",          "V:L" }, -- Linewise Visual.
-    { "<C-q>",      "V:B" }, -- Block Visual.
-    { ":term<CR>a", "TER" }, -- Terminal.
+    { "",            "NOR" }, -- Normal.
+    { "i",           "INS" }, -- Insert.
+    { ":",           "CMD" }, -- Command.
+    { "v",           "V:C" }, -- Charwise Visual.
+    { "V",           "V:L" }, -- Linewise Visual.
+    { "<C-q>",       "V:B" }, -- Block Visual.
+    { ":term<CR>a",  "TER" }, -- Terminal.
   }
-,
-  -- stylua: ignore end
 })
+-- stylua: ignore end
 
-T["components"]["vim_mode"]["parameterized"] = function(keys, expected_vim_mode)
+T["components"]["vim_mode"]["p"] = function(keys, expected_vim_mode)
   child.type_keys(keys)
   local vim_mode = child.lua_get("bareline.components.vim_mode:get()")
   eq(vim_mode, expected_vim_mode)
@@ -187,19 +186,18 @@ end
 
 -- INDENT_STYLE
 
+-- stylua: ignore start
 T["components"]["indent_style"] = new_set({
-  -- stylua: ignore start
   parametrize = {
     { vim.NIL,  vim.NIL,  "tabs:8"   }, -- Nvim defaults.
     { false,    4,        "tabs:4"   },
     { true,     2,        "spaces:2" },
     { true,     4,        "spaces:4" },
   }
-,
-  -- stylua: ignore end
 })
+-- stylua: ignore end
 
-T["components"]["indent_style"]["parameterized"] = function(
+T["components"]["indent_style"]["p"] = function(
   expandtab,
   tabstop,
   expected_indent_style
@@ -223,10 +221,7 @@ T["components"]["end_of_line"] = new_set({
   },
 })
 
-T["components"]["end_of_line"]["parameterized"] = function(
-  keys,
-  expected_eol_marker
-)
+T["components"]["end_of_line"]["p"] = function(keys, expected_eol_marker)
   child.type_keys(keys)
   local eol = child.lua_get("bareline.components.end_of_line:get()")
   eq(eol, expected_eol_marker)
@@ -241,98 +236,219 @@ T["components"]["git_head"]["omit head when buf name is empty"] = function()
   eq(child.lua_get("bareline.components.git_head:get()"), vim.NIL)
 end
 
-T["components"]["git_head"]["standard_repo"] = new_set({
+T["components"]["git_head"]["standard repo"] = new_set({
   parametrize = {
-    { "/git_dir_branch/file.txt", "(trunk)" },
-    { "/git_dir_branch_no_showUntrackedFiles/untracked.txt", vim.NIL },
     {
-      "/git_dir_branch_no_showUntrackedFiles/file_is_not_written.txt",
+      h.resources_dir .. "/git_dir_branch/file.txt",
+      "(trunk)",
+    },
+    {
+      h.resources_dir .. "/git_dir_branch_no_showUntrackedFiles/untracked.txt",
       vim.NIL,
     },
-    { "/git_dir_hash/file.txt", "(d6656f5)" },
-    { "/git_dir_hash/sub_dir_a/sub_dir_a_a/file.txt", "(d6656f5)" },
     {
-      "/git_dir_hash/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt",
+      h.resources_dir
+        .. "/git_dir_branch_no_showUntrackedFiles/file_is_not_written.txt",
+      vim.NIL,
+    },
+    {
+      h.resources_dir .. "/git_dir_hash/file.txt",
       "(d6656f5)",
     },
-    { "/git_dir_tag/file.txt", "(03ffbf9)" },
+    {
+      h.resources_dir .. "/git_dir_hash/sub_dir_a/sub_dir_a_a/file.txt",
+      "(d6656f5)",
+    },
+    {
+      h.resources_dir
+        .. "/git_dir_hash/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt",
+      "(d6656f5)",
+    },
+    {
+      h.resources_dir .. "/git_dir_tag/file.txt",
+      "(03ffbf9)",
+    },
   },
 })
 
-T["components"]["git_head"]["standard_repo"]["parameterized"] = function(
-  relative_filepath,
+T["components"]["git_head"]["standard repo"]["p"] = function(
+  filepath,
   expected_git_head
 )
-  child.cmd("edit " .. h.resources_dir .. relative_filepath)
-  local git_head = child.lua_get("bareline.components.git_head:get()")
-  eq(git_head, expected_git_head)
+  child.cmd("edit " .. filepath)
+  ---@type vim.NIL|string
+  local expected_git_head_stl_item = vim.NIL
+  local git_head_stl_item = child.lua_get("bareline.components.git_head:get()")
+  if expected_git_head ~= vim.NIL then
+    expected_git_head_stl_item = "%{w:bareline_git_head}"
+  end
+  child.lua("vim.uv.sleep(100)")
+  eq(git_head_stl_item, expected_git_head_stl_item)
+  if expected_git_head ~= vim.NIL then
+    eq(
+      child.lua_get(
+        "vim.api.nvim_eval_statusline('" .. git_head_stl_item .. "', {}).str"
+      ),
+      expected_git_head
+    )
+  end
 end
 
 -- This also tests finding the *first* match for the Git HEAD.
 T["components"]["git_head"]["head taken from buf name instead of cwd"] = function()
   child.cmd("cd " .. h.tmp_dir_for_testing)
   child.cmd("edit " .. h.resources_dir .. "/git_dir_hash/file.txt")
-  eq(child.lua_get("bareline.components.git_head:get()"), "(d6656f5)")
+  child.lua("vim.uv.sleep(100)")
+  local git_head_stl_item_1 =
+    child.lua_get("bareline.components.git_head:get()")
+  eq(git_head_stl_item_1, "%{w:bareline_git_head}")
+  eq(
+    child.lua_get(
+      "vim.api.nvim_eval_statusline('" .. git_head_stl_item_1 .. "', {}).str"
+    ),
+    "(d6656f5)"
+  )
   child.cmd("edit " .. h.resources_dir .. "/git_dir_branch/file.txt")
-  eq(child.lua_get("bareline.components.git_head:get()"), "(trunk)")
+  child.lua("vim.uv.sleep(100)")
+  local git_head_stl_item_2 =
+    child.lua_get("bareline.components.git_head:get()")
+  eq(git_head_stl_item_2, "%{w:bareline_git_head}")
+  eq(
+    child.lua_get(
+      "vim.api.nvim_eval_statusline('" .. git_head_stl_item_2 .. "', {}).str"
+    ),
+    "(trunk)"
+  )
 end
 
-T["components"]["git_head"]["detached working tree"] = new_set({
+T["components"]["git_head"]["detached work tree"] = new_set({
   parametrize = {
     {
-      h.resources_dir .. "/git_dir_bare.git",
       h.tmp_dir_for_testing .. "/file.txt",
-      "(bare-repo-test)",
     },
     {
-      h.resources_dir .. "/git_dir_bare.git",
       h.tmp_dir_for_testing .. "/file_is_not_written.txt",
-      "(bare-repo-test)",
     },
     {
-      h.resources_dir .. "/git_dir_bare.git",
       h.tmp_dir_for_testing .. "/sub_dir_a/sub_dir_a_a/file.txt",
-      "(bare-repo-test)",
     },
     {
-      h.resources_dir .. "/git_dir_bare.git",
       h.tmp_dir_for_testing .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt",
-      "(bare-repo-test)",
-    },
-    {
-      h.resources_dir .. "/git_dir_bare_no_showUntrackedFiles.git",
-      h.tmp_dir_for_testing .. "/untracked.txt",
-      vim.NIL,
-    },
-    {
-      h.resources_dir .. "/git_dir_bare_no_showUntrackedFiles.git",
-      h.tmp_dir_for_testing .. "/file_is_not_written.txt",
-      vim.NIL,
     },
   },
 })
 
-T["components"]["git_head"]["detached working tree"]["parameterized"] = function(
-  git_bare_repo_dir,
-  filepath,
-  expected_git_head
-)
+T["components"]["git_head"]["detached work tree"]["p"] = function(filepath)
   child.cmd("edit " .. filepath)
-  local git_head = child.lua_get([[bareline.components.git_head:config({
+  local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
+  child.lua([[bareline.components.git_head:config({
     worktrees = {
       {
         toplevel = "]] .. h.tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
       }
     }
   }):get()]])
-  eq(git_head, expected_git_head)
+  child.lua("vim.uv.sleep(100)")
+  local git_head_stl_item =
+    child.lua_get([[bareline.components.git_head:config({
+    worktrees = {
+      {
+        toplevel = "]] .. h.tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
+      }
+    }
+  }):get()]])
+  eq(git_head_stl_item, "%{w:bareline_git_head}")
+  eq(
+    child.lua_get(
+      "vim.api.nvim_eval_statusline('" .. git_head_stl_item .. "', {}).str"
+    ),
+    "(bare-repo-test)"
+  )
 end
 
-T["components"]["git_head"]["git worktree add"] = function()
+T["components"]["git_head"]["detached work tree 'status.showUntrackedFiles=yes'"] =
+  new_set({
+    parametrize = {
+      { h.tmp_dir_for_testing .. "/untracked.txt" },
+      { h.tmp_dir_for_testing .. "/file_is_not_written.txt" },
+    },
+  })
+
+T["components"]["git_head"]["detached work tree 'status.showUntrackedFiles=yes'"]["p"] = function(
+  filepath
+)
+  child.cmd("edit " .. filepath)
+  local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
+  child.lua([[bareline.components.git_head:config({
+    worktrees = {
+      {
+        toplevel = "]] .. h.tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
+      }
+    }
+  }):get()]])
+  child.lua("vim.uv.sleep(100)")
+  local git_head_stl_item =
+    child.lua_get([[bareline.components.git_head:config({
+    worktrees = {
+      {
+        toplevel = "]] .. h.tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
+      }
+    }
+  }):get()]])
+  eq(git_head_stl_item, "%{w:bareline_git_head}")
+  eq(
+    child.lua_get(
+      "vim.api.nvim_eval_statusline('" .. git_head_stl_item .. "', {}).str"
+    ),
+    "(bare-repo-test)"
+  )
+end
+
+T["components"]["git_head"]["detached work tree 'status.showUntrackedFiles=no'"] =
+  new_set({
+    parametrize = {
+      { h.tmp_dir_for_testing .. "/untracked.txt" },
+      { h.tmp_dir_for_testing .. "/file_is_not_written.txt" },
+    },
+  })
+
+T["components"]["git_head"]["detached work tree 'status.showUntrackedFiles=no'"]["p"] = function(
+  filepath
+)
+  child.cmd("edit " .. filepath)
+  local git_bare_repo_dir = h.resources_dir
+    .. "/git_dir_bare_no_showUntrackedFiles.git"
+  child.lua([[bareline.components.git_head:config({
+    worktrees = {
+      {
+        toplevel = "]] .. h.tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
+      }
+    }
+  }):get()]])
+  child.lua("vim.uv.sleep(100)")
+  local git_head_stl_item =
+    child.lua_get([[bareline.components.git_head:config({
+    worktrees = {
+      {
+        toplevel = "]] .. h.tmp_dir_for_testing .. [[", gitdir = "]] .. git_bare_repo_dir .. [["
+      }
+    }
+  }):get()]])
+  eq(git_head_stl_item, vim.NIL)
+end
+
+T["components"]["git_head"]["'git worktree add'"] = function()
   child.cmd("cd " .. h.resources_dir .. "/git_dir_branch_worktree")
   child.cmd("edit file.txt")
-  local git_head = child.lua_get("bareline.components.git_head:get()")
-  eq(git_head, "(hotfix)")
+  local git_head_stl_item = child.lua_get("bareline.components.git_head:get()")
+  child.lua("vim.uv.sleep(100)")
+  eq(git_head_stl_item, "%{w:bareline_git_head}")
+  eq(
+    child.lua_get(
+      "vim.api.nvim_eval_statusline('" .. git_head_stl_item .. "', {}).str"
+    ),
+    "(hotfix)"
+  )
 end
 
 -- FILE_PATH_RELATIVE_TO_CWD
@@ -404,7 +520,7 @@ T["components"]["file_path_relative_to_cwd"]["trim cwd"] = new_set({
   },
 })
 
-T["components"]["file_path_relative_to_cwd"]["trim cwd"]["parameterized"] = function(
+T["components"]["file_path_relative_to_cwd"]["trim cwd"]["p"] = function(
   setup,
   expected_file_path
 )
@@ -415,6 +531,7 @@ T["components"]["file_path_relative_to_cwd"]["trim cwd"]["parameterized"] = func
   eq(file_path_relative_to_cwd, expected_file_path)
 end
 
+-- stylua: ignore start
 T["components"]["file_path_relative_to_cwd"]["sanitize"] = new_set({
   parametrize = {
     { h.resources_dir .. "/injection/%", " %<%% ", " % " },
@@ -423,23 +540,16 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"] = new_set({
     { h.resources_dir .. "/injection/%{0}", " %<%%{0} ", " %{0} " },
     { h.resources_dir .. "/injection/%{%0%}", " %<%%{%%0%%} ", " %{%0%} " },
     { h.resources_dir .. "/injection/%(0%)", " %<%%(0%%) ", " %(0%) " },
-    {
-      h.resources_dir .. "/injection/%@B@c.c%X",
-      " %<%%@B@c.c%%X ",
-      " %@B@c.c%X ",
-    },
+    { h.resources_dir .. "/injection/%@B@c.c%X", " %<%%@B@c.c%%X ", " %@B@c.c%X " },
     { h.resources_dir .. "/injection/%<", " %<%%< ", " %< " },
     { h.resources_dir .. "/injection/%=", " %<%%= ", " %= " },
-    {
-      h.resources_dir .. "/injection/%#Normal#",
-      " %<%%#Normal# ",
-      " %#Normal# ",
-    },
+    { h.resources_dir .. "/injection/%#Normal#", " %<%%#Normal# ", " %#Normal# " },
     { h.resources_dir .. "/injection/%1*%*", " %<%%1*%%* ", " %1*%* " },
   },
 })
+-- stylua: ignore end
 
-T["components"]["file_path_relative_to_cwd"]["sanitize"]["parameterized"] = function(
+T["components"]["file_path_relative_to_cwd"]["sanitize"]["p"] = function(
   file,
   expected_statusline,
   expected_evaluated_statusline
@@ -538,7 +648,7 @@ T["components"]["diagnostics"] = new_set({
   },
 })
 
-T["components"]["diagnostics"]["parameterized"] = function(
+T["components"]["diagnostics"]["p"] = function(
   diagnostics,
   expected_diagnostics
 )
@@ -553,9 +663,7 @@ end
 
 -- POSITION
 
-T["components"]["position"] = new_set({})
-
-T["components"]["position"]["parameterized"] = function()
+T["components"]["position"] = function()
   eq(child.lua_get("bareline.components.position:get()"), "%02l:%02c/%02L")
 end
 
@@ -736,9 +844,10 @@ T["setup"]["components.git_head"] = function()
       }
     }
   })]])
+  child.lua("vim.uv.sleep(100)")
   eq(
     child.wo.statusline,
-    " NOR  %<file.txt  %m%h%r%=  tabs:8  (bare-repo-test)  tmp_dir_for_testing  %02l:%02c/%02L "
+    " NOR  %<file.txt  %m%h%r%=  tabs:8  %{w:bareline_git_head}  tmp_dir_for_testing  %02l:%02c/%02L "
   )
 end
 

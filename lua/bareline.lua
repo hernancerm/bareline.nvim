@@ -401,9 +401,9 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- Options applicable to any |bareline.BareComponent|.
 ---@class BareComponentCommonOpts
 ---@field async boolean? When true, the `value` of the component must be a
---- function returning a statusline expression as follows: `%{bareline_async_<>}`,
---- where `<>` is the name of the component, e.g. `%{bareline_async_git_head}`.
---- To show the actual value, the component is responsible of setting the var.
+--- function returning a statusline expression as follows: `%{bareline_<>}`, where
+--- `<>` is the name of the component, e.g. `%{bareline_git_head}`. To show the
+--- actual value, the component is responsible of setting the var.
 ---@field skip_async boolean? Whether to skip the async logic in async components.
 --- The component author is responsible for respecting this option.
 ---@field redraw_on_autocmd table? Expects a table with the keys `event` and
@@ -592,7 +592,7 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
         if h.providers.git_head.is_filepath_tracked(filepath, gitdir)
             or h.providers.git_head.should_show_untracked(gitdir) then
           bareline.redraw_on_fs_event(gitdir)
-          vim.w.bareline_async_git_head =
+          vim.w.bareline_git_head =
             h.providers.git_head.get_pretty_head(gitdir)
           h.draw_statusline_from_async_component()
         end
@@ -604,7 +604,7 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
         if matched_worktree ~= nil then
           -- Found work tree from `worktrees` custom component opt.
           bareline.redraw_on_fs_event(matched_worktree.gitdir)
-          vim.w.bareline_async_git_head =
+          vim.w.bareline_git_head =
             h.providers.git_head.get_pretty_head(matched_worktree.gitdir)
           h.draw_statusline_from_async_component()
         end
@@ -612,7 +612,7 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
     end))
   end
   -- stylua: ignore end
-  return "bareline_async_git_head"
+  return "bareline_git_head"
 end, { async = true })
 
 --- LSP servers.
