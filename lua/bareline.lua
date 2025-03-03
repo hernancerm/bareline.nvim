@@ -114,6 +114,7 @@ function bareline.setup(config)
         "winhighlight",
         "virtualedit",
         "scrolloff",
+        "cmdheight",
       }
       if vim.tbl_contains(options_blacklist, event.match) then
         return
