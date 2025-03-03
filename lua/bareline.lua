@@ -451,8 +451,8 @@ function bareline.BareComponent:get(skip_async)
     value = self.value(self.opts)
     self.opts.skip_async = false -- Reset the default value of this option.
     if value ~= nil and self.opts.async then
-      if vim.w[value] ~= nil then
-        value = "%{w:" .. value .. "}"
+      if vim.b[value] ~= nil then
+        value = "%{b:" .. value .. "}"
       else
         value = nil
       end
@@ -592,7 +592,7 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
         if h.providers.git_head.is_filepath_tracked(filepath, gitdir)
             or h.providers.git_head.should_show_untracked(gitdir) then
           bareline.redraw_on_fs_event(gitdir)
-          vim.w.bareline_git_head =
+          vim.b.bareline_git_head =
             h.providers.git_head.get_pretty_head(gitdir)
           h.draw_statusline_from_async_component()
         end
@@ -604,7 +604,7 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
         if matched_worktree ~= nil then
           -- Found work tree from `worktrees` custom component opt.
           bareline.redraw_on_fs_event(matched_worktree.gitdir)
-          vim.w.bareline_git_head =
+          vim.b.bareline_git_head =
             h.providers.git_head.get_pretty_head(matched_worktree.gitdir)
           h.draw_statusline_from_async_component()
         end

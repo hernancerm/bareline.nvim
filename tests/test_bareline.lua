@@ -280,7 +280,7 @@ T["components"]["git_head"]["standard repo"]["p"] = function(
   local expected_git_head_stl_item = vim.NIL
   local git_head_stl_item = child.lua_get("bareline.components.git_head:get()")
   if expected_git_head ~= vim.NIL then
-    expected_git_head_stl_item = "%{w:bareline_git_head}"
+    expected_git_head_stl_item = "%{b:bareline_git_head}"
   end
   child.lua("vim.uv.sleep(100)")
   eq(git_head_stl_item, expected_git_head_stl_item)
@@ -301,7 +301,7 @@ T["components"]["git_head"]["head taken from buf name instead of cwd"] = functio
   child.lua("vim.uv.sleep(100)")
   local git_head_stl_item_1 =
     child.lua_get("bareline.components.git_head:get()")
-  eq(git_head_stl_item_1, "%{w:bareline_git_head}")
+  eq(git_head_stl_item_1, "%{b:bareline_git_head}")
   eq(
     child.lua_get(
       "vim.api.nvim_eval_statusline('" .. git_head_stl_item_1 .. "', {}).str"
@@ -312,7 +312,7 @@ T["components"]["git_head"]["head taken from buf name instead of cwd"] = functio
   child.lua("vim.uv.sleep(100)")
   local git_head_stl_item_2 =
     child.lua_get("bareline.components.git_head:get()")
-  eq(git_head_stl_item_2, "%{w:bareline_git_head}")
+  eq(git_head_stl_item_2, "%{b:bareline_git_head}")
   eq(
     child.lua_get(
       "vim.api.nvim_eval_statusline('" .. git_head_stl_item_2 .. "', {}).str"
@@ -357,7 +357,7 @@ T["components"]["git_head"]["detached work tree"]["p"] = function(filepath)
       }
     }
   }):get()]])
-  eq(git_head_stl_item, "%{w:bareline_git_head}")
+  eq(git_head_stl_item, "%{b:bareline_git_head}")
   eq(
     child.lua_get(
       "vim.api.nvim_eval_statusline('" .. git_head_stl_item .. "', {}).str"
@@ -395,7 +395,7 @@ T["components"]["git_head"]["detached work tree 'status.showUntrackedFiles=yes'"
       }
     }
   }):get()]])
-  eq(git_head_stl_item, "%{w:bareline_git_head}")
+  eq(git_head_stl_item, "%{b:bareline_git_head}")
   eq(
     child.lua_get(
       "vim.api.nvim_eval_statusline('" .. git_head_stl_item .. "', {}).str"
@@ -442,7 +442,7 @@ T["components"]["git_head"]["'git worktree add'"] = function()
   child.cmd("edit file.txt")
   local git_head_stl_item = child.lua_get("bareline.components.git_head:get()")
   child.lua("vim.uv.sleep(100)")
-  eq(git_head_stl_item, "%{w:bareline_git_head}")
+  eq(git_head_stl_item, "%{b:bareline_git_head}")
   eq(
     child.lua_get(
       "vim.api.nvim_eval_statusline('" .. git_head_stl_item .. "', {}).str"
@@ -847,7 +847,7 @@ T["setup"]["components.git_head"] = function()
   child.lua("vim.uv.sleep(100)")
   eq(
     child.wo.statusline,
-    " NOR  %<file.txt  %m%h%r%=  tabs:8  %{w:bareline_git_head}  tmp_dir_for_testing  %02l:%02c/%02L "
+    " NOR  %<file.txt  %m%h%r%=  tabs:8  %{b:bareline_git_head}  tmp_dir_for_testing  %02l:%02c/%02L "
   )
 end
 
