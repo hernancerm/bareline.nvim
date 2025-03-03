@@ -112,6 +112,8 @@ function bareline.setup(config)
         "eventignore",
         "winblend",
         "winhighlight",
+        "virtualedit",
+        "scrolloff",
       }
       if vim.tbl_contains(options_blacklist, event.match) then
         return
