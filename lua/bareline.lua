@@ -590,7 +590,7 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
         if h.providers.git_head.is_filepath_tracked(filepath, gitdir)
             or h.providers.git_head.should_show_untracked(gitdir) then
           bareline.redraw_on_fs_event(gitdir)
-          vim.g.bareline_async_git_head =
+          vim.w.bareline_async_git_head =
             h.providers.git_head.get_pretty_head(gitdir)
           h.draw_statusline_from_async_component()
         end
@@ -602,7 +602,7 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
         if matched_worktree ~= nil then
           -- Found work tree from `worktrees` custom component opt.
           bareline.redraw_on_fs_event(matched_worktree.gitdir)
-          vim.g.bareline_async_git_head =
+          vim.w.bareline_async_git_head =
             h.providers.git_head.get_pretty_head(matched_worktree.gitdir)
           h.draw_statusline_from_async_component()
         end
@@ -610,10 +610,10 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
     end))
   end
   -- stylua: ignore end
-  if vim.g.bareline_async_git_head == nil then
-    vim.g.bareline_async_git_head = "{{NIL}}"
+  if vim.w.bareline_async_git_head == nil then
+    vim.w.bareline_async_git_head = "{{NIL}}"
   end
-  return "%{bareline_async_git_head}"
+  return "%{w:bareline_async_git_head}"
 end, { async = true })
 
 --- LSP servers.
