@@ -447,6 +447,8 @@ function bareline.BareComponent:get(skip_async)
       self.opts.skip_async = skip_async
     end
     value = self.value(self.opts)
+    -- Reset the default value of this option.
+    self.opts.skip_async = false
     if value ~= nil and self.opts.async then
       local success, result = pcall(vim.api.nvim_eval_statusline, value, {})
       if (not success) or result.str == "{{NIL}}" then
@@ -574,7 +576,6 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
     return nil
   end
   -- stylua: ignore start
-  -- print(vim.json.encode(opts.skip_async))
   if not opts.skip_async then
     vim.system({
       "git", "-C", vim.fn.fnamemodify(filepath, ":h"),
@@ -1067,7 +1068,6 @@ function h.draw_statusline_if_plugin_window(
   statusline_2,
   skip_async
 )
-  skip_async = skip_async or false
   if h.is_plugin_window(vim.fn.bufnr()) then
     h.draw_window_statusline(statusline_1, skip_async)
   else
