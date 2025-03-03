@@ -254,6 +254,10 @@ Options applicable to any |bareline.BareComponent|.
 Class ~
 {BareComponentCommonOpts}
 Fields ~
+{async} `(boolean?)` When true, the `value` of the component must be a
+function returning a statusline expression as follows: `%{bareline_async_<>}`,
+where `<>` is the name of the component, e.g. `%{bareline_async_git_head}`.
+To show the actual value, the component is responsible of setting the var.
 {redraw_on_autocmd} `(table?)` Expects a table with the keys `event` and
 `opts`. These values are passed as-is to |vim.api.nvim_create_autocmd()|.
 {cache_on_vim_modes} `((string[]|fun():string[])|nil)` Use cache in these Vim
@@ -331,6 +335,10 @@ Type ~
                                                   *bareline.components.git_head*
                          `bareline.components.git_head`
 Git HEAD.
+
+Attributes:
+• async
+
 Git needs to be installed for this component to work. The search for the HEAD
 is done in relationship to the name of the current buffer, Neovim's cwd is
 irrelevant. To learn the HEAD, first a repo needs to be found.

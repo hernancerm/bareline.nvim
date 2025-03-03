@@ -398,6 +398,10 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- #tag bareline-BareComponentCommonOpts
 --- Options applicable to any |bareline.BareComponent|.
 ---@class BareComponentCommonOpts
+---@field async boolean? When true, the `value` of the component must be a
+--- function returning a statusline expression as follows: `%{bareline_async_<>}`,
+--- where `<>` is the name of the component, e.g. `%{bareline_async_git_head}`.
+--- To show the actual value, the component is responsible of setting the var.
 ---@field redraw_on_autocmd table? Expects a table with the keys `event` and
 --- `opts`. These values are passed as-is to |vim.api.nvim_create_autocmd()|.
 ---@field cache_on_vim_modes (string[]|fun():string[])|nil Use cache in these Vim
@@ -437,6 +441,12 @@ function bareline.BareComponent:get()
   local value = nil
   if type(self.value) == "function" then
     value = self.value(self.opts)
+    if value ~= nil and self.opts.async then
+      local success, result = pcall(vim.api.nvim_eval_statusline, value, {})
+      if (not success) or result.str == "{{NIL}}" then
+        value = nil
+      end
+    end
   elseif type(self.value) == "string" then
     value = self.value
   end
@@ -518,6 +528,10 @@ bareline.components.end_of_line = bareline.BareComponent:new(function()
 end, {})
 
 --- Git HEAD.
+---
+--- Attributes:
+--- * async
+---
 --- Git needs to be installed for this component to work. The search for the HEAD
 --- is done in relationship to the name of the current buffer, Neovim's cwd is
 --- irrelevant. To learn the HEAD, first a repo needs to be found.
@@ -549,44 +563,50 @@ end, {})
 --- Mockup: `(main)`
 ---@type BareComponent
 bareline.components.git_head = bareline.BareComponent:new(function(opts)
-  local worktrees = h.providers.git_head.get_opt_worktrees(opts)
   local filepath = vim.api.nvim_buf_get_name(0)
   if filepath == "" then
     return nil
   end
   -- stylua: ignore start
-  local rev_parse_o = vim.system({
+  vim.system({
     "git", "-C", vim.fn.fnamemodify(filepath, ":h"),
-      "rev-parse", "--absolute-git-dir",
-  }, { text = true }):wait()
+    "rev-parse", "--absolute-git-dir",
+  }, { text = true }, vim.schedule_wrap(function(rev_parse_o)
+    local gitdir = nil
+    if rev_parse_o.code == 0 then
+      gitdir = vim.fn.trim(rev_parse_o.stdout, "\n", 2)
+    end
+    if gitdir ~= nil then
+      -- Found standard repo or work tree from `git worktree add`.
+      if h.providers.git_head.is_filepath_tracked(filepath, gitdir)
+          or h.providers.git_head.should_show_untracked(gitdir) then
+        bareline.redraw_on_fs_event(gitdir)
+        vim.g.bareline_async_git_head =
+          h.providers.git_head.get_pretty_head(gitdir)
+        -- Refresh.
+        vim.wo.statusline = vim.wo.statusline
+      end
+    else
+      local matched_worktree = h.providers.git_head.get_matching_worktree(
+        h.providers.git_head.get_opt_worktrees(opts),
+        filepath
+      )
+      if matched_worktree ~= nil then
+        -- Found work tree from `worktrees` custom component opt.
+        bareline.redraw_on_fs_event(matched_worktree.gitdir)
+        vim.g.bareline_async_git_head =
+          h.providers.git_head.get_pretty_head(matched_worktree.gitdir)
+        -- Refresh.
+        vim.wo.statusline = vim.wo.statusline
+      end
+    end
+  end))
   -- stylua: ignore end
-  local gitdir = nil
-  if rev_parse_o.code == 0 then
-    gitdir = vim.fn.trim(rev_parse_o.stdout, "\n", 2)
+  if vim.g.bareline_async_git_head == nil then
+    vim.g.bareline_async_git_head = "{{NIL}}"
   end
-  local git_head = nil
-  if gitdir ~= nil then
-    -- Found standard repo or work tree from `git worktree add`.
-    local is_filepath_tracked =
-      h.providers.git_head.is_filepath_tracked(filepath, gitdir)
-    if is_filepath_tracked then
-      bareline.redraw_on_fs_event(gitdir)
-      git_head = h.providers.git_head.get_pretty_head(gitdir)
-    elseif h.providers.git_head.should_show_untracked(gitdir) then
-      bareline.redraw_on_fs_event(gitdir)
-      git_head = h.providers.git_head.get_pretty_head(gitdir)
-    end
-  else
-    local matched_worktree =
-      h.providers.git_head.get_matching_worktree(worktrees, filepath)
-    if matched_worktree ~= nil then
-      -- Found work tree from `worktrees` custom component opt.
-      bareline.redraw_on_fs_event(matched_worktree.gitdir)
-      git_head = h.providers.git_head.get_pretty_head(matched_worktree.gitdir)
-    end
-  end
-  return git_head
-end, {})
+  return "%{bareline_async_git_head}"
+end, { async = true })
 
 --- LSP servers.
 --- The LSP servers attached to the current buffer.
@@ -839,9 +859,10 @@ function h.providers.git_head.get_matching_worktree(worktrees, filepath)
     if vim.startswith(vim.fn.fnamemodify(filepath, ":h"), wt.toplevel) then
       local is_filepath_tracked =
         h.providers.git_head.is_filepath_tracked(filepath, wt.gitdir)
-      if is_filepath_tracked then
-        matched_worktree = wt
-      elseif h.providers.git_head.should_show_untracked(wt.gitdir) then
+      if
+        is_filepath_tracked
+        or h.providers.git_head.should_show_untracked(wt.gitdir)
+      then
         matched_worktree = wt
       end
     end
@@ -950,10 +971,10 @@ function h.build_user_supplied_component(component)
     end
   end
 
-  local computed_value = bare_component:get()
-  h.store_bare_component_cache(bare_component, computed_value)
+  local value = bare_component:get()
+  h.store_bare_component_cache(bare_component, value)
 
-  return computed_value
+  return value
 end
 
 h.component_separator = "  "
