@@ -449,11 +449,11 @@ function bareline.BareComponent:get(skip_async)
       self.opts.skip_async = skip_async
     end
     value = self.value(self.opts)
-    -- Reset the default value of this option.
-    self.opts.skip_async = false
+    self.opts.skip_async = false -- Reset the default value of this option.
     if value ~= nil and self.opts.async then
-      local success, result = pcall(vim.api.nvim_eval_statusline, value, {})
-      if (not success) or result.str == "{{NIL}}" then
+      if vim.w[value] ~= nil then
+        value = "%{w:" .. value .. "}"
+      else
         value = nil
       end
     end
@@ -612,10 +612,7 @@ bareline.components.git_head = bareline.BareComponent:new(function(opts)
     end))
   end
   -- stylua: ignore end
-  if vim.w.bareline_async_git_head == nil then
-    vim.w.bareline_async_git_head = "{{NIL}}"
-  end
-  return "%{w:bareline_async_git_head}"
+  return "bareline_async_git_head"
 end, { async = true })
 
 --- LSP servers.
