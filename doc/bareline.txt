@@ -255,9 +255,11 @@ Class ~
 {BareComponentCommonOpts}
 Fields ~
 {async} `(boolean?)` When true, the `value` of the component must be a
-function returning a statusline expression as follows: `%{bareline_async_<>}`,
-where `<>` is the name of the component, e.g. `%{bareline_async_git_head}`.
-To show the actual value, the component is responsible of setting the var.
+function returning a statusline expression as follows: `%{bareline_<>}`, where
+`<>` is the name of the component, e.g. `%{bareline_git_head}`. To show the
+actual value, the component is responsible of setting the var.
+{skip_async} `(boolean?)` Whether to skip the async logic in async components.
+The component author is responsible for respecting this option.
 {redraw_on_autocmd} `(table?)` Expects a table with the keys `event` and
 `opts`. These values are passed as-is to |vim.api.nvim_create_autocmd()|.
 {cache_on_vim_modes} `((string[]|fun():string[])|nil)` Use cache in these Vim
@@ -287,8 +289,10 @@ Return ~
 `(BareComponent)`
 
                                                   *bareline.BareComponent:get()*
-                         `bareline.BareComponent:get`()
+                   `bareline.BareComponent:get`({skip_async})
 Retrieve the value of the component.
+Parameters ~
+{skip_async} `(optional)` `(boolean)`
 Return ~
 `(string)` `(optional)`
 
