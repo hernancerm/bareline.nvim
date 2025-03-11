@@ -99,7 +99,7 @@ function bareline.setup(config)
         h.draw_statusline_if_plugin_window(
           bareline.config.statuslines.plugin,
           bareline.config.statuslines.active,
-          h.constants.DRAW_ANY_ASYNC
+          h.constants.ANY_VAR_NAME
         )
       end
     end,
@@ -160,7 +160,7 @@ function bareline.setup(config)
     h.draw_statusline_if_plugin_window(
       bareline.config.statuslines.plugin,
       bareline.config.statuslines.active,
-      h.constants.DRAW_ANY_ASYNC
+      h.constants.ANY_VAR_NAME
     )
   end
 end
@@ -601,28 +601,29 @@ bareline.components.git_head =
                       callback(pretty_head)
                     end
                   )
-                end
-                h.providers.git_head.should_show_untracked(
-                  gitdir,
-                  function(should_show_untracked)
-                    if should_show_untracked then
-                      -- Found standard repo or work tree from `git worktree add`.
-                      bareline.redraw_on_fs_event(
-                        gitdir,
-                        component_git_head_value
-                      )
-                      h.providers.git_head.get_pretty_head(
-                        gitdir,
-                        function(pretty_head)
-                          callback(pretty_head)
-                        end
-                      )
-                    else
-                      callback(nil)
-                      return
+                else
+                  h.providers.git_head.should_show_untracked(
+                    gitdir,
+                    function(should_show_untracked)
+                      if should_show_untracked then
+                        -- Found standard repo or work tree from `git worktree add`.
+                        bareline.redraw_on_fs_event(
+                          gitdir,
+                          component_git_head_value
+                        )
+                        h.providers.git_head.get_pretty_head(
+                          gitdir,
+                          function(pretty_head)
+                            callback(pretty_head)
+                          end
+                        )
+                      else
+                        callback(nil)
+                        return
+                      end
                     end
-                  end
-                )
+                  )
+                end
               end
             )
           else
@@ -647,28 +648,29 @@ bareline.components.git_head =
                         callback(pretty_head)
                       end
                     )
-                  end
-                  h.providers.git_head.should_show_untracked(
-                    worktree.gitdir,
-                    function(should_show_untracked)
-                      if should_show_untracked then
-                        -- Found work tree from `worktrees` custom component opt.
-                        bareline.redraw_on_fs_event(
-                          worktree.gitdir,
-                          component_git_head_value
-                        )
-                        h.providers.git_head.get_pretty_head(
-                          worktree.gitdir,
-                          function(pretty_head)
-                            callback(pretty_head)
-                          end
-                        )
-                      else
-                        callback(nil)
-                        return
+                  else
+                    h.providers.git_head.should_show_untracked(
+                      worktree.gitdir,
+                      function(should_show_untracked)
+                        if should_show_untracked then
+                          -- Found work tree from `worktrees` custom component opt.
+                          bareline.redraw_on_fs_event(
+                            worktree.gitdir,
+                            component_git_head_value
+                          )
+                          h.providers.git_head.get_pretty_head(
+                            worktree.gitdir,
+                            function(pretty_head)
+                              callback(pretty_head)
+                            end
+                          )
+                        else
+                          callback(nil)
+                          return
+                        end
                       end
-                    end
-                  )
+                    )
+                  end
                 end
               )
             end
@@ -678,7 +680,13 @@ bareline.components.git_head =
     end,
     redraw_on_autocmd = {
       var_name = component_git_head_value,
-      event = { "VimResume", "FocusGained", "BufEnter", "WinEnter" },
+      event = {
+        "VimResume",
+        "FocusGained",
+        "CmdlineLeave",
+        "BufEnter",
+        "WinEnter",
+      },
     },
   })
 
@@ -1051,39 +1059,25 @@ function h.standardize_component(component)
   return bareline.BareComponent:new(nil, {})
 end
 
---- Drawing an async component involves redrawing the entire statusline.
 ---@param component BareComponent
----@param var_name string?
----@return string?
-function h.draw_async_component(component, var_name)
-  assert(component._value)
-  assert(component.opts.callback)
-  if var_name == component._value or var_name == h.constants.DRAW_ANY_ASYNC then
-    vim.defer_fn(function()
-      component.opts.callback(component.opts, function(var_value)
-        vim.b[component._value] = var_value
-        if vim.b[component._value] ~= nil then
-          h.draw_statusline_if_plugin_window(
-            bareline.config.statuslines.plugin,
-            bareline.config.statuslines.active
-          )
-        end
-      end)
-    end, 0)
-  end
-  if vim.b[component._value] ~= nil then
-    return "%{b:" .. component._value .. "}"
-  end
-  return nil
+function h.call_async_component_callback(component)
+  vim.defer_fn(function()
+    component.opts.callback(component.opts, function(var_value)
+      vim.b[component._value] = var_value
+      h.draw_statusline_if_plugin_window(
+        bareline.config.statuslines.plugin,
+        bareline.config.statuslines.active
+      )
+    end)
+  end, 0)
 end
 
----@param component UserSuppliedComponent
+---@param component BareComponent
 ---@param var_name string?
 ---@return ComponentValue
-function h.build_user_supplied_component(component, var_name)
-  local bare_component = h.standardize_component(component)
-  local component_cache = h.get_component_cache(bare_component)
-  local opts = bare_component.opts
+function h.build_component(component, var_name)
+  local component_cache = h.get_component_cache(component)
+  local opts = component.opts
 
   if opts.cache_on_vim_modes and component_cache then
     local short_current_vim_mode = vim.fn.mode():lower():sub(1, 1)
@@ -1093,14 +1087,18 @@ function h.build_user_supplied_component(component, var_name)
     end
   end
 
-  local value = bare_component:get()
-  if
-    bare_component._value ~= nil
-    and type(bare_component.opts.callback) == "function"
-  then
-    value = h.draw_async_component(bare_component, var_name)
+  local value = component:get()
+  if type(component.opts.callback) == "function" and component._value ~= nil then
+    if vim.b[component._value] ~= nil and vim.b[component._value] ~= "" then
+      value = "%{b:" .. component._value .. "}"
+    else
+      value = nil
+    end
+    if var_name == component._value or var_name == h.constants.ANY_VAR_NAME then
+      h.call_async_component_callback(component)
+    end
   end
-  h.store_bare_component_cache(bare_component, value)
+  h.store_bare_component_cache(component, value)
   return value
 end
 
@@ -1118,7 +1116,7 @@ function h.build_section(section, var_name)
   for _, component in ipairs(section) do
     table.insert(
       built_components,
-      h.build_user_supplied_component(component, var_name)
+      h.build_component(h.standardize_component(component), var_name)
     )
   end
   return table.concat(
@@ -1346,7 +1344,7 @@ h.state = {
 }
 
 h.constants = {
-  DRAW_ANY_ASYNC = "bareline_any",
+  ANY_VAR_NAME = "bareline_any",
 }
 
 return bareline
