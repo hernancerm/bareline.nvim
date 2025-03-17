@@ -591,6 +591,7 @@ bareline.components.git_head =
             h.providers.git_head.is_filepath_tracked(
               filepath,
               gitdir,
+              parent_path,
               function(is_filepath_tracked)
                 if is_filepath_tracked then
                   -- Found standard repo or work tree from `git worktree add`.
@@ -635,6 +636,7 @@ bareline.components.git_head =
               h.providers.git_head.is_filepath_tracked(
                 filepath,
                 worktree.gitdir,
+                worktree.toplevel,
                 function(is_filepath_tracked)
                   if is_filepath_tracked then
                     -- Found work tree from `worktrees` custom component opt.
@@ -923,11 +925,17 @@ end
 
 ---@param filepath string
 ---@param gitdir string
+---@param toplevel string
 ---@param callback fun(is_file_tracked:boolean)
-function h.providers.git_head.is_filepath_tracked(filepath, gitdir, callback)
+function h.providers.git_head.is_filepath_tracked(
+  filepath,
+  gitdir,
+  toplevel,
+  callback
+)
   -- stylua: ignore start
   vim.system({
-    "git", "--git-dir", gitdir, "--work-tree", vim.fn.fnamemodify(filepath, ":h"),
+    "git", "--git-dir", gitdir, "--work-tree", toplevel,
     "ls-files", "--error-unmatch", filepath,
   }, {}, function(ls_files_o)
     callback(ls_files_o.code == 0)
