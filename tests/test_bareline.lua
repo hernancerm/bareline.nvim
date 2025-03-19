@@ -45,13 +45,13 @@ T["smoke"] = new_set({
 -- SMOKE
 
 T["smoke"]["active window"] = function()
-  local expected = " NOR  %f  %m%h%r%=tabs:8  %02l:%02c/%02L "
+  local expected = " NOR  %f  %m%h%r%=tabs:8  git_dir_branch  %02l:%02c/%02L "
   eq(child.wo.statusline, expected)
 end
 
 T["smoke"]["inactive window"] = function()
   child.cmd("new")
-  local expected = "      %f  %m%h%r%=tabs:8  %02l:%02c/%02L "
+  local expected = "      %f  %m%h%r%=tabs:8  git_dir_branch  %02l:%02c/%02L "
   local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
   local statusline_window_inactive = child.lua_get("vim.wo[" .. window_ids[2] .. "].statusline")
   eq(statusline_window_inactive, expected)
@@ -415,27 +415,21 @@ end
 
 T["components"]["cwd"] = new_set({})
 
-T["components"]["cwd"]["include when file belongs under cwd"] = function()
-  child.cmd("cd " .. h.resources_dir .. "/dir_b")
-  child.cmd("edit .gitkeep")
-  eq(child.lua_get("bareline.components.cwd:get()"), "dir_b")
+T["components"]["cwd"]["display"] = function()
+  child.cmd("cd " .. h.resources_dir)
+  child.cmd("edit file.txt")
+  eq(child.lua_get("bareline.components.cwd:get()"), "resources")
 end
 
-T["components"]["cwd"]["display '~' when file belongs under cwd being user home"] = function()
+T["components"]["cwd"]["display in [No Name]"] = function()
+  child.cmd("cd " .. h.resources_dir)
+  eq(child.lua_get("bareline.components.cwd:get()"), "resources")
+end
+
+T["components"]["cwd"]["display caret (~) when the cwd is the user home"] = function()
   child.cmd("cd ~")
   child.cmd("edit i2o_tye8ieowiu-e8_yroi9ur.txt")
   eq(child.lua_get("bareline.components.cwd:get()"), "~")
-end
-
-T["components"]["cwd"]["omit when file does not belong under cwd"] = function()
-  child.cmd("cd " .. h.resources_dir .. "/dir_b")
-  child.cmd("edit " .. h.resources_dir .. "/dir_a/dir_a_a/.gitkeep")
-  eq(child.lua_get("bareline.components.cwd:get()"), vim.NIL)
-end
-
-T["components"]["cwd"]["omit when there is no file name"] = function()
-  child.cmd("cd " .. h.resources_dir .. "/dir_b")
-  eq(child.lua_get("bareline.components.cwd:get()"), vim.NIL)
 end
 
 -- SYNC-COMPONENT: MHR

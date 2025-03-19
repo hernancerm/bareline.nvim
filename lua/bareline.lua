@@ -775,18 +775,12 @@ end, {
 bareline.components.position = bareline.BareComponent:new("%02l:%02c/%02L", {})
 
 --- Current working directory.
---- When the current working directory (cwd) is the home dir then `~` is shown,
---- otherwise the tail of the cwd is displayed. When the buffer's name is not
---- under the cwd, the component is omitted.
+--- The tail of the current working directory (cwd).
 --- Mockup: `bareline.nvim`
 ---@type BareComponent
 bareline.components.cwd = bareline.BareComponent:new(function()
   local cwd_tail = nil
   local cwd = vim.uv.cwd() or ""
-  local buf_name = vim.api.nvim_buf_get_name(0)
-  if buf_name == "" or #buf_name == #h.replace_prefix(buf_name, cwd, "") then
-    return nil
-  end
   if cwd == vim.uv.os_homedir() then
     cwd_tail = "~"
   elseif cwd == h.state.system_root_dir then
