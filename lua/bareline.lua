@@ -188,7 +188,7 @@ local function assign_default_config()
       active = {
         { -- Section 1: Left.
           bareline.components.vim_mode,
-          bareline.components.file_path_relative_to_cwd,
+          bareline.components.filepath_relative_to_cwd,
           bareline.components.lsp_servers,
           bareline.components.mhr,
         },
@@ -205,7 +205,7 @@ local function assign_default_config()
       inactive = {
         { -- Section 1: Left.
           bareline.components.vim_mode:config({ mask = " " }),
-          bareline.components.file_path_relative_to_cwd,
+          bareline.components.filepath_relative_to_cwd,
           bareline.components.lsp_servers,
           bareline.components.mhr,
         },
@@ -709,11 +709,11 @@ end, {
 })
 
 --- Stable `%f`.
---- The file path relative to the current working directory (|:pwd|). When the
---- user home directory appears in the file path, `~` is used to shorten the path.
+--- If the file is in the cwd (|:pwd|) at any depth level, the filepath relative
+--- to the cwd is displayed. Otherwise, the full filepath is displayed.
 --- Mockup: `lua/bareline.lua`
 ---@type BareComponent
-bareline.components.file_path_relative_to_cwd = bareline.BareComponent:new(
+bareline.components.filepath_relative_to_cwd = bareline.BareComponent:new(
   function()
     local buf_name = vim.api.nvim_buf_get_name(0)
     if buf_name == "" or vim.bo.filetype == "help" then
@@ -721,9 +721,9 @@ bareline.components.file_path_relative_to_cwd = bareline.BareComponent:new(
     end
     local cwd = vim.uv.cwd() .. ""
     if cwd ~= h.state.system_root_dir then
-      cwd = cwd .. h.state.file_path_sep
+      cwd = cwd .. h.state.fs_sep
     end
-    local sanitized_file_path_relative_to_cwd = string.gsub(
+    local sanitized_filepath_relative_to_cwd = string.gsub(
       h.replace_prefix(
         h.replace_prefix(buf_name, cwd, ""),
         vim.uv.os_homedir() or "",
@@ -732,7 +732,7 @@ bareline.components.file_path_relative_to_cwd = bareline.BareComponent:new(
       "%%",
       "%%%0"
     )
-    return "%<" .. sanitized_file_path_relative_to_cwd
+    return "%<" .. sanitized_filepath_relative_to_cwd
   end,
   {}
 )
@@ -1294,12 +1294,12 @@ function h.replace_prefix(value, prefix, replacement)
 end
 
 ---@return string
-function h.get_file_path_sep()
-  local file_path_sep = "/"
+function h.get_fs_sep()
+  local fs_sep = "/"
   if string.sub(vim.uv.os_uname().sysname, 1, 7) == "Windows" then
-    file_path_sep = "\\"
+    fs_sep = "\\"
   end
-  return file_path_sep
+  return fs_sep
 end
 
 ---@return string
@@ -1341,7 +1341,7 @@ end
 
 h.state = {
   log_file = nil,
-  file_path_sep = h.get_file_path_sep(),
+  fs_sep = h.get_fs_sep(),
   system_root_dir = h.get_system_root_dir(),
 }
 

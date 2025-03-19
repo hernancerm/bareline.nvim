@@ -81,7 +81,7 @@ bareline.setup({
     active = {
       { -- Section 1: Left.
         bareline.components.vim_mode,
-        bareline.components.file_path_relative_to_cwd,
+        bareline.components.filepath_relative_to_cwd,
         bareline.components.lsp_servers,
         bareline.components.mhr,
       },
@@ -98,7 +98,7 @@ bareline.setup({
     inactive = {
       { -- Section 1: Left.
         bareline.components.vim_mode:config({ mask = " " }),
-        bareline.components.file_path_relative_to_cwd,
+        bareline.components.filepath_relative_to_cwd,
         bareline.components.lsp_servers,
         bareline.components.mhr,
       },
@@ -131,6 +131,7 @@ bareline.setup({
   },
   logging = {
     enabled = false,
+    level = vim.log.levels.DEBUG,
   },
 })
 ```

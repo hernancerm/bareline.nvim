@@ -71,7 +71,7 @@ Below is the default config; `bareline` is the value of `require("bareline")`.
       active = {
         { -- Section 1: Left.
           bareline.components.vim_mode,
-          bareline.components.file_path_relative_to_cwd,
+          bareline.components.filepath_relative_to_cwd,
           bareline.components.lsp_servers,
           bareline.components.mhr,
         },
@@ -88,7 +88,7 @@ Below is the default config; `bareline` is the value of `require("bareline")`.
       inactive = {
         { -- Section 1: Left.
           bareline.components.vim_mode:config({ mask = " " }),
-          bareline.components.file_path_relative_to_cwd,
+          bareline.components.filepath_relative_to_cwd,
           bareline.components.lsp_servers,
           bareline.components.mhr,
         },
@@ -387,11 +387,11 @@ Mockup: `[lua_ls]`
 Type ~
 `(BareComponent)`
 
-                                 *bareline.components.file_path_relative_to_cwd*
-                `bareline.components.file_path_relative_to_cwd`
+                                  *bareline.components.filepath_relative_to_cwd*
+                 `bareline.components.filepath_relative_to_cwd`
 Stable `%f`.
-The file path relative to the current working directory (|:pwd|). When the
-user home directory appears in the file path, `~` is used to shorten the path.
+If the file is in the cwd (|:pwd|) at any depth level, the filepath relative
+to the cwd is displayed. Otherwise, the full filepath is displayed.
 Mockup: `lua/bareline.lua`
 Type ~
 `(BareComponent)`

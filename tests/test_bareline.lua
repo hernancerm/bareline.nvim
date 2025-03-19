@@ -214,28 +214,28 @@ T["components"]["end_of_line"]["p"] = function(keys, expected_eol_marker)
   eq(eol, expected_eol_marker)
 end
 
--- SYNC-COMPONENT: FILE_PATH_RELATIVE_TO_CWD
+-- SYNC-COMPONENT: FILEPATH_RELATIVE_TO_CWD
 
-T["components"]["file_path_relative_to_cwd"] = new_set({})
+T["components"]["filepath_relative_to_cwd"] = new_set({})
 
-T["components"]["file_path_relative_to_cwd"]["%f"] = new_set({})
+T["components"]["filepath_relative_to_cwd"]["%f"] = new_set({})
 
-T["components"]["file_path_relative_to_cwd"]["%f"]["[No Name]"] = function()
+T["components"]["filepath_relative_to_cwd"]["%f"]["[No Name]"] = function()
   child.cmd("cd " .. h.resources_dir)
-  local file_path_relative_to_cwd =
-    child.lua_get("bareline.components.file_path_relative_to_cwd:get()")
-  eq(file_path_relative_to_cwd, "%f")
+  local filepath_relative_to_cwd =
+    child.lua_get("bareline.components.filepath_relative_to_cwd:get()")
+  eq(filepath_relative_to_cwd, "%f")
 end
 
-T["components"]["file_path_relative_to_cwd"]["%f"]["[Help]"] = function()
+T["components"]["filepath_relative_to_cwd"]["%f"]["[Help]"] = function()
   child.cmd("cd " .. h.resources_dir)
   child.cmd("help")
-  local file_path_relative_to_cwd =
-    child.lua_get("bareline.components.file_path_relative_to_cwd:get()")
-  eq(file_path_relative_to_cwd, "%f")
+  local filepath_relative_to_cwd =
+    child.lua_get("bareline.components.filepath_relative_to_cwd:get()")
+  eq(filepath_relative_to_cwd, "%f")
 end
 
-T["components"]["file_path_relative_to_cwd"]["trim cwd"] = new_set({
+T["components"]["filepath_relative_to_cwd"]["trim cwd"] = new_set({
   parametrize = {
     {
       {
@@ -281,15 +281,15 @@ T["components"]["file_path_relative_to_cwd"]["trim cwd"] = new_set({
   },
 })
 
-T["components"]["file_path_relative_to_cwd"]["trim cwd"]["p"] = function(setup, expected_file_path)
+T["components"]["filepath_relative_to_cwd"]["trim cwd"]["p"] = function(setup, expected_filepath)
   child.cmd("cd " .. setup.cd)
   child.cmd("edit " .. setup.edit)
-  local file_path_relative_to_cwd =
-    child.lua_get("bareline.components.file_path_relative_to_cwd:get()")
-  eq(file_path_relative_to_cwd, expected_file_path)
+  local filepath_relative_to_cwd =
+    child.lua_get("bareline.components.filepath_relative_to_cwd:get()")
+  eq(filepath_relative_to_cwd, expected_filepath)
 end
 
-T["components"]["file_path_relative_to_cwd"]["sanitize"] = new_set({
+T["components"]["filepath_relative_to_cwd"]["sanitize"] = new_set({
   parametrize = {
     { h.resources_dir .. "/injection/%", " %<%% ", " % " },
     { h.resources_dir .. "/injection/%%", " %<%%%% ", " %% " },
@@ -305,7 +305,7 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"] = new_set({
   },
 })
 
-T["components"]["file_path_relative_to_cwd"]["sanitize"]["p"] = function(
+T["components"]["filepath_relative_to_cwd"]["sanitize"]["p"] = function(
   file,
   expected_statusline,
   expected_evaluated_statusline
@@ -313,7 +313,7 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"]["p"] = function(
   child.lua([[
       bareline.setup({
         statuslines = {
-          active = {{ bareline.components.file_path_relative_to_cwd }}
+          active = {{ bareline.components.filepath_relative_to_cwd }}
         }
       })]])
   child.cmd("cd " .. h.resources_dir .. "/injection")
@@ -322,12 +322,12 @@ T["components"]["file_path_relative_to_cwd"]["sanitize"]["p"] = function(
   eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, expected_evaluated_statusline)
 end
 
-T["components"]["file_path_relative_to_cwd"]["lua special chars"] = function()
+T["components"]["filepath_relative_to_cwd"]["lua special chars"] = function()
   local file = h.resources_dir .. "/dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
   child.lua([[
       bareline.setup({
         statuslines = {
-          active = {{ bareline.components.file_path_relative_to_cwd }}
+          active = {{ bareline.components.filepath_relative_to_cwd }}
         }
       })]])
   child.cmd("cd " .. h.resources_dir)
@@ -339,11 +339,11 @@ T["components"]["file_path_relative_to_cwd"]["lua special chars"] = function()
   )
 end
 
-T["components"]["file_path_relative_to_cwd"]["truncate long path"] = function()
+T["components"]["filepath_relative_to_cwd"]["truncate long path"] = function()
   child.lua([[
       bareline.setup({
         statuslines = {
-          active = {{ bareline.components.file_path_relative_to_cwd }}
+          active = {{ bareline.components.filepath_relative_to_cwd }}
         }
       })]])
   child.cmd("cd " .. h.resources_dir)
@@ -836,7 +836,7 @@ T["setup"]["components.mhr"]["display_modified = false"] = function()
       active = {
         {
           bareline.components.vim_mode,
-          bareline.components.file_path_relative_to_cwd,
+          bareline.components.filepath_relative_to_cwd,
           bareline.components.mhr,
         }
       }
@@ -856,7 +856,7 @@ T["setup"]["components.mhr"]["config() over config.components"] = function()
       active = {
         {
           bareline.components.vim_mode,
-          bareline.components.file_path_relative_to_cwd,
+          bareline.components.filepath_relative_to_cwd,
           bareline.components.mhr:config({ display_modified = true }),
         }
       }
