@@ -1162,9 +1162,19 @@ function h.is_plugin_window(bufnr)
     and not vim.tbl_contains(special_non_plugin_filetypes, filetype)
 end
 
+---@param win_id integer
+---@return boolean
+function h.is_win_floating(win_id)
+  -- See |api-floatwin| to learn how to check whether a win is floating.
+  return vim.api.nvim_win_get_config(win_id).relative ~= ""
+end
+
 ---@param statusline BareStatusline
 ---@param var_name string?
 function h.draw_window_statusline(statusline, var_name)
+  if h.is_win_floating(0) then
+    return
+  end
   local built_statusline = h.build_statusline(statusline, var_name)
   vim.wo.statusline = built_statusline
   h.log(built_statusline)
