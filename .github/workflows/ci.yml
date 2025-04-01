@@ -31,9 +31,9 @@ jobs:
           curl -LO https://github.com/neovim/neovim/releases/download/v0.11.0/nvim-linux-x86_64.tar.gz
           rm -rf /opt/nvim
           mkdir -p /opt
-          tar -C /opt -xzf nvim-linux64.tar.gz
+          tar -C /opt -xzf nvim-linux-x86_64.tar.gz
           # Add the nvim binary to the system's path.
-          echo /opt/nvim-linux64/bin >> ${GITHUB_PATH}
+          echo /opt/nvim-linux-x86_64/bin >> ${GITHUB_PATH}
 
       - name: Run all checks
         run: |
