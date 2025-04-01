@@ -48,7 +48,7 @@
 
 ## Requirements
 
-- Works on Neovim 0.10.1. Not tested on other versions.
+- Neovim >= 0.11.0
 
 ## Installation
 

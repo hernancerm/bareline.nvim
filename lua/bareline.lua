@@ -452,9 +452,7 @@ function bareline.BareComponent:get()
     self._value = value
   end
   if value ~= nil and self.opts ~= nil and self.opts.mask then
-    vim.validate({
-      mask = { self.opts.mask, { "string" } },
-    })
+    vim.validate("mask", self.opts.mask, "string")
     value = string.gsub(value, ".", string.sub(self.opts.mask, 1, 1))
     self._value = value
   end
@@ -855,21 +853,19 @@ function h.providers.git_head.get_opt_worktrees(opts)
   if worktrees == nil then
     worktrees = bareline.config.components.git_head.worktrees
   end
-  vim.validate({
-    ["worktrees"] = { worktrees, { "table" }, true },
-  })
+  vim.validate("worktrees", worktrees, "table", true)
   if worktrees ~= nil and #worktrees > 0 then
     for i = 1, #worktrees do
-      vim.validate({
-        ["worktrees[" .. i .. "].toplevel"] = {
-          worktrees[i].toplevel,
-          "string",
-        },
-        ["worktrees[" .. i .. "].gitdir"] = {
-          worktrees[i].toplevel,
-          "string",
-        },
-      })
+      vim.validate(
+        "worktrees[" .. i .. "].toplevel",
+        worktrees[i].toplevel,
+        "string"
+      )
+      vim.validate(
+        "worktrees[" .. i .. "].gitdir",
+        worktrees[i].toplevel,
+        "string"
+      )
     end
   end
   return worktrees
@@ -995,12 +991,11 @@ function h.providers.mhr.get_opt_display_modified(opts)
   if display_modified == nil then
     display_modified = bareline.config.components.mhr.display_modified
   end
-  vim.validate({
-    ["opts.display_modified"] = {
-      display_modified,
-      { "boolean", "function" },
-    },
-  })
+  vim.validate(
+    "opts.display_modified",
+    display_modified,
+    { "boolean", "function" }
+  )
   return display_modified
 end
 
@@ -1050,9 +1045,7 @@ end
 ---@param component UserSuppliedComponent
 ---@return BareComponent
 function h.standardize_component(component)
-  vim.validate({
-    component = { component, { "string", "function", "table" }, true },
-  })
+  vim.validate("component", component, { "string", "function", "table" }, true)
   if type(component) == "table" then
     return bareline.BareComponent:new(component.value, component.opts or {})
   elseif type(component) == "string" or type(component) == "function" then
@@ -1267,17 +1260,13 @@ vim.api.nvim_create_autocmd({ "WinClosed" }, {
 ---@param default_config table Bareline's default config.
 ---@return table
 function h.get_config_with_fallback(config, default_config)
-  vim.validate({ config = { config, "table", true } })
+  vim.validate("config", config, "table", true)
   config =
     vim.tbl_deep_extend("force", vim.deepcopy(default_config), config or {})
-  vim.validate({
-    statuslines = { config.statuslines, "table" },
-  })
-  vim.validate({
-    ["statuslines.active"] = { config.statuslines.active, "table" },
-    ["statuslines.inactive"] = { config.statuslines.inactive, "table" },
-    ["statuslines.plugin"] = { config.statuslines.plugin, "table" },
-  })
+  vim.validate("statuslines", config.statuslines, "table")
+  vim.validate("statuslines.active", config.statuslines.active, "table")
+  vim.validate("statuslines.inactive", config.statuslines.inactive, "table")
+  vim.validate("statuslines.plugin", config.statuslines.plugin, "table")
   return config
 end
 
