@@ -7,8 +7,6 @@ MINI_TEST_GIT_HASH := 5b319ef8e6b368970f51119663943f7b75385b83
 STYLUA_VERSION := $(shell grep stylua .tool-versions | awk '{ print $$2 }')
 STYLUA := $(HOME)/.asdf/installs/stylua/$(STYLUA_VERSION)/bin/stylua
 
-# ACTIONS
-
 # Check formatting.
 .PHONY: testmft
 testfmt: $(STYLUA)
@@ -40,8 +38,6 @@ fmt: $(STYLUA)
 docs: deps/lua/doc.lua
 	$(CMD_MINI_DOC_GENERATE)
 
-# FILES
-
 deps/lua/test.lua:
 	@mkdir -p deps/lua
 	curl $(ECHASNOVSKI_GH_BASE_URL)/mini.test/$(MINI_TEST_GIT_HASH)/lua/mini/test.lua -o $@
@@ -50,8 +46,6 @@ deps/lua/doc.lua:
 	@mkdir -p deps/lua
 	curl $(ECHASNOVSKI_GH_BASE_URL)/mini.doc/$(MINI_DOC_GIT_HASH)/lua/mini/doc.lua -o $@
 
-# Install Stylua using asdf (https://asdf-vm.com/).
-# <https://github.com/JohnnyMorganz/StyLua>.
 $(STYLUA):
 	asdf plugin add stylua
 	asdf install stylua
