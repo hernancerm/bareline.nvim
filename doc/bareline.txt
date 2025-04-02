@@ -213,8 +213,8 @@ See: |bareline-control-stl-redraws|.
 Control statusline redraws ~
 
 Bareline does not use a timer to redraw the statusline, instead it uses:
-1. |autocmd|s. See `redraw_on_autocmd` in |bareline-BareComponentCommonOpts|.
-2. |uv| file watchers. See |bareline.redraw_on_fs_event()|.
+1. |autocmd|s. See |bareline-BareComponentCommonOpts|, `register_redraw_on_autocmd`.
+2. |uv| file watchers. See |bareline.register_redraw_on_fs_event()|.
 
 These are the base autocmds used to redraw the stl:
 • |BufEnter|
@@ -229,8 +229,8 @@ These are the base autocmds used to redraw the stl:
 With the default config, these are the fs paths watched to redraw the stl:
 • Git repository directories to fulfill |bareline.components.git_head|.
 
-                                                 *bareline.redraw_on_fs_event()*
-              `bareline.redraw_on_fs_event`({fs_path}, {var_name})
+                                        *bareline.register_redraw_on_fs_event()*
+         `bareline.register_redraw_on_fs_event`({fs_path}, {var_name})
 Conditionally create a |uv_fs_event_t| to monitor `fs_path` for changes. When
 a change is detected, redraw the statusline of the current window. If a luv fs
 event handle already exists for the `fs_path`, then do nothing.
@@ -262,8 +262,8 @@ Class ~
 Fields ~
 {callback} `(fun(opts:BareComponentCommonOpts, callback:fun(var_value:any))?)`
 TODO: Write docs.
-{redraw_on_autocmd} `(table?)` Expects a table with the keys `event` and
-`opts`. These values are passed as-is to |vim.api.nvim_create_autocmd()|.
+{register_redraw_on_autocmd} `(table?)` Expects a table with the keys `event`
+and `opts`. These values are passed as-is to |vim.api.nvim_create_autocmd()|.
 {cache_on_vim_modes} `((string[]|fun():string[])|nil)` Use cache in these Vim
 modes. Each Vim mode is expected as the first char returned by |mode()|.
 {mask} `(string?)` Single character used to mask the value.

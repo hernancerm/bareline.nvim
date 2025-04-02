@@ -335,8 +335,8 @@ end
 --- Control statusline redraws ~
 ---
 --- Bareline does not use a timer to redraw the statusline, instead it uses:
---- 1. |autocmd|s. See `redraw_on_autocmd` in |bareline-BareComponentCommonOpts|.
---- 2. |uv| file watchers. See |bareline.redraw_on_fs_event()|.
+--- 1. |autocmd|s. See |bareline-BareComponentCommonOpts|, `register_redraw_on_autocmd`.
+--- 2. |uv| file watchers. See |bareline.register_redraw_on_fs_event()|.
 ---
 --- These are the base autocmds used to redraw the stl:
 --- * |BufEnter|
@@ -356,7 +356,7 @@ end
 --- event handle already exists for the `fs_path`, then do nothing.
 ---@param fs_path string Full or relative path to a dir or file.
 ---@param var_name string
-function bareline.redraw_on_fs_event(fs_path, var_name)
+function bareline.register_redraw_on_fs_event(fs_path, var_name)
   local fs_path_absolute = vim.uv.fs_realpath(fs_path)
   if
     fs_path_absolute ~= nil
@@ -406,8 +406,8 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 ---@class BareComponentCommonOpts
 ---@field callback fun(opts:BareComponentCommonOpts, callback:fun(var_value:any))?
 --- TODO: Write docs.
----@field redraw_on_autocmd table? Expects a table with the keys `event` and
---- `opts`. These values are passed as-is to |vim.api.nvim_create_autocmd()|.
+---@field register_redraw_on_autocmd table? Expects a table with the keys `event`
+--- and `opts`. These values are passed as-is to |vim.api.nvim_create_autocmd()|.
 ---@field cache_on_vim_modes (string[]|fun():string[])|nil Use cache in these Vim
 --- modes. Each Vim mode is expected as the first char returned by |mode()|.
 ---@field mask string? Single character used to mask the value.
@@ -488,7 +488,7 @@ bareline.components.vim_mode = bareline.BareComponent:new(function()
   }
   return mode_labels[vim_mode]:upper()
 end, {
-  redraw_on_autocmd = {
+  register_redraw_on_autocmd = {
     event = "ModeChanged",
   },
 })
@@ -527,7 +527,7 @@ bareline.components.end_of_line = bareline.BareComponent:new(function()
   return "noeol"
 end, {})
 
-local component_git_head_value = "bareline_git_head"
+local component_git_head_var_name = "bareline_git_head"
 
 --- Git HEAD.
 ---
@@ -569,7 +569,7 @@ local component_git_head_value = "bareline_git_head"
 --- Mockup: `(main)`
 ---@type BareComponent
 bareline.components.git_head =
-  bareline.BareComponent:new(component_git_head_value, {
+  bareline.BareComponent:new(component_git_head_var_name, {
     callback = function(opts, callback)
       local filepath = vim.api.nvim_buf_get_name(0)
       if filepath == "" then
@@ -593,7 +593,10 @@ bareline.components.git_head =
               function(is_filepath_tracked)
                 if is_filepath_tracked then
                   -- Found standard repo or work tree from `git worktree add`.
-                  bareline.redraw_on_fs_event(gitdir, component_git_head_value)
+                  bareline.register_redraw_on_fs_event(
+                    gitdir,
+                    component_git_head_var_name
+                  )
                   h.providers.git_head.get_pretty_head(
                     gitdir,
                     function(pretty_head)
@@ -606,9 +609,9 @@ bareline.components.git_head =
                     function(should_show_untracked)
                       if should_show_untracked then
                         -- Found standard repo or work tree from `git worktree add`.
-                        bareline.redraw_on_fs_event(
+                        bareline.register_redraw_on_fs_event(
                           gitdir,
-                          component_git_head_value
+                          component_git_head_var_name
                         )
                         h.providers.git_head.get_pretty_head(
                           gitdir,
@@ -638,9 +641,9 @@ bareline.components.git_head =
                 function(is_filepath_tracked)
                   if is_filepath_tracked then
                     -- Found work tree from `worktrees` custom component opt.
-                    bareline.redraw_on_fs_event(
+                    bareline.register_redraw_on_fs_event(
                       worktree.gitdir,
-                      component_git_head_value
+                      component_git_head_var_name
                     )
                     h.providers.git_head.get_pretty_head(
                       worktree.gitdir,
@@ -654,9 +657,9 @@ bareline.components.git_head =
                       function(should_show_untracked)
                         if should_show_untracked then
                           -- Found work tree from `worktrees` custom component opt.
-                          bareline.redraw_on_fs_event(
+                          bareline.register_redraw_on_fs_event(
                             worktree.gitdir,
-                            component_git_head_value
+                            component_git_head_var_name
                           )
                           h.providers.git_head.get_pretty_head(
                             worktree.gitdir,
@@ -678,8 +681,8 @@ bareline.components.git_head =
         end)
       )
     end,
-    redraw_on_autocmd = {
-      var_name = component_git_head_value,
+    register_redraw_on_autocmd = {
+      var_name = component_git_head_var_name,
       event = {
         "VimResume",
         "FocusGained",
@@ -690,21 +693,30 @@ bareline.components.git_head =
     },
   })
 
+local component_lsp_servers_var_name = "bareline_lsp_servers"
+
 --- LSP servers.
 --- The LSP servers attached to the current buffer.
 --- Mockup: `[lua_ls]`
 ---@type BareComponent
-bareline.components.lsp_servers = bareline.BareComponent:new(function()
-  local lsp_servers = h.providers.lsp_servers.get_names()
-  if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then
-    return nil
-  end
-  return "[" .. vim.fn.join(lsp_servers, ",") .. "]"
-end, {
-  redraw_on_autocmd = {
-    event = { "LspAttach", "LspDetach" },
-  },
-})
+bareline.components.lsp_servers =
+  bareline.BareComponent:new(component_lsp_servers_var_name, {
+    callback = function(_, callback)
+      h.providers.lsp_servers.get_names(function(lsp_servers)
+        if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then
+          callback(nil)
+        else
+          callback("[" .. vim.fn.join(lsp_servers, ",") .. "]")
+        end
+      end)
+    end,
+    {
+      register_redraw_on_autocmd = {
+        var_name = component_lsp_servers_var_name,
+        event = { "LspAttach", "LspDetach" },
+      },
+    },
+  })
 
 --- Stable `%f`.
 --- If the file is in the cwd (|:pwd|) at any depth level, the filepath relative
@@ -755,7 +767,7 @@ bareline.components.diagnostics = bareline.BareComponent:new(function()
   end
   return string.sub(output, 1, #output - 1)
 end, {
-  redraw_on_autocmd = {
+  register_redraw_on_autocmd = {
     event = "DiagnosticChanged",
   },
   cache_on_vim_modes = function()
@@ -971,14 +983,14 @@ end
 
 h.providers.lsp_servers = {}
 
---- LSP attached servers.
---- Returns the names of the LSP servers attached to the current buffer.
---- Example output: `{ "lua_ls" }`
----@return table
-function h.providers.lsp_servers.get_names()
-  return vim.tbl_map(function(client)
-    return client.name
-  end, vim.lsp.get_clients({ bufnr = 0 }))
+---@param callback fun(lsp_servers:string[]) Example `lsp_servers`: `{"lua_ls"}`.
+function h.providers.lsp_servers.get_names(callback)
+  vim.defer_fn(function()
+    local lsp_servers = vim.tbl_map(function(client)
+      return client.name
+    end, vim.lsp.get_clients({ bufnr = 0 }))
+    callback(lsp_servers)
+  end, 0)
 end
 
 h.providers.mhr = {}
@@ -1190,12 +1202,12 @@ function h.create_bare_component_autocmds(statusline)
     if
       type(component) ~= "table"
       or type(component.opts) ~= "table"
-      or type(component.opts.redraw_on_autocmd) ~= "table"
-      or component.opts.redraw_on_autocmd.event == nil
+      or type(component.opts.register_redraw_on_autocmd) ~= "table"
+      or component.opts.register_redraw_on_autocmd.event == nil
     then
       return
     end
-    local autocmd = component.opts.redraw_on_autocmd
+    local autocmd = component.opts.register_redraw_on_autocmd
     autocmd.opts = autocmd.opts or {}
     autocmd.opts.group = h.draw_methods_augroup
     autocmd.opts.callback = function()
