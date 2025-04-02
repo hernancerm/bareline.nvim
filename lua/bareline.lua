@@ -5,18 +5,17 @@
 --- Contents:
 ---
 --- 1. Introduction                                   |bareline-introduction|
---- 2. Quickstart                                     |bareline-quickstart|
---- 3. Configuration                                  |bareline-configuration|
---- 4. Custom components                              |bareline-custom-components|
---- 5. Control statusline redraws                     |bareline-control-stl-redraws|
---- 6. Built-in components                            |bareline-built-in-components|
+--- 2. Configuration                                  |bareline-configuration|
+--- 3. Custom components                              |bareline-custom-components|
+--- 4. Control statusline redraws                     |bareline-control-stl-redraws|
+--- 5. Built-in components                            |bareline-built-in-components|
 ---
 ---                   Press `gO` to load the table of contents in the location list.
 --- ==============================================================================
 --- #tag bareline-introduction
 --- Introduction ~
 ---
---- Key design ideas
+--- Goals
 ---
 --- 1. Ease of configuration.
 --- 2. Batteries included experience.
@@ -41,10 +40,8 @@
 local bareline = {}
 local h = {}
 
---- #delimiter
---- #tag bareline-quickstart
---- Quickstart ~
-
+--- Quickstart
+---
 --- To enable the plugin you need to call the |bareline.setup()| function. To use
 --- the defaults, call it without arguments:
 --- >lua
