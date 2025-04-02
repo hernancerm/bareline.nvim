@@ -733,16 +733,12 @@ bareline.components.filepath_relative_to_cwd = bareline.BareComponent:new(
     if cwd ~= h.state.system_root_dir then
       cwd = cwd .. h.state.fs_sep
     end
-    local sanitized_filepath_relative_to_cwd = string.gsub(
-      h.replace_prefix(
+    return "%<"
+      .. h.replace_prefix(
         h.replace_prefix(buf_name, cwd, ""),
         vim.uv.os_homedir() or "",
         "~"
-      ),
-      "%%",
-      "%%%0"
-    )
-    return "%<" .. sanitized_filepath_relative_to_cwd
+      )
   end,
   {}
 )

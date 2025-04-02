@@ -289,56 +289,6 @@ T["components"]["filepath_relative_to_cwd"]["trim cwd"]["p"] = function(setup, e
   eq(filepath_relative_to_cwd, expected_filepath)
 end
 
-T["components"]["filepath_relative_to_cwd"]["sanitize"] = new_set({
-  parametrize = {
-    { h.resources_dir .. "/injection/%", " %<%% ", " % " },
-    { h.resources_dir .. "/injection/%%", " %<%%%% ", " %% " },
-    { h.resources_dir .. "/injection/%f%m", " %<%%f%%m ", " %f%m " },
-    { h.resources_dir .. "/injection/%{0}", " %<%%{0} ", " %{0} " },
-    { h.resources_dir .. "/injection/%{%0%}", " %<%%{%%0%%} ", " %{%0%} " },
-    { h.resources_dir .. "/injection/%(0%)", " %<%%(0%%) ", " %(0%) " },
-    { h.resources_dir .. "/injection/%@B@c.c%X", " %<%%@B@c.c%%X ", " %@B@c.c%X " },
-    { h.resources_dir .. "/injection/%<", " %<%%< ", " %< " },
-    { h.resources_dir .. "/injection/%=", " %<%%= ", " %= " },
-    { h.resources_dir .. "/injection/%#Normal#", " %<%%#Normal# ", " %#Normal# " },
-    { h.resources_dir .. "/injection/%1*%*", " %<%%1*%%* ", " %1*%* " },
-  },
-})
-
-T["components"]["filepath_relative_to_cwd"]["sanitize"]["p"] = function(
-  file,
-  expected_statusline,
-  expected_evaluated_statusline
-)
-  child.lua([[
-      bareline.setup({
-        statuslines = {
-          active = {{ bareline.components.filepath_relative_to_cwd }}
-        }
-      })]])
-  child.cmd("cd " .. h.resources_dir .. "/injection")
-  child.cmd("edit " .. string.gsub(file, "[%%#]", [[\%0]]))
-  eq(child.wo.statusline, expected_statusline)
-  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, expected_evaluated_statusline)
-end
-
-T["components"]["filepath_relative_to_cwd"]["lua special chars"] = function()
-  local file = h.resources_dir .. "/dir_lua_special_chars_^$()%.[]*+-?/.gitkeep"
-  child.lua([[
-      bareline.setup({
-        statuslines = {
-          active = {{ bareline.components.filepath_relative_to_cwd }}
-        }
-      })]])
-  child.cmd("cd " .. h.resources_dir)
-  child.cmd("edit " .. string.gsub(file, "[%%#]", [[\%0]]))
-  eq(child.wo.statusline, " %<dir_lua_special_chars_^$()%%.[]*+-?/.gitkeep ")
-  eq(
-    child.api.nvim_eval_statusline(child.wo.statusline, {}).str,
-    " dir_lua_special_chars_^$()%.[]*+-?/.gitkeep "
-  )
-end
-
 T["components"]["filepath_relative_to_cwd"]["truncate long path"] = function()
   child.lua([[
       bareline.setup({
