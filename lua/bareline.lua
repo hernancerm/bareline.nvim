@@ -696,6 +696,10 @@ bareline.components.git_head =
 local component_lsp_servers_var_name = "bareline_lsp_servers"
 
 --- LSP servers.
+---
+--- Attritubes:
+--- * async
+---
 --- The LSP servers attached to the current buffer.
 --- Mockup: `[lua_ls]`
 ---@type BareComponent
