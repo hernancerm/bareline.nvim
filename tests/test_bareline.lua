@@ -749,6 +749,41 @@ T["setup"]["components.git_head"]["worktrees"] = function()
   eq(h.get_child_evaluated_stl(child), " (bare-repo-test) ")
 end
 
+-- Coverage for: <https://github.com/hernancerm/bareline.nvim/issues/2#issuecomment-2730553925>.
+-- On `408de89` this test should fail, and on `2a9e54e` it should pass. However, `file2.txt` is now
+-- tracked in `git_dir_bare_no_showUntrackedFiles.git`, so just checking out to those commits and
+-- copy/pasting this tests will not behave as expected.
+T["setup"]["components.git_head"]["worktrees file with parent dir diff from toplevel"] = function()
+  child.cmd("cd " .. h.tmp_testing_dir)
+  local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare_no_showUntrackedFiles.git"
+  child.cmd("edit sub_dir_a/sub_dir_a_a/file2.txt")
+  -- stylua: ignore start
+  child.lua([[bareline.setup({
+    statuslines = {
+      active = {
+        {
+          bareline.components.git_head
+        }
+      },
+      inactive = {{}},
+      plugin = {{}}
+    },
+    components = {
+      git_head = {
+        worktrees = {
+          {]] ..
+            'toplevel = "' .. h.tmp_testing_dir .. '",' ..
+            'gitdir = "' .. git_bare_repo_dir .. '",' ..
+          [[}
+        }
+      }
+    }
+  })]])
+  -- stylua: ignore end
+  h.sleep(child, 25, 8)
+  eq(h.get_child_evaluated_stl(child), " (bare-repo-test) ")
+end
+
 T["setup"]["components.git_head"]["config() over config.components"] = function()
   child.cmd("cd " .. h.tmp_testing_dir)
   local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
