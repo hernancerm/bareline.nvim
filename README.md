@@ -164,6 +164,12 @@ No reason.
 
 The latter.
 
+## Contributing
+
+Feel free to open an issue requesting any behavior change (e.g., bug fix, new feature), I'm happy to
+discuss proposals. If I think the functionality fits well in the plugin, I might implement it.
+Please do not submit a pull-request unless it's for a trivial bug fix.
+
 ## License
 
 [MIT](./LICENSE)
