@@ -147,16 +147,7 @@ Please refer to the help file: [bareline.txt](./doc/bareline.txt).
 - [mini.statusline](https://github.com/echasnovski/mini.nvim/blob/main/readmes/mini-statusline.md)
 - [staline.nvim](https://github.com/tamton-aquib/staline.nvim)
 
-## Why another statusline plugin?
-
-> In "Love Story," why do the two characters fall madly in love with each other? No reason. In
-> Oliver Stone's "JFK," why is the President suddenly assassinated by some stranger? No reason. In
-> the excellent "Chain Saw Massacre" by Tobe Hooper, why don't we ever see the characters go to the
-> bathroom or wash their hands like people do in real life? Absolutely no reason. — Rubber (2010).
-
-No reason.
-
-> You gotta have a reason. Everything has a reason. — Dr. House, from House M.D. (2004-2012).
+Why another statusline plugin?
 
 > I know people like to meme about how vim enthusiasts are always trying to convince people to learn
 > vim keybindings but I truly believe that learning it will not only make you faster but also
