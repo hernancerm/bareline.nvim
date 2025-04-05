@@ -4,11 +4,11 @@
 ---
 --- Contents:
 ---
---- 1. Introduction                                   |bareline-introduction|
---- 2. Configuration                                  |bareline-configuration|
---- 3. Custom components                              |bareline-custom-components|
---- 4. Control statusline redraws                     |bareline-control-stl-redraws|
---- 5. Built-in components                            |bareline-built-in-components|
+--- 1. Introduction                             |bareline-introduction|
+--- 2. Configuration                            |bareline-configuration|
+--- 3. Built-in components                      |bareline-built-in-components|
+--- 4. Create your own component                |bareline-create-your-own-component|
+--- 5. Control statusline redraws               |bareline-control-stl-redraws|
 ---
 ---                   Press `gO` to load the table of contents in the location list.
 --- ==============================================================================
@@ -294,95 +294,9 @@ end
 --- are discarded. Default: `vim.log.levels.DEBUG`.
 
 --- #delimiter
---- #tag bareline-custom-components
---- Custom components ~
----
---- Bareline comes with some components: |bareline-built-in-components|. If none
---- provide what you want, you can create your own. A component can be a string,
---- function or |bareline.BareComponent|:
----
---- 1. String: Gets evaluated as a statusline string (see 'statusline'). Examples:
----    * Arbitrary string: `"S-WRAP"`. In the statusline you'll see `S-WRAP`.
----    * Options: `vim.bo.fileformat`. In the statusline you might see `unix`.
----    * Statusline item: `"%r"`. In the statusline you might see `[RO]`.
----
---- 2. Function: Returns a string or nil. When a string, it's placed in the
----    statusline; when nil, the component is skipped. Example:
---- >lua
----    -- Get the tail of the current working directory.
----    local component_cwd = function ()
----      local cwd = vim.uv.cwd() or ""
----      if cwd == (vim.uv.os_homedir() or "") then
----        return "~"
----      end
----      return vim.fn.fnamemodify(cwd, ":t")
----    end
---- <
---- 3. |bareline.BareComponent|: This allows the most granular customization.
----
---- For several use cases you don't need to use a |bareline.BareComponent| since
---- out of the box the statusline gets redrawn on several autocmds.
---- See: |bareline-control-stl-redraws|.
 
----@alias UserSuppliedComponent any|fun():any|BareComponent
-
---- #delimiter
---- #tag bareline-control-stl-redraws
 ---
---- Control statusline redraws ~
----
---- Bareline does not use a timer to redraw the statusline, instead it uses:
---- 1. |autocmd|s. See |bareline-BareComponentCommonOpts|, `register_redraw_on_autocmd`.
---- 2. |uv| file watchers. See |bareline.register_redraw_on_fs_event()|.
----
---- These are the base autocmds used to redraw the stl:
---- * |BufEnter|
---- * |BufWinEnter|
---- * |WinEnter|
---- * |VimResume|
---- * |FocusGained|
---- * |OptionSet|
---- * |DirChanged|
---- * |TermLeave|
----
---- With the default config, these are the fs paths watched to redraw the stl:
---- * Git repository directories to fulfill |bareline.components.git_head|.
-
---- Conditionally create a |uv_fs_event_t| to monitor `fs_path` for changes. When
---- a change is detected, redraw the statusline of the current window. If a luv fs
---- event handle already exists for the `fs_path`, then do nothing.
----@param fs_path string Full or relative path to a dir or file.
----@param var_name string
-function bareline.register_redraw_on_fs_event(fs_path, var_name)
-  local fs_path_absolute = vim.uv.fs_realpath(fs_path)
-  if
-    fs_path_absolute ~= nil
-    and h.fs_path_to_uv_fs_event_handle[fs_path_absolute] == nil
-  then
-    local uv_fs_event_handle = h.create_uv_fs_event(fs_path_absolute, function()
-      if var_name then
-        h.log("Redraw on *fs_event*: For var: " .. var_name, vim.log.levels.INFO)
-      end
-      h.draw_statusline_if_plugin_window(
-        bareline.config.statuslines.plugin,
-        bareline.config.statuslines.active,
-        var_name
-      )
-    end)
-    h.fs_path_to_uv_fs_event_handle[fs_path_absolute] = uv_fs_event_handle
-    h.log(
-      "Added to fs_path_to_uv_fs_event_handle. Resulting table: "
-        .. vim.inspect(h.fs_path_to_uv_fs_event_handle),
-      vim.log.levels.INFO
-    )
-  end
-end
-
--- COMPONENTS
-
-bareline.components = {}
-
---- #delimiter
+--- All |bareline-built-in-components| are a |bareline.BareComponent|.
 
 --- Standardized statusline component.
 --- All |bareline-built-in-components| are a |bareline.BareComponent|. To create
@@ -401,8 +315,8 @@ bareline.BareComponent["__index"] = bareline.BareComponent
 --- #tag bareline-BareComponentCommonOpts
 --- Options applicable to any |bareline.BareComponent|.
 ---@class BareComponentCommonOpts
----@field callback fun(opts:BareComponentCommonOpts, callback:fun(var_value:any))?
---- TODO: Write docs.
+---@field callback fun(opts:BareComponentCommonOpts, set:fun(var_value:any))?
+--- For async components. See |bareline-create-your-own-component|.
 ---@field register_redraw_on_autocmd table? Expects a table with the keys `event`
 --- and `opts`. These values are passed as-is to |vim.api.nvim_create_autocmd()|.
 ---@field cache_on_vim_modes (string[]|fun():string[])|nil Use cache in these Vim
@@ -455,6 +369,11 @@ function bareline.BareComponent:get()
   end
   return value
 end
+
+
+-- COMPONENTS
+
+bareline.components = {}
 
 --- #delimiter
 --- #tag bareline-built-in-components
@@ -567,10 +486,10 @@ local component_git_head_var_name = "bareline_git_head"
 ---@type BareComponent
 bareline.components.git_head =
   bareline.BareComponent:new(component_git_head_var_name, {
-    callback = function(opts, callback)
+    callback = function(opts, set)
       local filepath = vim.api.nvim_buf_get_name(0)
       if filepath == "" then
-        callback(nil)
+        set(nil)
         return
       end
       local parent_path = vim.fn.fnamemodify(filepath, ":h")
@@ -597,7 +516,7 @@ bareline.components.git_head =
                   h.providers.git_head.get_pretty_head(
                     gitdir,
                     function(pretty_head)
-                      callback(pretty_head)
+                      set(pretty_head)
                     end
                   )
                 else
@@ -613,11 +532,11 @@ bareline.components.git_head =
                         h.providers.git_head.get_pretty_head(
                           gitdir,
                           function(pretty_head)
-                            callback(pretty_head)
+                            set(pretty_head)
                           end
                         )
                       else
-                        callback(nil)
+                        set(nil)
                         return
                       end
                     end
@@ -645,7 +564,7 @@ bareline.components.git_head =
                     h.providers.git_head.get_pretty_head(
                       worktree.gitdir,
                       function(pretty_head)
-                        callback(pretty_head)
+                        set(pretty_head)
                       end
                     )
                   else
@@ -661,11 +580,11 @@ bareline.components.git_head =
                           h.providers.git_head.get_pretty_head(
                             worktree.gitdir,
                             function(pretty_head)
-                              callback(pretty_head)
+                              set(pretty_head)
                             end
                           )
                         else
-                          callback(nil)
+                          set(nil)
                           return
                         end
                       end
@@ -692,7 +611,7 @@ bareline.components.git_head =
 
 local component_lsp_servers_var_name = "bareline_lsp_servers"
 
---- LSP servers.
+--- Lsp servers.
 ---
 --- Attritubes:
 --- * async
@@ -702,12 +621,12 @@ local component_lsp_servers_var_name = "bareline_lsp_servers"
 ---@type BareComponent
 bareline.components.lsp_servers =
   bareline.BareComponent:new(component_lsp_servers_var_name, {
-    callback = function(_, callback)
+    callback = function(_, set)
       h.providers.lsp_servers.get_names(function(lsp_servers)
         if lsp_servers == nil or vim.tbl_isempty(lsp_servers) then
-          callback(nil)
+          set(nil)
         else
-          callback("[" .. vim.fn.join(lsp_servers, ",") .. "]")
+          set("[" .. vim.fn.join(lsp_servers, ",") .. "]")
         end
       end)
     end,
@@ -821,6 +740,97 @@ bareline.components.mhr = bareline.BareComponent:new(function(opts)
   end
   return value
 end, {})
+
+---@alias UserSuppliedComponent any|fun():any|BareComponent
+
+--- #delimiter
+--- #tag bareline-create-your-own-component
+--- Create your own component ~
+---
+--- Bareline comes with some components: |bareline-built-in-components|. If none
+--- provide what you want, you can create your own. A component can be a string,
+--- function or |bareline.BareComponent|:
+---
+--- 1. String: Gets evaluated as a statusline string (see 'statusline'). Examples:
+---    * Arbitrary string: `"S-WRAP"`. In the statusline you'll see `S-WRAP`.
+---    * Options: `vim.bo.fileformat`. In the statusline you might see `unix`.
+---    * Statusline item: `"%r"`. In the statusline you might see `[RO]`.
+---
+--- 2. Function: Returns a string or nil. When a string, it's placed in the
+---    statusline; when nil, the component is skipped. Example:
+--- >lua
+---    local component_wrap = function()
+---      local label = nil
+---      if vim.wo.wrap then
+---        label = "S-WRAP"
+---      end
+---      return label
+---    end
+--- <
+--- 3. |bareline.BareComponent|: This allows the most granular customization.
+---
+--- For many use cases you don't need to use a |bareline.BareComponent| since out
+--- of the box the statusline gets redrawn on several autocmds.
+--- See: |bareline-control-stl-redraws|.
+---
+--- Create an async component ~
+---
+--- * The component must be a |bareline.BareComponent|.
+--- * The `value` of the `BareComponent` must be the name (string) of a buf-local
+---   var. You don't need to do anytyhing prior with this var, just pass the name.
+--- * The `callback` of the `BareComponent` must be set. This function assigns the
+---   value for the buf-local var. To achieve that, call `set()` in `callback`
+---   exactly once, passing the value of the buf-local var as the single arg.
+--- * Distribute the processing in the `callback` function in as many event loop
+---   cycles as possible. If the whole async function runs in a single cycle, then
+---   there is no performance gain vs a sync component. Leverage the `on_exit`
+---   callback of |vim.system| and consider using |vim.defer_fn()|. Go down the
+---   road of callback hell.
+
+--- #delimiter
+--- #tag bareline-control-stl-redraws
+---
+--- Control statusline redraws ~
+---
+--- Bareline does not use a timer to redraw the statusline, instead it uses:
+--- 1. |autocmd|s. See |bareline-BareComponentCommonOpts|, `register_redraw_on_autocmd`.
+--- 2. |uv| file watchers. See |bareline.register_redraw_on_fs_event()|.
+---
+--- These are the base |autocmd-events| to redraw the stl: BufEnter, BufWinEnter,
+--- WinEnter, VimResume, FocusGained, OptionSet, DirChanged, TermLeave.
+---
+--- With the default config, these are the fs paths watched to redraw the stl:
+--- * Git repository directories to fulfill |bareline.components.git_head|.
+
+--- Conditionally create a |uv_fs_event_t| to monitor `fs_path` for changes. When
+--- a change is detected, redraw the statusline of the current window. If a luv fs
+--- event handle already exists for the `fs_path`, then do nothing.
+---@param fs_path string Full or relative path to a dir or file.
+---@param var_name string
+function bareline.register_redraw_on_fs_event(fs_path, var_name)
+  local fs_path_absolute = vim.uv.fs_realpath(fs_path)
+  if
+    fs_path_absolute ~= nil
+    and h.fs_path_to_uv_fs_event_handle[fs_path_absolute] == nil
+  then
+    local uv_fs_event_handle = h.create_uv_fs_event(fs_path_absolute, function()
+      if var_name then
+        h.log("Redraw on *fs_event*: For var: " .. var_name, vim.log.levels.INFO)
+      end
+      h.draw_statusline_if_plugin_window(
+        bareline.config.statuslines.plugin,
+        bareline.config.statuslines.active,
+        var_name
+      )
+    end)
+    h.fs_path_to_uv_fs_event_handle[fs_path_absolute] = uv_fs_event_handle
+    h.log(
+      "Added to fs_path_to_uv_fs_event_handle. Resulting table: "
+        .. vim.inspect(h.fs_path_to_uv_fs_event_handle),
+      vim.log.levels.INFO
+    )
+  end
+end
 
 -- Set module default config.
 assign_default_config()
