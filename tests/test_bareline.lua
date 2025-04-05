@@ -588,6 +588,7 @@ T["components"]["git_head"]["detached work tree 'status.showUntrackedFiles=no'"]
   },
   parametrize = {
     { h.tmp_testing_dir .. "/untracked.txt" },
+    { h.tmp_testing_dir .. "/sub_dir_a/sub_dir_a_a/file.txt" },
     { h.tmp_testing_dir .. "/file_is_not_written.txt" },
   },
 })
