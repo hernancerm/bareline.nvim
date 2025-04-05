@@ -370,7 +370,6 @@ function bareline.BareComponent:get()
   return value
 end
 
-
 -- COMPONENTS
 
 bareline.components = {}
