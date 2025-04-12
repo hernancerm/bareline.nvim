@@ -30,19 +30,21 @@ Follow these manual steps:
   in [minidoc.lua](./scripts/minidoc.lua)).
 - Recommended format options to facilitate proper hard wrapping:
 
-  ```lua
-  -- Set default formatting options.
-  vim.o.formatoptions = "tcqjrn"
-  -- Improve pattern recognition for lists.
-  vim.o.formatlistpat = [[^\s*\d\+[\]:.)}\t ]\s*\|\s*[-*•]\s*]]
-  ```
-- Throughout [bareline.lua](./lua/bareline.lua), comments beginning with `DOCS:` indicate something
-  important to convey on documentation. When modifying sections close to these comments, honor them.
+```lua
+-- Set default formatting options.
+vim.o.formatoptions = "tcqjrn"
+-- Improve pattern recognition for lists.
+vim.o.formatlistpat = [[^\s*\d\+[\]:.)}\t ]\s*\|^\s*[-*•]\s*]]
+```
 
 ## Tests
 
-- To run the unit test at the cursor location: `:lua MiniTest.run_at_location()`. You need to have
-  installed: [mini.test](https://github.com/echasnovski/mini.test).
-- To run all unit tests: `make test`.
-- To run all CI checks: `make testci`.
+Your Neovim must have [mini.test](https://github.com/echasnovski/mini.test) installed to use:
+
+- Nvim ex cmd to run a unit test at the cursor location: `lua MiniTest.run_at_location()`.
+
+Only [GNU Make](https://www.gnu.org/software/make/) required for:
+
+- Shell cmd to run all unit tests: `make test`.
+- Shell cmd to run all CI checks: `make testci`.
 - Tests should be kept as black-box as possible.

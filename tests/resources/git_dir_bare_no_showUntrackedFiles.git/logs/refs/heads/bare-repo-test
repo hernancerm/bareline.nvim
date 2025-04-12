@@ -1,5 +1,0 @@
-0000000000000000000000000000000000000000 b1c21733cba0e114bfb51e40de603c09ea16ab62 Hernán Cervera <hjcerveram@hotmail.com> 1740637577 -0600	commit (initial): Initial commit
-b1c21733cba0e114bfb51e40de603c09ea16ab62 491ac5bff31fe2c630e0fa8fb5e4b3909ec6f1f6 Hernán Cervera <hjcerveram@hotmail.com> 1740637617 -0600	commit: Modify file.txt
-491ac5bff31fe2c630e0fa8fb5e4b3909ec6f1f6 491ac5bff31fe2c630e0fa8fb5e4b3909ec6f1f6 Hernán Cervera <hjcerveram@hotmail.com> 1740637654 -0600	Branch: renamed refs/heads/main to refs/heads/bare-repo-main
-491ac5bff31fe2c630e0fa8fb5e4b3909ec6f1f6 491ac5bff31fe2c630e0fa8fb5e4b3909ec6f1f6 Hernán Cervera <hjcerveram@hotmail.com> 1740637673 -0600	Branch: renamed refs/heads/bare-repo-main to refs/heads/bare-repo-test
-491ac5bff31fe2c630e0fa8fb5e4b3909ec6f1f6 17c1b0c878acf17d6737684e4f12d528d2adaac7 Hernán Cervera <hjcerveram@hotmail.com> 1743736916 -0600	commit: Add nested file2.txt

@@ -68,22 +68,22 @@ Below is the default config, where `bareline` equals `require("bareline")`.
 >lua
   {
     statusline = {
-      value = "%{bl#Is(1)}"
-        .. "%{bl#Inahide(get(b:,'bl_vim_mode',''))}"
-        .. "%{bl#Is(1)}"
+      value = "%{BlIs(1)}"
+        .. "%{BlInahide(get(b:,'bl_vim_mode',''))}"
+        .. "%{BlIs(1)}"
         .. "%<"
-        .. "%{bl#Pad(get(b:,'bl_filepath',''))}"
-        .. "%{bl#Pad(get(b:,'bl_lsp_servers',''))}"
-        .. "%{%bl#Pad(get(b:,'bl_mhr',''))%}"
+        .. "%{BlPad(get(b:,'bl_filepath',''))}"
+        .. "%{BlPad(get(b:,'bl_lsp_servers',''))}"
+        .. "%{%BlPad(get(b:,'bl_mhr',''))%}"
         .. "%="
-        .. "%{bl#Pad(get(b:,'bl_diagnostics',''))}"
-        .. "%{bl#Pad(get(b:,'bl_end_of_line',''))}"
-        .. "%{bl#Pad(get(b:,'bl_indent_style',''))}"
-        .. "%{bl#Inarm(bl#Pad(bl#Wrap(get(b:,'gitsigns_head',''),'(',')')))}"
-        .. "%{bl#Pad(get(b:,'bl_current_working_dir',''))}"
-        .. "%{bl#Is(1)}"
+        .. "%{BlPad(get(b:,'bl_diagnostics',''))}"
+        .. "%{BlPad(get(b:,'bl_end_of_line',''))}"
+        .. "%{BlPad(get(b:,'bl_indent_style',''))}"
+        .. "%{BlInarm(BlPad(BlWrap(get(b:,'gitsigns_head',''),'(',')')))}"
+        .. "%{BlPad(get(b:,'bl_current_working_dir',''))}"
+        .. "%{BlIs(1)}"
         .. "%02l:%02c/%02L"
-        .. "%{bl#Is(1)}",
+        .. "%{BlIs(1)}",
       items = {
         bareline.items.vim_mode,
         bareline.items.filepath,
@@ -105,7 +105,7 @@ Below is the default config, where `bareline` equals `require("bareline")`.
     },
     logging = {
       enabled = false,
-      level = vim.log.levels.DEBUG,
+      level = vim.log.levels.INFO,
     },
   }
 <
@@ -149,7 +149,7 @@ Log file location: |$XDG_DATA_HOME|`/bareline.nvim/bareline.log`.
                                                  *bareline.config.logging.level*
     {level} `(integer)`
       Log statements on this level and up are written to the log file, the
-      others are discarded. Default: `vim.log.levels.DEBUG`.
+      others are discarded. Default: `vim.log.levels.INFO`.
 
 ------------------------------------------------------------------------------
                                                        *bareline-item-structure*
@@ -215,7 +215,7 @@ All custom items are a |bareline.BareItem|. Example item indicating soft wrap:
     function(var)
       local label = nil
       if vim.wo.wrap then
-        label = "S-WRAP"
+        label = "s-wrap"
       end
       vim.b[var] = label
     end, {
@@ -362,53 +362,61 @@ The functions in this section have the goal of facilitating writing the value
 for |bareline.config.statusline.value| (i.e., 'statusline'). So the functions
 are intended to be used in the statusline string.
 
-bl#Is(length)                                                          *bl#Is()*
-  Invisible space. Returns a {length} amount of Unicode Thin Space (U+2009)
-  chars. This is useful to control empty space in the statusline, since ASCII
-  whitespace is sometimes trimmed by Neovim, while this Unicode char is not.
-  Params:
-  • {length} `(string)` Amount of consecutive U+2009 chars to return.
+                                                                        *BlIs()*
+BlIs(length)
+Invisible space. Returns a {length} amount of Unicode Thin Space (U+2009)
+chars. This is useful to control empty space in the statusline, since ASCII
+whitespace is sometimes trimmed by Neovim, while this Unicode char is not.
+Params:
+• {length} `(string)` Amount of consecutive U+2009 chars to return.
 
-bl#Ina(value,mapper)                                                  *bl#Ina()*
-  Inactive. Maps {value} via the funcref {mapper}. Used to transform how a
-  value appears in statuslines in inactive windows.
-  Params:
-  • {value} `(string)` Any.
-  • {mapper} `(Funcref)` Takes `{value}` as its single arg.
+                                                                       *BlIna()*
+BlIna(value,mapper)
+Inactive. Maps {value} via the funcref {mapper}. Used to transform how a
+value appears in statuslines in inactive windows.
+Params:
+• {value} `(string)` Any.
+• {mapper} `(Funcref)` Takes `{value}` as its single arg.
 
-bl#Inarm(value)                                                     *bl#Inarm()*
-  Inactive remove. Remove the value on inactive windows.
-  Params:
-  • {value} `(string)` Any.
+                                                                     *BlInarm()*
+BlInarm(value)
+Inactive remove. Remove the value on inactive windows.
+Params:
+• {value} `(string)` Any.
 
-bl#Inahide(value)                                                 *bl#Inahide()*
-  Inactive hide. Mask with whitespace the value on inactive windows.
-  Params:
-  • {value} `(string)` Any.
+                                                                   *BlInahide()*
+BlInahide(value)
+Inactive hide. Mask with whitespace the value on inactive windows.
+Params:
+• {value} `(string)` Any.
 
-bl#Padl(value)                                                       *bl#Padl()*
-  Pad {value} left with `bl#Is(1)`.
-  Params:
-  • {value} `(string)` Any.
+                                                                      *BlPadl()*
+BlPadl(value)
+Pad {value} left with `BlIs(1)`.
+Params:
+• {value} `(string)` Any.
 
-bl#Padr(value)                                                       *bl#Padr()*
-  Pad {value} right with `bl#Is(1)`.
-  Params:
-  • {value} `(string)` Any.
+                                                                      *BlPadr()*
+BlPadr(value)
+Pad {value} right with `BlIs(1)`.
+Params:
+• {value} `(string)` Any.
 
-bl#Pad(value)                                                         *bl#Pad()*
-  Pad {value} on both left and right with `bl#Is(1)`.
-  Params:
-  • {value} `(string)` Any.
+                                                                       *BlPad()*
+BlPad(value)
+Pad {value} on both left and right with `BlIs(1)`.
+Params:
+• {value} `(string)` Any.
 
-bl#Wrap(value,prefix,suffix)                                         *bl#Wrap()*
+                                                                      *BlWrap()*
+BlWrap(value,prefix,suffix)
 Wrap {value} around {prefix} and {suffix}. Example function usage to wrap with
-parentheses the Git HEAD returned by lewis6991/gitsigns.nvim:
-`bl#Wrap(get(b:,'gitsigns_head',''),'(',')')`
-  Params:
-  • {value} `(string)` Any.
-  • {prefix} `(string)` Any.
-  • {suffix} `(string)` Any.
+parentheses the Git HEAD returned by the plugin gitsigns:
+`BlWrap(get(b:,'gitsigns_head',''),'(',')')`
+Params:
+• {value} `(string)` Any.
+• {prefix} `(string)` Any.
+• {suffix} `(string)` Any.
 
 ------------------------------------------------------------------------------
                                                             *bareline-functions*
@@ -420,8 +428,9 @@ Reassign the proper value to the window local 'statusline'. Use this to
 integrate with plugins which provide statusline integration through buf-local
 vars and user autocmds.
 
-For example, out of the box, Bareline comes with integration with
-lewis6991/gitsigns.nvim. If it didn't, this is how it would be done:
+For example, consider the integration with the plugin gitsigns. By default,
+Bareline provides this out of the box. If it were not provided, this is how a
+user could define it themselves:
 >lua
   vim.api.nvim_create_autocmd("User", {
     group = h.statusline_augroup,

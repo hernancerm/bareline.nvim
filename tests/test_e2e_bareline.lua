@@ -1,11 +1,10 @@
 ---@diagnostic disable: undefined-field, undefined-global
 
--- See: https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md
+-- IMPORTANT: This file contains several Unicode Thin Space (U+2009) chars: ` `. These look
+-- identical as a regular whitespace. These chars are relevant in the assertions. If you use the
+-- kitty terminal, you can highlight them with a mark: <https://sw.kovidgoyal.net/kitty/marks/>.
 
-if not vim.fn.executable("git") then
-  print("Unsatisfied requirement: Git is not installed.\n")
-  os.exit(1)
-end
+-- See: https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md
 
 local h = dofile("tests/helpers.lua")
 
@@ -37,7 +36,8 @@ T["smoke"] = new_set({
   hooks = {
     pre_case = function()
       child.lua("bareline.setup()")
-      child.cmd("cd " .. h.resources_dir .. "/git_dir_branch/")
+      child.cmd("cd " .. h.resources_dir)
+      child.cmd("new") -- TODO: Not sure why this is needed.
     end,
   },
 })
@@ -45,74 +45,30 @@ T["smoke"] = new_set({
 -- SMOKE
 
 T["smoke"]["active window"] = function()
-  local expected = " NOR  %f  %m%h%r%=tabs:8  git_dir_branch  %02l:%02c/%02L "
-  eq(child.wo.statusline, expected)
+  child.o.columns = 50
+  local expected = " NOR  [No Name]       tabs:8  resources  00:00/01 "
+  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, expected)
 end
 
 T["smoke"]["inactive window"] = function()
   child.cmd("new")
-  local expected = "      %f  %m%h%r%=tabs:8  git_dir_branch  %02l:%02c/%02L "
+  child.o.columns = 50
+  local expected = "      [No Name]       tabs:8  resources  00:00/01 "
   local window_ids = child.lua_get("vim.api.nvim_tabpage_list_wins(0)")
-  local statusline_window_inactive = child.lua_get("vim.wo[" .. window_ids[2] .. "].statusline")
-  eq(statusline_window_inactive, expected)
+  local statusline_window_inactive = child.lua_get("vim.wo[" .. window_ids[1] .. "].statusline")
+  child.lua([[require("bareline").refresh_statusline()]])
+  eq(child.api.nvim_eval_statusline(statusline_window_inactive, {}).str, expected)
 end
 
 T["smoke"]["plugin window"] = function()
   child.bo.filetype = "test"
   child.bo.buflisted = false
-  local expected = " [test]  %m%h%r%=%02l:%02c/%02L "
-  eq(child.wo.statusline, expected)
+  child.o.columns = 21
+  local expected = " [test]     00:00/01 "
+  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, expected)
 end
 
--- CLASS: BARE COMPONENT
-
-T["bare_component"] = new_set({})
-
-T["bare_component"][":config()"] = new_set({})
-
-T["bare_component"][":config()"]["user component option"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua([[component_transform_file_type = bareline.BareComponent:new(function(opts)
-          local transformer = opts.transformer
-          if type(transformer) == "function" then
-            return transformer(vim.bo.filetype)
-          end
-          return vim.bo.filetype
-        end, {})]])
-    end,
-  },
-  parametrize = {
-    { "vim.fn.sha256", vim.fn.sha256("text") },
-    { "vim.base64.encode", vim.base64.encode("text") },
-  },
-})
-
-T["bare_component"][":config()"]["user component option"]["p"] = function(
-  transformer,
-  expected_value
-)
-  child.cmd("edit " .. h.resources_dir .. "/foo.txt")
-  local actual_value = child.lua_get([[component_transform_file_type
-    :config({ transformer = ]] .. transformer .. [[})
-    :get()]])
-  eq(actual_value, expected_value)
-end
-
-T["bare_component"][":config()"]["'mask' built-in option"] = new_set({
-  parametrize = {
-    { " ", "   " },
-    { "*", "***" },
-  },
-})
-
-T["bare_component"][":config()"]["'mask' built-in option"]["p"] = function(char, expected_value)
-  local actual_value =
-    child.lua_get([[bareline.components.vim_mode:config({ mask = "]] .. char .. [[" }):get()]])
-  eq(actual_value, expected_value)
-end
-
--- SYNC-COMPONENT: VIM_MODE
+-- VIM_MODE
 
 T["components"] = new_set({
   hooks = {
@@ -142,7 +98,7 @@ T["components"]["vim_mode"]["p"] = function(keys, expected_vim_mode)
   eq(vim_mode, expected_vim_mode)
 end
 
--- SYNC-COMPONENT: PLUGIN_NAME
+-- PLUGIN_NAME
 
 T["components"]["plugin_name"] = new_set({
   hooks = {
@@ -175,7 +131,7 @@ T["components"]["plugin_name"]["fallback"] = function()
   eq(plugin_name, "[nvimtree]")
 end
 
--- SYNC-COMPONENT: INDENT_STYLE
+-- INDENT_STYLE
 
 -- stylua: ignore start
 T["components"]["indent_style"] = new_set({
@@ -199,7 +155,7 @@ T["components"]["indent_style"]["p"] = function(expandtab, tabstop, expected_ind
   eq(indent_style, expected_indent_style)
 end
 
--- SYNC-COMPONENT: END_OF_LINE
+-- END_OF_LINE
 
 T["components"]["end_of_line"] = new_set({
   parametrize = {
@@ -214,7 +170,7 @@ T["components"]["end_of_line"]["p"] = function(keys, expected_eol_marker)
   eq(eol, expected_eol_marker)
 end
 
--- SYNC-COMPONENT: FILEPATH_RELATIVE_TO_CWD
+-- FILEPATH_RELATIVE_TO_CWD
 
 T["components"]["filepath_relative_to_cwd"] = new_set({})
 
@@ -306,7 +262,7 @@ T["components"]["filepath_relative_to_cwd"]["truncate long path"] = function()
   )
 end
 
--- SYNC-COMPONENT: DIAGNOSTICS
+-- DIAGNOSTICS
 
 T["components"]["diagnostics"] = new_set({
   parametrize = {
@@ -355,13 +311,13 @@ T["components"]["diagnostics"]["p"] = function(diagnostics, expected_diagnostics
   eq(child.lua_get("bareline.components.diagnostics:get()"), expected_diagnostics)
 end
 
--- SYNC-COMPONENT: POSITION
+-- POSITION
 
 T["components"]["position"] = function()
   eq(child.lua_get("bareline.components.position:get()"), "%02l:%02c/%02L")
 end
 
--- SYNC-COMPONENT: CWD
+-- CWD
 
 T["components"]["cwd"] = new_set({})
 
@@ -382,7 +338,7 @@ T["components"]["cwd"]["display caret (~) when the cwd is the user home"] = func
   eq(child.lua_get("bareline.components.cwd:get()"), "~")
 end
 
--- SYNC-COMPONENT: MHR
+-- MHR
 
 T["components"]["mhr"] = new_set({})
 
@@ -430,212 +386,6 @@ T["components"]["mhr"]["include %m as per function config"] = function()
         }):get()]]),
     "%m%h%r"
   )
-end
-
--- ASYNC-COMPONENT: GIT_HEAD
-
-T["components"]["git_head"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua([[bareline.setup({
-        statuslines = {
-          active = {
-            {
-              bareline.components.git_head
-            }
-          },
-          inactive = {{}},
-          plugin = {{}}
-        }
-      })]])
-    end,
-  },
-})
-
----@param git_bare_repo_dir string
-local function setup_with_git_head_worktree(git_bare_repo_dir)
-  -- stylua: ignore start
-  child.lua([[bareline.setup({
-    statuslines = {
-      active = {
-        {
-          bareline.components.git_head
-        }
-      },
-      inactive = {{}},
-      plugin = {{}}
-    },
-    components = {
-      git_head = {
-        worktrees = {
-          {]] ..
-            'toplevel = "' .. h.tmp_testing_dir .. '",' ..
-            'gitdir = "' .. git_bare_repo_dir .. '",' ..
-          [[}
-        }
-      }
-    }
-  })]])
-  -- stylua: ignore end
-end
-
-T["components"]["git_head"]["var name"] = function()
-  eq(child.lua_get("bareline.components.git_head:get()"), "bareline_git_head")
-end
-
-T["components"]["git_head"]["standard repo"] = new_set({
-  parametrize = {
-    {
-      h.resources_dir .. "/git_dir_branch/file.txt",
-      " (trunk) ",
-    },
-    {
-      h.resources_dir .. "/git_dir_hash/file.txt",
-      " (d6656f5) ",
-    },
-    {
-      h.resources_dir .. "/git_dir_hash/sub_dir_a/sub_dir_a_a/file.txt",
-      " (d6656f5) ",
-    },
-    {
-      h.resources_dir .. "/git_dir_hash/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt",
-      " (d6656f5) ",
-    },
-    {
-      h.resources_dir .. "/git_dir_tag/file.txt",
-      " (03ffbf9) ",
-    },
-  },
-})
-
-T["components"]["git_head"]["standard repo"]["p"] = function(filepath, expected_statusline)
-  child.cmd("edit " .. filepath)
-  h.sleep(child, 25, 4)
-  eq(h.get_child_evaluated_stl(child), expected_statusline)
-end
-
--- This also tests finding the *first* match for the Git HEAD.
-T["components"]["git_head"]["head taken from buf name instead of cwd"] = function()
-  child.cmd("cd " .. h.tmp_testing_dir)
-  child.cmd("edit " .. h.resources_dir .. "/git_dir_hash/file.txt")
-  h.sleep(child, 25, 4)
-  eq(h.get_child_evaluated_stl(child), " (d6656f5) ")
-  child.cmd("edit " .. h.resources_dir .. "/git_dir_branch/file.txt")
-  h.sleep(child, 25, 4)
-  eq(h.get_child_evaluated_stl(child), " (trunk) ")
-end
-
-T["components"]["git_head"]["detached work tree"] = new_set({
-  hooks = {
-    pre_case = function()
-      setup_with_git_head_worktree(h.resources_dir .. "/git_dir_bare.git")
-    end,
-  },
-  parametrize = {
-    { h.tmp_testing_dir .. "/file.txt" },
-    { h.tmp_testing_dir .. "/file_is_not_written.txt" },
-    { h.tmp_testing_dir .. "/sub_dir_a/sub_dir_a_a/file.txt" },
-    { h.tmp_testing_dir .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt" },
-  },
-})
-
-T["components"]["git_head"]["detached work tree"]["p"] = function(filepath)
-  child.cmd("edit " .. filepath)
-  h.sleep(child, 25, 8)
-  eq(h.get_child_evaluated_stl(child), " (bare-repo-test) ")
-end
-
-T["components"]["git_head"]["detached work tree 'status.showUntrackedFiles=yes'"] = new_set({
-  hooks = {
-    pre_case = function()
-      setup_with_git_head_worktree(h.resources_dir .. "/git_dir_bare.git")
-    end,
-  },
-  parametrize = {
-    { h.tmp_testing_dir .. "/untracked.txt" },
-    { h.tmp_testing_dir .. "/file_is_not_written.txt" },
-  },
-})
-
-T["components"]["git_head"]["detached work tree 'status.showUntrackedFiles=yes'"]["p"] = function(
-  filepath
-)
-  child.cmd("edit " .. filepath)
-  h.sleep(child, 25, 8)
-  eq(h.get_child_evaluated_stl(child), " (bare-repo-test) ")
-end
-
-T["components"]["git_head"]["regular repo 'status.showUntrackedFiles=yes'"] = new_set({
-  parametrize = {
-    { h.resources_dir .. "/git_dir_branch/untracked.txt" },
-    { h.resources_dir .. "/git_dir_branch/file_is_not_written.txt" },
-  },
-})
-
-T["components"]["git_head"]["regular repo 'status.showUntrackedFiles=yes'"]["p"] = function(
-  filepath
-)
-  child.cmd("edit " .. filepath)
-  h.sleep(child, 25, 4)
-  eq(h.get_child_evaluated_stl(child), " (trunk) ")
-end
-
-T["components"]["git_head"]["detached work tree 'status.showUntrackedFiles=no'"] = new_set({
-  hooks = {
-    pre_case = function()
-      setup_with_git_head_worktree(h.resources_dir .. "/git_dir_bare_no_showUntrackedFiles.git")
-    end,
-  },
-  parametrize = {
-    { h.tmp_testing_dir .. "/untracked.txt" },
-    { h.tmp_testing_dir .. "/sub_dir_a/sub_dir_a_a/file.txt" },
-    { h.tmp_testing_dir .. "/file_is_not_written.txt" },
-  },
-})
-
-T["components"]["git_head"]["detached work tree 'status.showUntrackedFiles=no'"]["p"] = function(
-  filepath
-)
-  child.cmd("edit " .. filepath)
-  h.sleep(child, 25, 8)
-  eq(h.get_child_evaluated_stl(child), "  ")
-end
-
-T["components"]["git_head"]["regular repo 'status.showUntrackedFiles=no'"] = new_set({
-  parametrize = {
-    { h.resources_dir .. "/git_dir_branch_no_showUntrackedFiles/untracked.txt" },
-    { h.resources_dir .. "/git_dir_branch_no_showUntrackedFiles/file_is_not_written.txt" },
-  },
-})
-
-T["components"]["git_head"]["regular repo 'status.showUntrackedFiles=no'"]["p"] = function(filepath)
-  child.cmd("edit " .. filepath)
-  h.sleep(child, 25, 8)
-  eq(h.get_child_evaluated_stl(child), "  ")
-end
-
--- What is being validated by this test:
--- No need to restart Neovim to see git_head react to a value change in 'status.showUntrackedFiles'.
-T["components"]["git_head"]["toggle head by toggling 'status.showUntrackedFiles'"] = function()
-  child.cmd("edit " .. h.tmp_testing_dir .. "/untracked.txt")
-  local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare_toggle_showUntrackedFiles.git"
-  setup_with_git_head_worktree(git_bare_repo_dir)
-  vim
-    .system({ "git", "--git-dir", git_bare_repo_dir, "config", "status.showUntrackedFiles", "yes" })
-    :wait()
-  h.sleep(child, 25, 8)
-  eq(h.get_child_evaluated_stl(child), " (bare-repo-test) ")
-  vim
-    .system({ "git", "--git-dir", git_bare_repo_dir, "config", "status.showUntrackedFiles", "no" })
-    :wait()
-  h.sleep(child, 25, 8)
-  eq(h.get_child_evaluated_stl(child), "  ")
-end
-
-T["components"]["git_head"]["'git worktree add'"] = function()
-  child.cmd("edit " .. h.resources_dir .. "/git_dir_branch_worktree/file.txt")
-  h.sleep(child, 25, 4)
-  eq(h.get_child_evaluated_stl(child), " (hotfix) ")
 end
 
 -- SETUP
@@ -715,103 +465,6 @@ T["setup"]["statusline partially custom"]["default statusline for plugin window"
   child.bo.buflisted = false
   child.bo.modifiable = false
   eq(child.wo.statusline, " [test]  %h%r%=%02l:%02c/%02L ")
-end
-
-T["setup"]["components.git_head"] = new_set({})
-
-T["setup"]["components.git_head"]["worktrees"] = function()
-  child.cmd("cd " .. h.tmp_testing_dir)
-  local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
-  child.cmd("edit file.txt")
-  -- stylua: ignore start
-  child.lua([[bareline.setup({
-    statuslines = {
-      active = {
-        {
-          bareline.components.git_head
-        }
-      },
-      inactive = {{}},
-      plugin = {{}}
-    },
-    components = {
-      git_head = {
-        worktrees = {
-          {]] ..
-            'toplevel = "' .. h.tmp_testing_dir .. '",' ..
-            'gitdir = "' .. git_bare_repo_dir .. '",' ..
-          [[}
-        }
-      }
-    }
-  })]])
-  -- stylua: ignore end
-  h.sleep(child, 25, 8)
-  eq(h.get_child_evaluated_stl(child), " (bare-repo-test) ")
-end
-
--- Coverage for: <https://github.com/hernancerm/bareline.nvim/issues/2#issuecomment-2730553925>.
--- On `408de89` this test should fail, and on `2a9e54e` it should pass. However, `file2.txt` is now
--- tracked in `git_dir_bare_no_showUntrackedFiles.git`, so just checking out to those commits and
--- copy/pasting this tests will not behave as expected.
-T["setup"]["components.git_head"]["worktrees file with parent dir diff from toplevel"] = function()
-  child.cmd("cd " .. h.tmp_testing_dir)
-  local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare_no_showUntrackedFiles.git"
-  child.cmd("edit sub_dir_a/sub_dir_a_a/file2.txt")
-  -- stylua: ignore start
-  child.lua([[bareline.setup({
-    statuslines = {
-      active = {
-        {
-          bareline.components.git_head
-        }
-      },
-      inactive = {{}},
-      plugin = {{}}
-    },
-    components = {
-      git_head = {
-        worktrees = {
-          {]] ..
-            'toplevel = "' .. h.tmp_testing_dir .. '",' ..
-            'gitdir = "' .. git_bare_repo_dir .. '",' ..
-          [[}
-        }
-      }
-    }
-  })]])
-  -- stylua: ignore end
-  h.sleep(child, 25, 8)
-  eq(h.get_child_evaluated_stl(child), " (bare-repo-test) ")
-end
-
-T["setup"]["components.git_head"]["config() over config.components"] = function()
-  child.cmd("cd " .. h.tmp_testing_dir)
-  local git_bare_repo_dir = h.resources_dir .. "/git_dir_bare.git"
-  -- stylua: ignore start
-  child.lua([[bareline.setup({
-    statuslines = {
-      active = {
-        {
-          bareline.components.indent_style,
-          bareline.components.git_head:config({ worktrees = {} })
-        }
-      }
-    },
-    components = {
-      git_head = {
-        worktrees = {
-          {]] ..
-            'toplevel = "' .. h.tmp_testing_dir .. '",' ..
-            'gitdir = "' .. git_bare_repo_dir .. '",' ..
-          [[}
-        }
-      }
-    }
-  })]])
-  h.sleep(child, 25, 8)
-  -- stylua: ignore end
-  eq(h.get_child_evaluated_stl(child), " tabs:8 ")
 end
 
 T["setup"]["components.mhr"] = new_set({})

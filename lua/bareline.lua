@@ -173,22 +173,22 @@ local function assign_default_config()
   bareline.default_config = {
     --minidoc_replace_end
     statusline = {
-      value = "%{bl#Is(1)}"
-        .. "%{bl#Inahide(get(b:,'bl_vim_mode',''))}"
-        .. "%{bl#Is(1)}"
+      value = "%{BlIs(1)}"
+        .. "%{BlInahide(get(b:,'bl_vim_mode',''))}"
+        .. "%{BlIs(1)}"
         .. "%<"
-        .. "%{bl#Pad(get(b:,'bl_filepath',''))}"
-        .. "%{bl#Pad(get(b:,'bl_lsp_servers',''))}"
-        .. "%{%bl#Pad(get(b:,'bl_mhr',''))%}"
+        .. "%{BlPad(get(b:,'bl_filepath',''))}"
+        .. "%{BlPad(get(b:,'bl_lsp_servers',''))}"
+        .. "%{%BlPad(get(b:,'bl_mhr',''))%}"
         .. "%="
-        .. "%{bl#Pad(get(b:,'bl_diagnostics',''))}"
-        .. "%{bl#Pad(get(b:,'bl_end_of_line',''))}"
-        .. "%{bl#Pad(get(b:,'bl_indent_style',''))}"
-        .. "%{bl#Inarm(bl#Pad(bl#Wrap(get(b:,'gitsigns_head',''),'(',')')))}"
-        .. "%{bl#Pad(get(b:,'bl_current_working_dir',''))}"
-        .. "%{bl#Is(1)}"
+        .. "%{BlPad(get(b:,'bl_diagnostics',''))}"
+        .. "%{BlPad(get(b:,'bl_end_of_line',''))}"
+        .. "%{BlPad(get(b:,'bl_indent_style',''))}"
+        .. "%{BlInarm(BlPad(BlWrap(get(b:,'gitsigns_head',''),'(',')')))}"
+        .. "%{BlPad(get(b:,'bl_current_working_dir',''))}"
+        .. "%{BlIs(1)}"
         .. "%02l:%02c/%02L"
-        .. "%{bl#Is(1)}",
+        .. "%{BlIs(1)}",
       items = {
         bareline.items.vim_mode,
         bareline.items.filepath,
@@ -210,7 +210,7 @@ local function assign_default_config()
     },
     logging = {
       enabled = false,
-      level = vim.log.levels.DEBUG,
+      level = vim.log.levels.INFO,
     },
   }
   --minidoc_afterlines_end
@@ -256,7 +256,7 @@ end
 --- #tag bareline.config.logging.level
 ---     {level} `(integer)`
 ---       Log statements on this level and up are written to the log file, the
----       others are discarded. Default: `vim.log.levels.DEBUG`.
+---       others are discarded. Default: `vim.log.levels.INFO`.
 
 --- #delimiter
 --- #tag bareline-item-structure
@@ -403,7 +403,13 @@ bareline.items.plugin_name = bareline.BareItem:new("bl_plugin_name", function(va
   else
     vim.b[var] = string.format("[%s]", vim.bo.filetype:lower():gsub("%s", ""))
   end
-end, {})
+end, {
+  autocmds = {
+    {
+      event = "BufEnter",
+    },
+  },
+})
 
 --- Indent style.
 --- Relies on 'expandtab' and 'tabstop'. Omitted when the buf is 'nomodifiable'.
@@ -618,11 +624,11 @@ bareline.alt_statuslines = {}
 --- Statusline for plugin windows, including the plugin name.
 ---@type BarelineAltStatusline
 bareline.alt_statuslines.plugin = {
-  value = "%{bl#Is(1)}"
+  value = "%{BlIs(1)}"
     .. "%{%get(b:,'bl_plugin_name','')%}"
     .. "%="
     .. "%02l:%02c/%02L"
-    .. "%{bl#Is(1)}",
+    .. "%{BlIs(1)}",
   items = {
     bareline.items.plugin_name,
   },
@@ -631,8 +637,6 @@ bareline.alt_statuslines.plugin = {
   end,
 }
 
--- The Vimscript fns in the doc comment below are defined in `./autoload/bl.vim`.
-
 --- #delimiter
 --- #tag bareline-vimscript-functions
 --- Vimscript functions ~
@@ -640,54 +644,120 @@ bareline.alt_statuslines.plugin = {
 --- The functions in this section have the goal of facilitating writing the value
 --- for |bareline.config.statusline.value| (i.e., 'statusline'). So the functions
 --- are intended to be used in the statusline string.
----
---- bl#Is(length)                                                          *bl#Is()*
----   Invisible space. Returns a {length} amount of Unicode Thin Space (U+2009)
----   chars. This is useful to control empty space in the statusline, since ASCII
----   whitespace is sometimes trimmed by Neovim, while this Unicode char is not.
----   Params:
----   * {length} `(string)` Amount of consecutive U+2009 chars to return.
----
---- bl#Ina(value,mapper)                                                  *bl#Ina()*
----   Inactive. Maps {value} via the funcref {mapper}. Used to transform how a
----   value appears in statuslines in inactive windows.
----   Params:
----   * {value} `(string)` Any.
----   * {mapper} `(Funcref)` Takes `{value}` as its single arg.
----
---- bl#Inarm(value)                                                     *bl#Inarm()*
----   Inactive remove. Remove the value on inactive windows.
----   Params:
----   * {value} `(string)` Any.
----
---- bl#Inahide(value)                                                 *bl#Inahide()*
----   Inactive hide. Mask with whitespace the value on inactive windows.
----   Params:
----   * {value} `(string)` Any.
----
---- bl#Padl(value)                                                       *bl#Padl()*
----   Pad {value} left with `bl#Is(1)`.
----   Params:
----   * {value} `(string)` Any.
----
---- bl#Padr(value)                                                       *bl#Padr()*
----   Pad {value} right with `bl#Is(1)`.
----   Params:
----   * {value} `(string)` Any.
----
---- bl#Pad(value)                                                         *bl#Pad()*
----   Pad {value} on both left and right with `bl#Is(1)`.
----   Params:
----   * {value} `(string)` Any.
----
---- bl#Wrap(value,prefix,suffix)                                         *bl#Wrap()*
+
+--- #tag BlIs()
+--- BlIs(length)
+--- Invisible space. Returns a {length} amount of Unicode Thin Space (U+2009)
+--- chars. This is useful to control empty space in the statusline, since ASCII
+--- whitespace is sometimes trimmed by Neovim, while this Unicode char is not.
+--- Params:
+--- * {length} `(string)` Amount of consecutive U+2009 chars to return.
+vim.cmd([[
+function! BlIs(length)
+  let u2009_chars = ''
+  for i in range(1, a:length)
+    " Unicode Thin Space (U+2009)
+    let u2009_chars .= ' '
+  endfor
+  return u2009_chars
+endfunction
+]])
+
+--- #tag BlIna()
+--- BlIna(value,mapper)
+--- Inactive. Maps {value} via the funcref {mapper}. Used to transform how a
+--- value appears in statuslines in inactive windows.
+--- Params:
+--- * {value} `(string)` Any.
+--- * {mapper} `(Funcref)` Takes `{value}` as its single arg.
+vim.cmd([[
+function! BlIna(value,mapper)
+  if get(b:, '_bareline_is_buf_active', v:false)
+    return a:value
+  else
+    return a:mapper(a:value)
+  endif
+endfunction
+]])
+
+--- #tag BlInarm()
+--- BlInarm(value)
+--- Inactive remove. Remove the value on inactive windows.
+--- Params:
+--- * {value} `(string)` Any.
+vim.cmd([[
+function! BlInarm(value)
+  return BlIna(a:value, { -> '' })
+endfunction
+]])
+
+--- #tag BlInahide()
+--- BlInahide(value)
+--- Inactive hide. Mask with whitespace the value on inactive windows.
+--- Params:
+--- * {value} `(string)` Any.
+vim.cmd([[
+function! BlInahide(value)
+  return BlIna(a:value, { v -> BlIs(strlen(v)) })
+endfunction
+]])
+
+--- #tag BlPadl()
+--- BlPadl(value)
+--- Pad {value} left with `BlIs(1)`.
+--- Params:
+--- * {value} `(string)` Any.
+vim.cmd([[
+function! BlPadl(value)
+  if a:value !=# ''
+    return BlIs(1) . a:value
+  endif
+  return ''
+endfunction
+]])
+
+--- #tag BlPadr()
+--- BlPadr(value)
+--- Pad {value} right with `BlIs(1)`.
+--- Params:
+--- * {value} `(string)` Any.
+vim.cmd([[
+function! BlPadr(value)
+  if a:value !=# ''
+    return a:value . BlIs(1)
+  endif
+  return ''
+endfunction
+]])
+
+--- #tag BlPad()
+--- BlPad(value)
+--- Pad {value} on both left and right with `BlIs(1)`.
+--- Params:
+--- * {value} `(string)` Any.
+vim.cmd([[
+function! BlPad(value)
+  return BlPadr(BlPadl(a:value))
+endfunction
+]])
+
+--- #tag BlWrap()
+--- BlWrap(value,prefix,suffix)
 --- Wrap {value} around {prefix} and {suffix}. Example function usage to wrap with
---- parentheses the Git HEAD returned by lewis6991/gitsigns.nvim:
---- `bl#Wrap(get(b:,'gitsigns_head',''),'(',')')`
----   Params:
----   * {value} `(string)` Any.
----   * {prefix} `(string)` Any.
----   * {suffix} `(string)` Any.
+--- parentheses the Git HEAD returned by the plugin gitsigns:
+--- `BlWrap(get(b:,'gitsigns_head',''),'(',')')`
+--- Params:
+--- * {value} `(string)` Any.
+--- * {prefix} `(string)` Any.
+--- * {suffix} `(string)` Any.
+vim.cmd([[
+function! BlWrap(value,prefix,suffix)
+  if a:value !=# ''
+    return a:prefix . a:value . a:suffix
+  endif
+  return ''
+endfunction
+]])
 
 --- #delimiter
 --- #tag bareline-functions
@@ -697,8 +767,9 @@ bareline.alt_statuslines.plugin = {
 --- integrate with plugins which provide statusline integration through buf-local
 --- vars and user autocmds.
 ---
---- For example, out of the box, Bareline comes with integration with
---- lewis6991/gitsigns.nvim. If it didn't, this is how it would be done:
+--- For example, consider the integration with the plugin gitsigns. By default,
+--- Bareline provides this out of the box. If it were not provided, this is how a
+--- user could define it themselves:
 --- >lua
 ---   vim.api.nvim_create_autocmd("User", {
 ---     group = h.statusline_augroup,
@@ -812,7 +883,8 @@ function h.draw_window_statusline(statusline)
     return
   end
   vim.wo.statusline = statusline
-  h.log(statusline)
+  h.log(statusline, vim.log.levels.DEBUG)
+  h.log("Stl win-local opt set")
 end
 
 h.existent_item_autocmds = {}
@@ -835,12 +907,17 @@ function h.create_item_autocmds(item)
       vim.validate("autocmd.event", autocmd.event, { "string", "table" })
       autocmd.opts = autocmd.opts or {}
       autocmd.opts.group = h.item_augroup
+      local ac_event = autocmd.event
+      if type(autocmd.event) == "table" then
+        ac_event = vim.fn.join(autocmd.event, ",")
+      end
       autocmd.opts.callback = function()
-        h.log("On *autocmd* re-compute var: " .. item.var, vim.log.levels.INFO)
         item.callback(item.var, item.opts)
+        h.log("Ran autocmd with event {" .. ac_event .. "} for: " .. item.var)
       end
       vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
       table.insert(h.existent_item_autocmds[vim.fn.bufnr()], item.var)
+      h.log("Created autocmd with event {" .. ac_event .. "} for: " .. item.var)
     end
   end
 end
@@ -911,7 +988,7 @@ end
 ---@param message string
 ---@param level integer? As per |vim.log.levels|.
 function h.log(message, level)
-  level = level or vim.log.levels.DEBUG
+  level = level or vim.log.levels.INFO
   if h.should_log(level) then
     vim.defer_fn(function()
       vim.fn.writefile({
