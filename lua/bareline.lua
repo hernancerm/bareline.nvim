@@ -241,8 +241,7 @@ end
 --- See: |bareline-built-in-alt-statuslines|.
 
 --- #tag bareline.config.items
---- The item options set in |bareline.BareItem:new()| are merged with these opts.
---- The options here have precedence.
+--- Provide item-specific configuration.
 ---
 --- #tag bareline.config.items.mhr
 ---     {mhr} `(boolean|fun():boolean)`
@@ -299,20 +298,6 @@ function bareline.BareItem:new(var, callback, opts)
   item.callback = callback
   item.opts = opts
   return item
-end
-
---- Update item opts.
----@param opts table The field `opts` from |bareline.BareItem| is merged with
---- these opts. For built-in items, the option keys here have priority over what
---- is set in both the constructor and at the plugin setup. Built-in items have
---- their custom options documented, which can be set or overriden using this
---- method. For an example, see |bareline.items.mhr|.
----@return BareItem
-function bareline.BareItem:config(opts)
-  local item_copy = vim.deepcopy(self)
-  item_copy.opts =
-    vim.tbl_deep_extend("force", vim.deepcopy(item_copy.opts), opts or {})
-  return item_copy
 end
 
 --- #delimiter
@@ -574,16 +559,15 @@ bareline.items.current_working_dir = bareline.BareItem:new(
 --- %m%h%r
 --- Display the modified, help and read-only markers using the built-in statusline
 --- fields, see 'statusline' for a list of fields where these are included.
----
---- Custom options:
----     {display_modified} `(boolean|fun():boolean)`
---- Control when the modified field (`%m`) is included. When `true`, the field is
---- always displayed except when the buf has set 'nomodifiable'. Default: true.
+--- Options (set in |bareline.config.items|):
+---  * {display_modified} `(boolean|fun():boolean)` Control when the modified
+---    field (`%m`) is included. When `true`, the field is always displayed except
+---    when the buf has set 'nomodifiable'. Default: `true`.
 ---
 --- Mockups: `[+]`, `[Help][RO]`
 ---@type BareItem
-bareline.items.mhr = bareline.BareItem:new("bl_mhr", function(var, opts)
-  local display_modified = h.providers.mhr.get_opt_display_modified(opts)
+bareline.items.mhr = bareline.BareItem:new("bl_mhr", function(var)
+  local display_modified = bareline.config.items.mhr.display_modified
   if type(display_modified) == "function" then
     display_modified = display_modified()
   end
@@ -833,24 +817,6 @@ function h.providers.lsp_servers.get_names(callback)
   end, 0)
 end
 
-h.providers.mhr = {}
-
---- Retrieve all, pick with highest precedence, validate, return.
----@param opts table `opts` field of the item.
----@return boolean Valid option value.
-function h.providers.mhr.get_opt_display_modified(opts)
-  local display_modified = opts.display_modified
-  if display_modified == nil then
-    display_modified = bareline.config.items.mhr.display_modified
-  end
-  vim.validate(
-    "opts.display_modified",
-    display_modified,
-    { "boolean", "function" }
-  )
-  return display_modified
-end
-
 -- OTHER
 
 h.statusline_augroup = vim.api.nvim_create_augroup("BarelineSetStatusline", {})
@@ -889,39 +855,56 @@ function h.draw_window_statusline(statusline)
   h.log("Stl win-local opt set")
 end
 
-h.existent_item_autocmds = {}
-
 --- Create the autocmds to call the `callback` of a `BareItem`.
 ---@param item BareItem
 function h.create_item_autocmds(item)
   vim.validate("item", item, "table")
   vim.validate("item.var", item.var, "string")
-  if h.existent_item_autocmds[vim.fn.bufnr()] == nil then
-    h.existent_item_autocmds[vim.fn.bufnr()] = {}
+  vim.validate("item.opts", item.opts, "table")
+  local buf_handler = vim.fn.bufnr()
+  if h.state.existent_item_autocmds[buf_handler] == nil then
+    h.state.existent_item_autocmds[buf_handler] = {}
   end
   -- Do not create duplicate autocmds.
-  if vim.tbl_contains(h.existent_item_autocmds[vim.fn.bufnr()], item.var) then
+  if vim.tbl_contains(h.state.existent_item_autocmds[buf_handler], item.var) then
     return
   end
-  vim.validate("item.opts", item.opts, "table")
   if type(item.opts.autocmds) == "table" then
-    for _, autocmd in ipairs(item.opts.autocmds) do
-      vim.validate("autocmd.event", autocmd.event, { "string", "table" })
-      autocmd.opts = autocmd.opts or {}
-      autocmd.opts.group = h.item_augroup
-      local ac_event = autocmd.event
-      if type(autocmd.event) == "table" then
-        ac_event = vim.fn.join(autocmd.event, ",")
-      end
-      autocmd.opts.callback = function()
-        item.callback(item.var, item.opts)
-        h.log("Ran autocmd with event {" .. ac_event .. "} for: " .. item.var)
-      end
-      vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
-      table.insert(h.existent_item_autocmds[vim.fn.bufnr()], item.var)
-      h.log("Created autocmd with event {" .. ac_event .. "} for: " .. item.var)
+    for i = 1, #item.opts.autocmds do
+      vim.validate(
+        "item.opts.autocmds[" .. i .. "].event",
+        item.opts.autocmds[i].event,
+        { "string", "table" }
+      )
+      vim.validate(
+        "item.opts.autocmds[" .. i .. "].opts",
+        item.opts.autocmds[i].opts,
+        "table",
+        true
+      )
+      h.create_item_autocmd(item, item.opts.autocmds[i])
     end
   end
+end
+
+---@param item BareItem
+---@param autocmd table
+function h.create_item_autocmd(item, autocmd)
+  autocmd.opts = autocmd.opts or {}
+  autocmd.opts.group = h.item_augroup
+  local string_ac_event = autocmd.event
+  if type(string_ac_event) == "table" then
+    string_ac_event = vim.fn.join(string_ac_event, ",")
+  end
+  autocmd.opts.callback = function()
+    item.callback(item.var, item.opts)
+    h.log("Ran autocmd with event {" .. string_ac_event .. "} for: " .. item.var)
+  end
+  vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
+  table.insert(h.state.existent_item_autocmds[vim.fn.bufnr()], item.var)
+  h.log(
+    "Created autocmd with event {" .. string_ac_event .. "} for: " .. item.var
+  )
 end
 
 --- Merge user-supplied config with the plugin's default config. For every key
@@ -1007,6 +990,7 @@ end
 
 h.state = {
   fs_sep = h.get_fs_sep(),
+  existent_item_autocmds = {},
   system_root_dir = h.get_system_root_dir(),
   log_filepath = vim.fn.stdpath("data") .. "/bareline.nvim/bareline.log",
 }
