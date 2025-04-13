@@ -1,7 +1,5 @@
 ---@diagnostic disable: undefined-field, undefined-global
 
--- TODO: Remove unnecessary files and nested dirs in `dir_a` & `dir_b`.
--- TODO: Test setup() for bareline.config.items.
 -- TODO: Fix plugin_name item.
 
 -- See: <https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md>.
@@ -71,46 +69,39 @@ end
 
 T["items"]["filepath"]["trim current working dir"] = new_set({
   parametrize = {
+    -- Happy path.
     {
       {
         cd = h.resources_dir,
-        edit = "test_file.txt",
+        edit = "test.txt",
       },
-      "test_file.txt",
+      "test.txt",
     },
-    {
-      {
-        cd = h.resources_dir .. "/dir_a",
-        edit = "dir_a_a/.gitkeep",
-      },
-      "dir_a_a/.gitkeep",
-    },
+    -- The displayed filepath should be *absolute* when the file opened with `:e` is not within cwd.
+    -- The user home part in the displayed filepath should be substituted with the caret symbol (~).
     {
       {
         cd = h.resources_dir .. "/dir_b",
-        edit = h.resources_dir .. "/dir_a/dir_a_a/.gitkeep",
+        edit = h.resources_dir .. "/dir_a/nested/a.txt",
       },
-      ""
-        .. string.gsub(h.resources_dir, h.escape_lua_pattern(os.getenv("HOME")), "~")
-        .. "/dir_a/dir_a_a/.gitkeep",
+        string.gsub(h.resources_dir, h.escape_lua_pattern(os.getenv("HOME")), "~")
+        .. "/dir_a/nested/a.txt",
     },
-    -- An absolute file path is used for `:e`, but the file path displayed
-    -- should be relative to the current working directory:
+    -- The filepath in stl should be *relative* to cwd when a *relative* filepath is used in `:e`.
     {
       {
         cd = h.resources_dir .. "/dir_a",
-        edit = h.resources_dir .. "/dir_a/dir_a_a/.gitkeep",
+        edit = "nested/a.txt",
       },
-      "dir_a_a/.gitkeep",
+      "nested/a.txt",
     },
-    -- If the cwd is not home and a file rooted at home is edited, then the home
-    -- portion of the file path should be replaced by `~`.
+    -- The filepath in stl should be *relative* to cwd when an *absolute* filepath is used in `:e`.
     {
       {
-        cd = h.resources_dir,
-        edit = os.getenv("HOME") .. "/this_file_does_not_need_to_exist.txt",
+        cd = h.resources_dir .. "/dir_a",
+        edit = h.resources_dir .. "/dir_a/nested/a.txt",
       },
-      "~/this_file_does_not_need_to_exist.txt",
+      "nested/a.txt",
     },
   },
 })
