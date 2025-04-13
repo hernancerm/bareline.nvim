@@ -385,15 +385,15 @@ end, {
 --- Mockup: `[nvimtree]`
 ---@type BareItem
 bareline.items.plugin_name = bareline.BareItem:new("bl_plugin_name", function(var)
-  if vim.bo.filetype == "qf" then
-    vim.b[var] = "%t%{exists('w:quickfix_title') ? ' '.w:quickfix_title : ''}"
+  if vim.bo.buftype == "quickfix" then
+    vim.b[var] = "%t %{w:quickfix_title}"
   else
     vim.b[var] = string.format("[%s]", vim.bo.filetype:lower():gsub("%s", ""))
   end
 end, {
   autocmds = {
     {
-      event = "BufEnter",
+      event = "BufWinEnter",
     },
   },
 })
@@ -830,7 +830,7 @@ function h.is_plugin_window(bufnr)
   local matched_filetype, _ = vim.filetype.match({ buf = bufnr })
   -- Although the quickfix and location lists are not plugin windows, using the
   -- plugin window format in these windows looks more sensible.
-  if vim.bo.filetype == "qf" then
+  if vim.bo.buftype == "quickfix" then
     return true
   end
   return matched_filetype == nil

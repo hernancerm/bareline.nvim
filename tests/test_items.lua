@@ -12,8 +12,6 @@ local child = MiniTest.new_child_neovim()
 
 local T = new_set({
   hooks = {
-    pre_once = function()
-    end,
     pre_case = function()
       child.restart({ "-u", "scripts/minimal_init.lua" })
       child.lua([[bareline = require("bareline")]])
@@ -82,7 +80,7 @@ T["items"]["filepath"]["trim current working dir"] = new_set({
         cd = h.resources_dir .. "/dir_b",
         edit = h.resources_dir .. "/dir_a/nested/a.txt",
       },
-        string.gsub(h.resources_dir, h.escape_lua_pattern(os.getenv("HOME")), "~")
+      string.gsub(h.resources_dir, h.escape_lua_pattern(os.getenv("HOME")), "~")
         .. "/dir_a/nested/a.txt",
     },
     -- The filepath in stl should be *relative* to cwd when a *relative* filepath is used in `:e`.
