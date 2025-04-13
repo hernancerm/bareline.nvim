@@ -98,6 +98,7 @@ function bareline.setup(config)
 
   -- Assign the initial values for the BareItem buf-local vars.
   vim.api.nvim_create_autocmd("BufEnter", {
+    group = h.item_augroup,
     callback = function()
       for _, item in ipairs(bareline.config.statusline.items) do
         item.callback(item.var, item.opts)
@@ -109,6 +110,7 @@ function bareline.setup(config)
           end
         end
       end
+      h.log("Initial value set for all buf-local vars in buf " .. vim.fn.bufnr())
     end,
   })
 
