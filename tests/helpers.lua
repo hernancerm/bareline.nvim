@@ -1,7 +1,6 @@
 local h = {}
 
 h.resources_dir = vim.uv.cwd() .. "/tests/resources"
-h.tmp_testing_dir = vim.fn.stdpath("data") .. "/bareline.nvim/tmp_testing_dir"
 
 --- It seems necessary to call sleep in a loop to go through several event loop cycles, so the
 --- values of the vars of async components have an opportunity to be computed.
@@ -83,32 +82,6 @@ function h.remove_git_worktree()
       h.resources_dir .. "/git_dir_branch_worktree",
     })
     :wait()
-end
-
-function h.create_tmp_testing_dir()
-  vim.fn.mkdir(h.tmp_testing_dir, "p")
-  vim.fn.mkdir(h.tmp_testing_dir .. "/sub_dir_a/sub_dir_a_a/sub_dir_a_a_a", "p")
-  vim.fn.mkdir(h.tmp_testing_dir .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b", "p")
-  vim.fn.writefile({}, h.tmp_testing_dir .. "/file.txt")
-  vim.fn.writefile({}, h.tmp_testing_dir .. "/untracked.txt")
-  vim.fn.writefile({}, h.tmp_testing_dir .. "/sub_dir_a/sub_dir_a_a/file.txt")
-  vim.fn.writefile({}, h.tmp_testing_dir .. "/sub_dir_a/sub_dir_a_a/file2.txt")
-  vim.fn.writefile({}, h.tmp_testing_dir .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt")
-end
-
-function h.delete_tmp_testing_dir()
-  vim.fn.delete(h.tmp_testing_dir .. "/file.txt")
-  vim.fn.delete(h.tmp_testing_dir .. "/untracked.txt")
-  vim.fn.delete(h.tmp_testing_dir .. "/sub_dir_a/sub_dir_a_a/file.txt")
-  vim.fn.delete(h.tmp_testing_dir .. "/sub_dir_a/sub_dir_a_a/file2.txt")
-  vim.fn.delete(h.tmp_testing_dir .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b/file.txt")
-  vim.fn.delete(h.tmp_testing_dir .. "/sub_dir_a/sub_dir_a_a/sub_dir_a_a_a", "d")
-  vim.fn.delete(h.tmp_testing_dir .. "/sub_dir_a/sub_dir_a_a", "d")
-  vim.fn.delete(h.tmp_testing_dir .. "/sub_dir_a", "d")
-  vim.fn.delete(h.tmp_testing_dir .. "/sub_dir_b/sub_dir_b_b/sub_dir_b_b_b", "d")
-  vim.fn.delete(h.tmp_testing_dir .. "/sub_dir_b/sub_dir_b_b", "d")
-  vim.fn.delete(h.tmp_testing_dir .. "/sub_dir_b", "d")
-  vim.fn.delete(h.tmp_testing_dir, "d")
 end
 
 --- Given a string, escape the Lua magic pattern characters so that the string can
