@@ -271,11 +271,11 @@ end
 ---@class BareItem
 ---@field var string Name of buf-local var holding the value of the item. The
 --- value is set directly by `callback`.
----@field callback fun(var:string, opts:BareItemCommonOpts) Sets `var`. The option
---- `autocmds` (|bareline.BareItemCommonOpts|) decides when the
---- callback is called. To improve performance on intensive workloads, consider
---- distributing the processing among several event loop cycles. Common ways to
---- do this are using the async form of |vim.system| and |vim.defer_fn()|.
+---@field callback fun(var:string) Sets `var` (`vim.b[var] = "foo"`). The option
+--- `autocmds` (|bareline.BareItemCommonOpts|) decides when to call the callback.
+--- To improve performance on intensive workloads, distribute the processing among
+--- several event loop cycles. Common ways to do this are using the async form of
+--- the function |vim.system()| and using |vim.defer_fn()|.
 ---@field opts BareItemCommonOpts
 bareline.BareItem = {}
 bareline.BareItem["__index"] = bareline.BareItem
@@ -897,7 +897,7 @@ function h.create_item_autocmd(item, autocmd)
     string_ac_event = vim.fn.join(string_ac_event, ",")
   end
   autocmd.opts.callback = function()
-    item.callback(item.var, item.opts)
+    item.callback(item.var)
     h.log("Ran autocmd with event {" .. string_ac_event .. "} for: " .. item.var)
   end
   vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)

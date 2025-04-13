@@ -132,8 +132,7 @@ first statusline which `predicate` returns true is used.
 See: |bareline-built-in-alt-statuslines|.
 
                                                          *bareline.config.items*
-The item options set in |bareline.BareItem:new()| are merged with these opts.
-The options here have precedence.
+Provide item-specific configuration.
 
                                                      *bareline.config.items.mhr*
     {mhr} `(boolean|fun():boolean)`
@@ -167,11 +166,11 @@ Class ~
 Fields ~
 {var} `(string)` Name of buf-local var holding the value of the item. The
 value is set directly by `callback`.
-{callback} `(fun(var:string, opts:BareItemCommonOpts))` Sets `var`. The option
-`autocmds` (|bareline.BareItemCommonOpts|) decides when the
-callback is called. To improve performance on intensive workloads, consider
-distributing the processing among several event loop cycles. Common ways to
-do this are using the async form of |vim.system| and |vim.defer_fn()|.
+{callback} `(fun(var:string))` Sets `var` (`vim.b[var] = "foo"`). The option
+`autocmds` (|bareline.BareItemCommonOpts|) decides when to call the callback.
+To improve performance on intensive workloads, distribute the processing among
+several event loop cycles. Common ways to do this are using the async form of
+the function |vim.system()| and using |vim.defer_fn()|.
 {opts} `(BareItemCommonOpts)`
 
                                                    *bareline-BareItemCommonOpts*
@@ -189,18 +188,6 @@ Parameters ~
 {var} `(string)`
 {callback} `(fun(buf_var_name:string, opts:BareItemCommonOpts))`
 {opts} `(BareItemCommonOpts)`
-Return ~
-`(BareItem)`
-
-                                                    *bareline.BareItem:config()*
-                       `bareline.BareItem:config`({opts})
-Update item opts.
-Parameters ~
-{opts} `(table)` The field `opts` from |bareline.BareItem| is merged with
-these opts. For built-in items, the option keys here have priority over what
-is set in both the constructor and at the plugin setup. Built-in items have
-their custom options documented, which can be set or overriden using this
-method. For an example, see |bareline.items.mhr|.
 Return ~
 `(BareItem)`
 
@@ -322,11 +309,10 @@ Type ~
 %m%h%r
 Display the modified, help and read-only markers using the built-in statusline
 fields, see 'statusline' for a list of fields where these are included.
-
-Custom options:
-    {display_modified} `(boolean|fun():boolean)`
-Control when the modified field (`%m`) is included. When `true`, the field is
-always displayed except when the buf has set 'nomodifiable'. Default: true.
+Options (set in |bareline.config.items|):
+ • {display_modified} `(boolean|fun():boolean)` Control when the modified
+   field (`%m`) is included. When `true`, the field is always displayed except
+   when the buf has set 'nomodifiable'. Default: `true`.
 
 Mockups: `[+]`, `[Help][RO]`
 Type ~

@@ -1,5 +1,9 @@
 ---@diagnostic disable: undefined-field, undefined-global
 
+-- TODO: Remove unnecessary files and nested dirs in `dir_a` & `dir_b`.
+-- TODO: Test setup() for bareline.config.items.
+-- TODO: Fix plugin_name item.
+
 -- See: <https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md>.
 
 local h = dofile("tests/helpers.lua")
@@ -48,57 +52,45 @@ T["items"]["vim_mode"] = new_set({
 })
 -- stylua: ignore end
 
-T["items"]["vim_mode"]["p"] = function(keys, expected_vim_mode)
-  child.cmd("new")
+T["items"]["vim_mode"]["p"] = function(keys, expected)
   child.type_keys(keys)
   child.lua("item = bareline.items.vim_mode")
   child.lua("item.callback(item.var, item.opts)")
-  eq(child.b[child.lua_get("bareline.items.vim_mode.var")], expected_vim_mode)
+  eq(child.b[child.lua_get("bareline.items.vim_mode.var")], expected)
 end
 
 -- FILEPATH
 
-T["items"]["filepath_relative_to_cwd"] = new_set({})
+T["items"]["filepath"] = new_set({})
 
-T["items"]["filepath_relative_to_cwd"]["%f"] = new_set({})
-
-T["items"]["filepath_relative_to_cwd"]["%f"]["[No Name]"] = function()
-  child.cmd("cd " .. h.resources_dir)
-  local filepath_relative_to_cwd =
-    child.lua_get("bareline.components.filepath_relative_to_cwd:get()")
-  eq(filepath_relative_to_cwd, "%f")
+T["items"]["filepath"]["[No Name]"] = function()
+  child.lua("item = bareline.items.filepath")
+  child.lua("item.callback(item.var, item.opts)")
+  eq(child.b[child.lua_get("bareline.items.filepath.var")], "[No Name]")
 end
 
-T["items"]["filepath_relative_to_cwd"]["%f"]["[Help]"] = function()
-  child.cmd("cd " .. h.resources_dir)
-  child.cmd("help")
-  local filepath_relative_to_cwd =
-    child.lua_get("bareline.components.filepath_relative_to_cwd:get()")
-  eq(filepath_relative_to_cwd, "%f")
-end
-
-T["items"]["filepath_relative_to_cwd"]["trim cwd"] = new_set({
+T["items"]["filepath"]["trim current working dir"] = new_set({
   parametrize = {
     {
       {
         cd = h.resources_dir,
         edit = "test_file.txt",
       },
-      "%<test_file.txt",
+      "test_file.txt",
     },
     {
       {
         cd = h.resources_dir .. "/dir_a",
         edit = "dir_a_a/.gitkeep",
       },
-      "%<dir_a_a/.gitkeep",
+      "dir_a_a/.gitkeep",
     },
     {
       {
         cd = h.resources_dir .. "/dir_b",
         edit = h.resources_dir .. "/dir_a/dir_a_a/.gitkeep",
       },
-      "%<"
+      ""
         .. string.gsub(h.resources_dir, h.escape_lua_pattern(os.getenv("HOME")), "~")
         .. "/dir_a/dir_a_a/.gitkeep",
     },
@@ -109,7 +101,7 @@ T["items"]["filepath_relative_to_cwd"]["trim cwd"] = new_set({
         cd = h.resources_dir .. "/dir_a",
         edit = h.resources_dir .. "/dir_a/dir_a_a/.gitkeep",
       },
-      "%<dir_a_a/.gitkeep",
+      "dir_a_a/.gitkeep",
     },
     -- If the cwd is not home and a file rooted at home is edited, then the home
     -- portion of the file path should be replaced by `~`.
@@ -118,34 +110,194 @@ T["items"]["filepath_relative_to_cwd"]["trim cwd"] = new_set({
         cd = h.resources_dir,
         edit = os.getenv("HOME") .. "/this_file_does_not_need_to_exist.txt",
       },
-      "%<~/this_file_does_not_need_to_exist.txt",
+      "~/this_file_does_not_need_to_exist.txt",
     },
   },
 })
 
-T["items"]["filepath_relative_to_cwd"]["trim cwd"]["p"] = function(setup, expected_filepath)
+T["items"]["filepath"]["trim current working dir"]["p"] = function(setup, expected)
   child.cmd("cd " .. setup.cd)
   child.cmd("edit " .. setup.edit)
-  local filepath_relative_to_cwd =
-    child.lua_get("bareline.components.filepath_relative_to_cwd:get()")
-  eq(filepath_relative_to_cwd, expected_filepath)
+  child.lua("item = bareline.items.filepath")
+  child.lua("item.callback(item.var, item.opts)")
+  eq(child.b[child.lua_get("bareline.items.filepath.var")], expected)
 end
 
-T["items"]["filepath_relative_to_cwd"]["truncate long path"] = function()
-  child.lua([[
-      bareline.setup({
-        statuslines = {
-          active = {{ bareline.components.filepath_relative_to_cwd }}
-        }
-      })]])
-  child.cmd("cd " .. h.resources_dir)
-  child.cmd("edit 123456789012")
-  child.o.columns = 12
-  eq(child.wo.statusline, " %<123456789012 ")
-  eq(
-    child.api.nvim_eval_statusline(child.wo.statusline, { maxwidth = child.o.columns }).str,
-    " <456789012 "
-  )
+-- MHR
+
+T["items"]["mhr"] = new_set({})
+
+T["items"]["mhr"]["include %m%h%r when [No Name]"] = function()
+  child.lua("item = bareline.items.mhr")
+  child.lua("item.callback(item.var, item.opts)")
+  eq(child.b[child.lua_get("bareline.items.mhr.var")], "%m%h%r")
+end
+
+T["items"]["mhr"]["include %m%h%r in file"] = function()
+  child.cmd("edit " .. h.resources_dir .. "/test.txt")
+  child.lua("item = bareline.items.mhr")
+  child.lua("item.callback(item.var, item.opts)")
+  eq(child.b[child.lua_get("bareline.items.mhr.var")], "%m%h%r")
+end
+
+T["items"]["mhr"]["include %h%r in Vim help file"] = function()
+  child.cmd("help")
+  child.lua("item = bareline.items.mhr")
+  child.lua("item.callback(item.var, item.opts)")
+  eq(child.b[child.lua_get("bareline.items.mhr.var")], "%h%r")
+end
+
+T["items"]["mhr"]["include %h%r in 'nomodifiable' buf"] = function()
+  child.bo.modifiable = false
+  child.lua("item = bareline.items.mhr")
+  child.lua("item.callback(item.var, item.opts)")
+  eq(child.b[child.lua_get("bareline.items.mhr.var")], "%h%r")
+end
+
+-- T["items"]["mhr"]["exclude %m as per boolean config (in [No Name])"] = function()
+--   eq(child.lua_get("bareline.items.mhr:config({ display_modified = false }):get()"), "%h%r")
+--
+--   child.cmd("new")
+--   child.lua("item = bareline.items.mhr")
+--   child.lua("item.callback(item.var, item.opts)")
+--   eq(child.b[child.lua_get("bareline.items.mhr.var")], "%m%h%r")
+-- end
+--
+-- T["items"]["mhr"]["exclude %m as per function config"] = function()
+--   eq(
+--     child.lua_get([[bareline.items.mhr:config({
+--           display_modified = function()
+--             return false
+--           end
+--         }):get()]]),
+--     "%h%r"
+--   )
+-- end
+--
+-- T["items"]["mhr"]["include %m as per function config"] = function()
+--   eq(
+--     child.lua_get([[bareline.items.mhr:config({
+--           display_modified = function()
+--             return true
+--           end
+--         }):get()]]),
+--     "%m%h%r"
+--   )
+-- end
+
+-- INDENT_STYLE
+
+-- stylua: ignore start
+T["items"]["indent_style"] = new_set({
+  parametrize = {
+    { vim.NIL,  vim.NIL,  "tabs:8"   }, -- Nvim defaults.
+    { false,    4,        "tabs:4"   },
+    { true,     2,        "spaces:2" },
+    { true,     4,        "spaces:4" },
+  }
+})
+-- stylua: ignore end
+
+T["items"]["indent_style"]["p"] = function(expandtab, tabstop, expected)
+  if expandtab ~= vim.NIL then
+    child.bo.expandtab = expandtab
+  end
+  if tabstop ~= vim.NIL then
+    child.bo.tabstop = tabstop
+  end
+  child.lua("item = bareline.items.indent_style")
+  child.lua("item.callback(item.var, item.opts)")
+  eq(child.b[child.lua_get("bareline.items.indent_style.var")], expected)
+end
+
+-- END_OF_LINE
+
+T["items"]["end_of_line"] = new_set({
+  parametrize = {
+    { ":set eol<CR>", vim.NIL },
+    { ":set noeol<CR>", "noeol" },
+  },
+})
+
+T["items"]["end_of_line"]["p"] = function(keys, expected)
+  child.type_keys(keys)
+  child.lua("item = bareline.items.end_of_line")
+  child.lua("item.callback(item.var, item.opts)")
+  eq(child.b[child.lua_get("bareline.items.end_of_line.var")], expected)
+end
+
+-- DIAGNOSTICS
+
+T["items"]["diagnostics"] = new_set({
+  parametrize = {
+    {
+      {
+        {
+          lnum = 1,
+          col = 1,
+          severity = vim.diagnostic.severity.WARN,
+        },
+      },
+      "w:1",
+    },
+    {
+      {
+        {
+          lnum = 1,
+          col = 1,
+          severity = vim.diagnostic.severity.ERROR,
+        },
+        {
+          lnum = 1,
+          col = 1,
+          severity = vim.diagnostic.severity.HINT,
+        },
+        {
+          lnum = 1,
+          col = 1,
+          severity = vim.diagnostic.severity.WARN,
+        },
+        {
+          lnum = 1,
+          col = 2,
+          severity = vim.diagnostic.severity.WARN,
+        },
+      },
+      "e:1,w:2,h:1",
+    },
+  },
+})
+
+T["items"]["diagnostics"]["p"] = function(diagnostics, expected)
+  child.api.nvim_create_namespace("test")
+  local test_ns = child.api.nvim_get_namespaces().test
+  child.diagnostic.set(test_ns, 0, diagnostics)
+  child.lua("item = bareline.items.diagnostics")
+  child.lua("item.callback(item.var, item.opts)")
+  eq(child.b[child.lua_get("bareline.items.diagnostics.var")], expected)
+end
+
+-- CWD
+
+T["items"]["cwd"] = new_set({
+  -- stylua: ignore start
+  parametrize = {
+    { h.resources_dir, vim.NIL,    "resources" },
+    { h.resources_dir, "test.txt", "resources" },
+    { vim.env.HOME,    vim.NIL,    "~" }
+  }
+,
+  -- stylua: ignore end
+})
+
+T["items"]["cwd"]["display in file"] = function(dir, filename, expected)
+  child.cmd("cd " .. dir)
+  if filename ~= vim.NIL then
+    child.cmd("edit " .. filename)
+  end
+  child.lua("item = bareline.items.current_working_dir")
+  child.lua("item.callback(item.var, item.opts)")
+  eq(child.b[child.lua_get("bareline.items.current_working_dir.var")], expected)
 end
 
 -- -- PLUGIN_NAME
@@ -179,171 +331,6 @@ end
 --   child.bo.filetype = "NvimTree"
 --   local plugin_name = child.lua_get("bareline.components.plugin_name:get()")
 --   eq(plugin_name, "[nvimtree]")
--- end
---
--- -- INDENT_STYLE
---
--- -- stylua: ignore start
--- T["components"]["indent_style"] = new_set({
---   parametrize = {
---     { vim.NIL,  vim.NIL,  "tabs:8"   }, -- Nvim defaults.
---     { false,    4,        "tabs:4"   },
---     { true,     2,        "spaces:2" },
---     { true,     4,        "spaces:4" },
---   }
--- })
--- -- stylua: ignore end
---
--- T["components"]["indent_style"]["p"] = function(expandtab, tabstop, expected_indent_style)
---   if expandtab ~= vim.NIL then
---     child.bo.expandtab = expandtab
---   end
---   if tabstop ~= vim.NIL then
---     child.bo.tabstop = tabstop
---   end
---   local indent_style = child.lua_get("bareline.components.indent_style:get()")
---   eq(indent_style, expected_indent_style)
--- end
---
--- -- END_OF_LINE
---
--- T["components"]["end_of_line"] = new_set({
---   parametrize = {
---     { ":set eol<CR>", vim.NIL },
---     { ":set noeol<CR>", "noeol" },
---   },
--- })
---
--- T["components"]["end_of_line"]["p"] = function(keys, expected_eol_marker)
---   child.type_keys(keys)
---   local eol = child.lua_get("bareline.components.end_of_line:get()")
---   eq(eol, expected_eol_marker)
--- end
---
--- -- DIAGNOSTICS
---
--- T["components"]["diagnostics"] = new_set({
---   parametrize = {
---     {
---       {
---         {
---           lnum = 1,
---           col = 1,
---           severity = vim.diagnostic.severity.WARN,
---         },
---       },
---       "w:1",
---     },
---     {
---       {
---         {
---           lnum = 1,
---           col = 1,
---           severity = vim.diagnostic.severity.ERROR,
---         },
---         {
---           lnum = 1,
---           col = 1,
---           severity = vim.diagnostic.severity.HINT,
---         },
---         {
---           lnum = 1,
---           col = 1,
---           severity = vim.diagnostic.severity.WARN,
---         },
---         {
---           lnum = 1,
---           col = 2,
---           severity = vim.diagnostic.severity.WARN,
---         },
---       },
---       "e:1,w:2,h:1",
---     },
---   },
--- })
---
--- T["components"]["diagnostics"]["p"] = function(diagnostics, expected_diagnostics)
---   child.api.nvim_create_namespace("test")
---   local test_ns = child.api.nvim_get_namespaces().test
---   child.diagnostic.set(test_ns, 0, diagnostics)
---   eq(child.lua_get("bareline.components.diagnostics:get()"), expected_diagnostics)
--- end
---
--- -- POSITION
---
--- T["components"]["position"] = function()
---   eq(child.lua_get("bareline.components.position:get()"), "%02l:%02c/%02L")
--- end
---
--- -- CWD
---
--- T["components"]["cwd"] = new_set({})
---
--- T["components"]["cwd"]["display"] = function()
---   child.cmd("cd " .. h.resources_dir)
---   child.cmd("edit file.txt")
---   eq(child.lua_get("bareline.components.cwd:get()"), "resources")
--- end
---
--- T["components"]["cwd"]["display in [No Name]"] = function()
---   child.cmd("cd " .. h.resources_dir)
---   eq(child.lua_get("bareline.components.cwd:get()"), "resources")
--- end
---
--- T["components"]["cwd"]["display caret (~) when the cwd is the user home"] = function()
---   child.cmd("cd ~")
---   child.cmd("edit i2o_tye8ieowiu-e8_yroi9ur.txt")
---   eq(child.lua_get("bareline.components.cwd:get()"), "~")
--- end
---
--- -- MHR
---
--- T["components"]["mhr"] = new_set({})
---
--- T["components"]["mhr"]["include %m%h%r in unnamed buf"] = function()
---   eq(child.lua_get("bareline.components.mhr:get()"), "%m%h%r")
--- end
---
--- T["components"]["mhr"]["include %m%h%r in buf with file"] = function()
---   child.cmd("edit " .. h.resources_dir .. "/foo.txt")
---   eq(child.lua_get("bareline.components.mhr:get()"), "%m%h%r")
--- end
---
--- T["components"]["mhr"]["include %h%r in vim help"] = function()
---   child.cmd("help")
---   eq(child.lua_get("bareline.components.mhr:get()"), "%h%r")
--- end
---
--- T["components"]["mhr"]["exclude %m in 'nomodifiable' buf"] = function()
---   child.cmd("edit " .. h.resources_dir .. "/foo.txt")
---   child.cmd("set nomodifiable")
---   eq(child.lua_get("bareline.components.mhr:get()"), "%h%r")
--- end
---
--- T["components"]["mhr"]["exclude %m as per boolean config"] = function()
---   eq(child.lua_get("bareline.components.mhr:config({ display_modified = false }):get()"), "%h%r")
--- end
---
--- T["components"]["mhr"]["exclude %m as per function config"] = function()
---   eq(
---     child.lua_get([[bareline.components.mhr:config({
---           display_modified = function()
---             return false
---           end
---         }):get()]]),
---     "%h%r"
---   )
--- end
---
--- T["components"]["mhr"]["include %m as per function config"] = function()
---   eq(
---     child.lua_get([[bareline.components.mhr:config({
---           display_modified = function()
---             return true
---           end
---         }):get()]]),
---     "%m%h%r"
---   )
 -- end
 --
 -- -- SETUP
@@ -499,4 +486,3 @@ end
 -- end
 
 return T
-
