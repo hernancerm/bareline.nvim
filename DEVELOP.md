@@ -23,7 +23,7 @@ Follow these manual steps:
 
 ## Vim help file
 
-- Generate the Vim help file with `make docs`.
+- Generate the Vim help file with `make docs`. GNU Make downloads mini.doc so you don't have to.
 - The Vim help file [bareline.txt](./doc/bareline.txt) is generated from
   [bareline.lua](./lua/bareline.lua) through
   [mini.doc](https://github.com/echasnovski/mini.nvim/blob/main/readmes/mini-doc.md) (configuration
@@ -47,4 +47,3 @@ Only [GNU Make](https://www.gnu.org/software/make/) required for:
 
 - Shell cmd to run all unit tests: `make test`.
 - Shell cmd to run all CI checks: `make testci`.
-- Tests should be kept as black-box as possible.
