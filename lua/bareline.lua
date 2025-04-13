@@ -386,7 +386,7 @@ end, {
 ---@type BareItem
 bareline.items.plugin_name = bareline.BareItem:new("bl_plugin_name", function(var)
   if vim.bo.buftype == "quickfix" then
-    vim.b[var] = "%t %{get(w:,'quickfix_title','')}"
+    vim.b[var] = "%t%{exists('w:quickfix_title')?' '.w:quickfix_title:''}"
   else
     vim.b[var] = string.format("[%s]", vim.bo.filetype:lower():gsub("%s", ""))
   end
