@@ -21,7 +21,7 @@
 ---
 --- 1. Simple configuration.
 --- 2. Batteries included experience.
---- 3. No timer. The statusline is updated immediately as changes happen.
+--- 3. Async. No timer. The statusline is updated immediately as changes happen.
 ---
 --- Design
 ---
@@ -31,12 +31,12 @@
 ---    See: |bareline.config.statusline.value|.
 --- 2. Helper functions are provided to improve the experience of using the DSL.
 ---    See: |bareline-vimscript-functions|.
---- 3. The plugin exposes "statusline items", which group of a buf-local var, a
+--- 3. The plugin exposes "statusline items", which group a buf-local var, a
 ---    callback which sets the var, and autocmds firing the callback.
 ---    See: |bareline.item-structure|.
 --- 4. When using any buf-local var in the statusline, reference it either
 ---    directly (`%{b:foo}`) or with a `get` call, `%{get(b:,'foo','')}`. This is
----    so the stl is updated by Nvim immediately when the vars are updated.
+---    so the stl is updated by Neovim immediately when the var is updated.
 ---
 --- With this design, all Bareline items are asynchronous.
 
@@ -219,7 +219,7 @@ local function assign_default_config()
 end
 
 --- #tag bareline.config.statusline
---- The main statusline. Use |bareline-built-in-items| here.
+--- The main statusline.
 ---
 --- #tag bareline.config.statusline.value
 ---     {value} `(string)`
@@ -228,16 +228,16 @@ end
 --- #tag bareline.config.statusline.items
 ---     {items} `(BareItem[])`
 ---       What you are "paying" for in `value`. List here the |bareline.BareItem|s
----       in use. This is used by Bareline to keep the statusline always showing
----       up to date values. Failing to do this can lead to seeing values not
----       being updated.
+---       in use. You can list here the |bareline-built-in-items|. This is used by
+---       Bareline to keep the statusline always showing up to date values.
+---       Failing to do this can lead to seeing values not being updated.
 ---
 --- #tag bareline.config.alt_statuslines
 --- Alternate statuslines to |bareline.config.statusline|. These can be used to
 --- assign a different statusline on windows that meet some criteria. For example,
 --- Bareline internally uses this feature to assign a different statusline for
 --- plugin windows (e.g., nvim-tree). This list is traversed in order and the
---- first statusline which `predicate` returns true is used.
+--- statusline picked is the first one which its `when` function returns true.
 --- See: |bareline-built-in-alt-statuslines|.
 
 --- #tag bareline.config.items
@@ -248,16 +248,16 @@ end
 ---       See |bareline.items.mhr|.
 
 --- #tag bareline.config.logging
---- Log file location: |$XDG_DATA_HOME|`/bareline.nvim/bareline.log`.
+--- Log file location: `stdpath("data")` .. `/bareline.nvim/bareline.log`.
 ---
 --- #tag bareline.config.logging.enabled
 ---     {enabled} `(boolean)`
----       Whether to write to the log file. Default: false.
+---       Whether to write to the log file. Default: `false`.
 ---
 --- #tag bareline.config.logging.level
 ---     {level} `(integer)`
----       Log statements on this level and up are written to the log file, the
----       others are discarded. Default: `vim.log.levels.INFO`.
+---       Log statements on this level and up are written to the log file.
+---       Default: `vim.log.levels.INFO`.
 
 --- #delimiter
 --- #tag bareline-item-structure
@@ -283,12 +283,12 @@ bareline.BareItem["__index"] = bareline.BareItem
 --- #tag bareline-BareItemCommonOpts
 --- Options applicable to any |bareline.BareItem|.
 ---@class BareItemCommonOpts
----@field autocmds table[]? Expects tables each with the keys
---- `event` and `opts`, which are used for: |vim.api.nvim_create_autocmd()|.
+---@field autocmds table[]? Expects tables each with the keys `event` and `opts`,
+--- which are passed to: |vim.api.nvim_create_autocmd()|.
 
 --- Constructor.
 ---@param var string
----@param callback fun(buf_var_name:string, opts:BareItemCommonOpts)
+---@param callback fun(var:string)
 ---@param opts BareItemCommonOpts
 ---@return BareItem
 function bareline.BareItem:new(var, callback, opts)
@@ -307,7 +307,7 @@ end
 --- All custom items are a |bareline.BareItem|. Example item indicating soft wrap:
 --- >lua
 ---   local item_soft_wrap = bareline.BareItem:new(
----     "bl_soft_wrap",
+---     "bl_x_soft_wrap",
 ---     function(var)
 ---       local label = nil
 ---       if vim.wo.wrap then
@@ -315,10 +315,9 @@ end
 ---       end
 ---       vim.b[var] = label
 ---     end, {
----     -- The autocmds need to account for all the cases where the value of the
----     -- buf-local var indicatd by `var` would change, so the statusline does
----     -- not show a stale value.
 ---     autocmds = {
+---       -- IMPORTANT: The autocmds need to account for all the cases where the
+---       -- value of the buf-local var indicated by `var` would change.
 ---       {
 ---         event = "OptionSet",
 ---         opts = { pattern = "wrap" }
@@ -331,7 +330,7 @@ end
 ---   require("bareline").setup({
 ---     statuslines = {
 ---       active = {
----         statusline = "%{get(b:,'bl_soft_wrap','')}",
+---         statusline = "%{get(b:,'bl_x_soft_wrap','')}",
 ---         items = {
 ---           -- IMPORTANT: Do not forget to add the item in the `items` list,
 ---           -- otherwise the value won't be updated as expected.
@@ -599,13 +598,13 @@ bareline.alt_statuslines = {}
 ---
 --- All custom ad built-in alt stls are structured as a `BarelineAltStatusline`.
 
+--- Statuslines defined as this class are meant to be used in the configuration
+--- key being |bareline.config.alt_statuslines|, which accepts a list. The list
+--- gets walked in order to find a match (`when`). The first match is used.
 ---@class BarelineAltStatusline
 ---@field value string Value for 'statusline'.
 ---@field items BareItem[] List of bare items.
----@field predicate (fun():boolean)? When it returns true, this stl is used.
---- Caveat: Statuslines as defined like this are meant to be used in the config
---- key |bareline.config.alt_statuslines|, which accepts a list. The list gets
---- walked in order to find a match. The first one returning true is taken.
+---@field when (fun():boolean)? Indicates a match. The stl should be used.
 
 --- Statusline for plugin windows, including the plugin name.
 ---@type BarelineAltStatusline
@@ -618,7 +617,7 @@ bareline.alt_statuslines.plugin = {
   items = {
     bareline.items.plugin_name,
   },
-  predicate = function()
+  when = function()
     return h.is_plugin_window(0)
   end,
 }
@@ -729,8 +728,8 @@ endfunction
 
 --- #tag BlWrap()
 --- BlWrap(value,prefix,suffix)
---- Wrap {value} around {prefix} and {suffix}. Example function usage to wrap with
---- parentheses the Git HEAD returned by the plugin gitsigns:
+--- Wrap {value} around {prefix} and {suffix}. Example usage to wrap with parens
+--- the Git HEAD returned by `https://github.com/lewis6991/gitsigns.nvim`:
 --- `BlWrap(get(b:,'gitsigns_head',''),'(',')')`
 --- Params:
 --- * {value} `(string)` Any.
@@ -753,9 +752,9 @@ endfunction
 --- integrate with plugins which provide statusline integration through buf-local
 --- vars and user autocmds.
 ---
---- For example, consider the integration with the plugin gitsigns. By default,
---- Bareline provides this out of the box. If it were not provided, this is how a
---- user could define it themselves:
+--- For example, consider the integration with `lewis6991/gitsigns.nvim`. Out of
+--- the box, Bareline provides this. If it did not provide it, this is how a user
+--- could define it themselves:
 --- >lua
 ---   vim.api.nvim_create_autocmd("User", {
 ---     group = h.statusline_augroup,
@@ -768,7 +767,7 @@ endfunction
 function bareline.refresh_statusline()
   local statusline_to_assign = bareline.config.statusline
   for _, statusline in ipairs(bareline.config.alt_statuslines) do
-    if statusline.predicate() then
+    if statusline.when() then
       statusline_to_assign = statusline
     end
   end
