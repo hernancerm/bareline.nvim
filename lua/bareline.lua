@@ -618,7 +618,7 @@ bareline.alt_statuslines.plugin = {
     bareline.items.plugin_name,
   },
   when = function()
-    return h.is_plugin_window(0)
+    return h.is_plugin_buf(0)
   end,
 }
 
@@ -823,7 +823,7 @@ h.item_augroup = vim.api.nvim_create_augroup("BarelineCallItemCallback", {})
 
 ---@param bufnr integer The buffer number, as returned by |bufnr()|.
 ---@return boolean
-function h.is_plugin_window(bufnr)
+function h.is_plugin_buf(bufnr)
   local filetype = vim.bo[bufnr].filetype
   local special_non_plugin_filetypes = { nil, "", "help", "man" }
   local matched_filetype, _ = vim.filetype.match({ buf = bufnr })
