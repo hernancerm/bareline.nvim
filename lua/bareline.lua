@@ -839,14 +839,14 @@ end
 
 ---@param win_id integer
 ---@return boolean
-function h.is_win_floating(win_id)
+function h.is_floating_win(win_id)
   -- See |api-floatwin| to learn how to check whether a win is floating.
   return vim.api.nvim_win_get_config(win_id).relative ~= ""
 end
 
 ---@param statusline string
 function h.draw_window_statusline(statusline)
-  if h.is_win_floating(0) then
+  if h.is_floating_win(0) then
     return
   end
   vim.wo.statusline = statusline
