@@ -631,12 +631,14 @@ bareline.alt_statuslines.plugin = {
 --- are intended to be used in the statusline string.
 
 --- #tag BlIs()
---- BlIs(length)
+---                              `BlIs`({length})
 --- Invisible space. Returns a {length} amount of Unicode Thin Space (U+2009)
 --- chars. This is useful to control empty space in the statusline, since ASCII
 --- whitespace is sometimes trimmed by Neovim, while this Unicode char is not.
---- Params:
+--- Parameters:
 --- * {length} `(string)` Amount of consecutive U+2009 chars to return.
+--- Return:
+--- `(string)`
 vim.cmd([[
 function! BlIs(length)
   let u2009_chars = ''
@@ -649,12 +651,14 @@ endfunction
 ]])
 
 --- #tag BlIna()
---- BlIna(value,mapper)
---- Inactive. Maps {value} via the funcref {mapper}. Used to transform how a
---- value appears in statuslines in inactive windows.
---- Params:
+---                          `BlIna`({value},{mapper})
+--- Inactive. In inactive windows return {value} mapped via the funcref {mapper}.
+--- In active windows return {value} as-is.
+--- Parameters:
 --- * {value} `(string)` Any.
---- * {mapper} `(Funcref)` Takes `{value}` as its single arg.
+--- * {mapper} `(Funcref)` Takes `{value}` as its single arg. See |Funcref|.
+--- Return:
+--- `(string)`
 vim.cmd([[
 function! BlIna(value,mapper)
   if get(b:, '_bareline_is_buf_active', v:false)
@@ -666,10 +670,13 @@ endfunction
 ]])
 
 --- #tag BlInarm()
---- BlInarm(value)
---- Inactive remove. Remove the value on inactive windows.
---- Params:
+---                              `BlInarm`({value})
+--- Inactive remove. In inactive windows return an empty string. In active windows
+--- return {value} as-is.
+--- Parameters:
 --- * {value} `(string)` Any.
+--- Return:
+--- `(string)`
 vim.cmd([[
 function! BlInarm(value)
   return BlIna(a:value, { -> '' })
@@ -677,10 +684,13 @@ endfunction
 ]])
 
 --- #tag BlInahide()
---- BlInahide(value)
---- Inactive hide. Mask with whitespace the value on inactive windows.
---- Params:
+---                             `BlInahide`({value})
+--- Inactive hide. In inactive windows return {value} masked using |BlIs()|. In
+--- active windows return {value} as-is.
+--- Parameters:
 --- * {value} `(string)` Any.
+--- Return:
+--- `(string)`
 vim.cmd([[
 function! BlInahide(value)
   return BlIna(a:value, { v -> BlIs(strlen(v)) })
@@ -688,10 +698,12 @@ endfunction
 ]])
 
 --- #tag BlPadl()
---- BlPadl(value)
---- Pad {value} left with `BlIs(1)`.
---- Params:
+---                              `BlPadl`({value})
+--- Return {value} padded on the left with `BlIs(1)`.
+--- Parameters:
 --- * {value} `(string)` Any.
+--- Return:
+--- `(string)`
 vim.cmd([[
 function! BlPadl(value)
   if a:value !=# ''
@@ -702,10 +714,12 @@ endfunction
 ]])
 
 --- #tag BlPadr()
---- BlPadr(value)
---- Pad {value} right with `BlIs(1)`.
---- Params:
+---                              `BlPadr`({value})
+--- Return {value} padded on the right with `BlIs(1)`.
+--- Parameters:
 --- * {value} `(string)` Any.
+--- Return:
+--- `(string)`
 vim.cmd([[
 function! BlPadr(value)
   if a:value !=# ''
@@ -716,10 +730,12 @@ endfunction
 ]])
 
 --- #tag BlPad()
---- BlPad(value)
---- Pad {value} on both left and right with `BlIs(1)`.
---- Params:
+---                               `BlPad`({value})
+--- Return {value} padded on both the left and right with `BlIs(1)`.
+--- Parameters:
 --- * {value} `(string)` Any.
+--- Return:
+--- `(string)`
 vim.cmd([[
 function! BlPad(value)
   return BlPadr(BlPadl(a:value))
@@ -727,14 +743,16 @@ endfunction
 ]])
 
 --- #tag BlWrap()
---- BlWrap(value,prefix,suffix)
---- Wrap {value} around {prefix} and {suffix}. Example usage to wrap with parens
---- the Git HEAD returned by `https://github.com/lewis6991/gitsigns.nvim`:
+---                     `BlWrap`({value},{prefix},{suffix})
+--- Return {value} wrapped with {prefix} and {suffix}. Example usage to wrap with
+--- parens the Git HEAD returned by `https://github.com/lewis6991/gitsigns.nvim`:
 --- `BlWrap(get(b:,'gitsigns_head',''),'(',')')`
---- Params:
+--- Parameters:
 --- * {value} `(string)` Any.
 --- * {prefix} `(string)` Any.
 --- * {suffix} `(string)` Any.
+--- Return:
+--- `(string)`
 vim.cmd([[
 function! BlWrap(value,prefix,suffix)
   if a:value !=# ''
