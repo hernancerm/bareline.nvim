@@ -632,7 +632,7 @@ bareline.alt_statuslines.plugin = {
 
 --- #tag BlIs()
 ---                              `BlIs`({length})
---- Invisible space. Returns a {length} amount of Unicode Thin Space (U+2009)
+--- Invisible space. Return a {length} amount of Unicode Thin Space (U+2009)
 --- chars. This is useful to control empty space in the statusline, since ASCII
 --- whitespace is sometimes trimmed by Neovim, while this Unicode char is not.
 --- Parameters:
