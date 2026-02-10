@@ -83,6 +83,7 @@ function bareline.setup(config)
     "FocusGained",
     "DirChanged",
     "VimResume",
+    "TermOpen",
     "TermLeave",
     "WinEnter",
   }, {
@@ -493,6 +494,7 @@ end, {
         "BufWinEnter",
         "CmdlineLeave",
         "FocusGained",
+        "TermOpen",
         "TermLeave",
       },
     },

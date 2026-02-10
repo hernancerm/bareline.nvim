@@ -108,6 +108,14 @@ T["items"]["filepath"]["trim current working dir"]["p"] = function(setup, expect
   eq(child.b[child.lua_get("bareline.items.filepath.var")], expected)
 end
 
+T["items"]["filepath"]["terminal buffer"] = function()
+  child.type_keys(":term<CR>")
+  -- Check that the buffer variable was set by the `TermOpen` autocmd.
+  -- Don't call the callback manually since the autocmd should trigger it.
+  local result = child.b[child.lua_get("bareline.items.filepath.var")]
+  eq(string.match(result, "^term://"), "term://")
+end
+
 -- MHR
 
 T["items"]["mhr"] = new_set({})
