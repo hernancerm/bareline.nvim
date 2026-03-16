@@ -11,7 +11,7 @@ MINI_TEST_GIT_COMMIT := v0.17.0
 
 # Check formatting.
 .PHONY: testmft
-testfmt: $(STYLUA)
+testfmt: $(STYLUA_BIN)
 	stylua --check lua/ scripts/ tests/
 
 # Check docs are up to date.
@@ -32,7 +32,7 @@ testci: testfmt testdocs test
 
 # Format.
 .PHONY: fmt
-fmt: $(STYLUA)
+fmt: $(STYLUA_BIN)
 	stylua lua/ scripts/ tests/
 
 # Update docs.
@@ -52,6 +52,6 @@ deps/mini.doc:
 	https://github.com/nvim-mini/mini.doc \
 	$@
 
-$(STYLUA):
+$(STYLUA_BIN):
 	asdf plugin add stylua
 	asdf install stylua
