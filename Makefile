@@ -1,11 +1,13 @@
 HELP_FILE := ./doc/bareline.txt
-CMD_NVIM := nvim --headless --noplugin
-ECHASNOVSKI_GH_BASE_URL := https://raw.githubusercontent.com/echasnovski
-CMD_MINI_DOC_GENERATE := @$(CMD_NVIM) -u ./scripts/testdocs_init.lua && echo ''
-MINI_DOC_GIT_HASH := 28d1d8172a463460131c3ae929498abe78937382
-MINI_TEST_GIT_HASH := 5b319ef8e6b368970f51119663943f7b75385b83
+NVIM_CMD := nvim --headless --noplugin
+MINI_DOC_GENERATE_CMD := @$(NVIM_CMD) -u ./scripts/minidoc_init.lua && echo ''
 STYLUA_VERSION := $(shell grep stylua .tool-versions | awk '{ print $$2 }')
-STYLUA := $(HOME)/.asdf/installs/stylua/$(STYLUA_VERSION)/bin/stylua
+STYLUA_BIN := $(HOME)/.asdf/installs/stylua/$(STYLUA_VERSION)/bin/stylua
+
+# Neovim plugins versions.
+# These are dev dependencies.
+MINI_DOC_GIT_COMMIT := v0.17.0
+MINI_TEST_GIT_COMMIT := v0.17.0
 
 # Check formatting.
 .PHONY: testmft
@@ -14,15 +16,15 @@ testfmt: $(STYLUA)
 
 # Check docs are up to date.
 .PHONY: testdocs
-testdocs: deps/lua/doc.lua
+testdocs: deps/mini.doc
 	git checkout $(HELP_FILE)
-	@$(CMD_MINI_DOC_GENERATE)
+	@$(MINI_DOC_GENERATE_CMD)
 	git diff --exit-code $(HELP_FILE)
 
 # Run all unit test.
 .PHONY: test
-test: deps/lua/test.lua
-	$(CMD_NVIM) -u ./scripts/minimal_init.lua -c "lua MiniTest.run()"
+test: deps/mini.test
+	$(NVIM_CMD) -u ./scripts/minimal_init.lua -c "lua MiniTest.run()"
 
 # Run CI tests.
 .PHONY: testci
@@ -35,16 +37,20 @@ fmt: $(STYLUA)
 
 # Update docs.
 .PHONY: docs
-docs: deps/lua/doc.lua
-	$(CMD_MINI_DOC_GENERATE)
+docs: deps/mini.doc
+	$(MINI_DOC_GENERATE_CMD)
 
-deps/lua/test.lua:
-	@mkdir -p deps/lua
-	curl $(ECHASNOVSKI_GH_BASE_URL)/mini.test/$(MINI_TEST_GIT_HASH)/lua/mini/test.lua -o $@
+deps/mini.test:
+	@mkdir -p deps
+	git clone --depth 1 --branch $(MINI_TEST_GIT_COMMIT) \
+	https://github.com/nvim-mini/mini.test \
+	$@
 
-deps/lua/doc.lua:
-	@mkdir -p deps/lua
-	curl $(ECHASNOVSKI_GH_BASE_URL)/mini.doc/$(MINI_DOC_GIT_HASH)/lua/mini/doc.lua -o $@
+deps/mini.doc:
+	@mkdir -p deps
+	git clone --depth 1 --branch $(MINI_DOC_GIT_COMMIT) \
+	https://github.com/nvim-mini/mini.doc \
+	$@
 
 $(STYLUA):
 	asdf plugin add stylua

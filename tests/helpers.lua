@@ -4,7 +4,7 @@ h.resources_dir = vim.uv.cwd() .. "/tests/resources"
 
 --- It seems necessary to call sleep in a loop to go through several event loop cycles, so the
 --- values of the vars of async components have an opportunity to be computed.
----@param child any Return value from `MiniTest.new_child_neovim()`
+---@param child MiniTest.child
 ---@param milliseconds integer
 ---@param times integer
 function h.sleep(child, milliseconds, times)
@@ -13,7 +13,7 @@ function h.sleep(child, milliseconds, times)
   end
 end
 
----@param child any Return value from `MiniTest.new_child_neovim()`
+---@param child MiniTest.child
 function h.get_child_evaluated_stl(child)
   return child.lua_get("vim.api.nvim_eval_statusline(vim.wo.statusline, {}).str")
 end

@@ -7,10 +7,11 @@
 -- See: <https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md>.
 
 local h = dofile("tests/helpers.lua")
+local mini_test = require("mini.test")
 
-local new_set = MiniTest.new_set
-local eq = MiniTest.expect.equality
-local child = MiniTest.new_child_neovim()
+local child = mini_test.new_child_neovim()
+local eq = mini_test.expect.equality
+local new_set = mini_test.new_set
 
 local T = new_set({
   hooks = {
