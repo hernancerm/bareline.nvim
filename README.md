@@ -1,5 +1,5 @@
-<a href="https://github.com/hernancerm/bareline.nvim/actions/workflows/ci.yml" target="_blank">
-  <img src="https://github.com/hernancerm/bareline.nvim/actions/workflows/ci.yml/badge.svg" />
+<a href="https://github.com/hernancerm/bareline.nvim/actions/workflows/test.yml" target="_blank">
+  <img src="https://github.com/hernancerm/bareline.nvim/actions/workflows/test.yml/badge.svg" />
 </a>
 
 # Bareline
