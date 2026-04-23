@@ -8,8 +8,8 @@
 --- 2. Configuration                                        |bareline-configuration|
 --- 3. Item structure                                      |bareline-item-structure|
 --- 4. Custom items                                          |bareline-custom-items|
---- 5. Built-in items                                      |bareline-built-in-items|
---- 6. Built-in alt statuslines                  |bareline-built-in-alt-statuslines|
+--- 5. Builtin items                                        |bareline-builtin-items|
+--- 6. Builtin alt statuslines                    |bareline-builtin-alt-statuslines|
 --- 7. Vimscript functions                            |bareline-vimscript-functions|
 --- 8. Functions                                                |bareline-functions|
 ---
@@ -229,7 +229,7 @@ end
 --- #tag bareline.config.statusline.items
 ---     {items} `(BareItem[])`
 ---       What you are "paying" for in `value`. List here the |bareline.BareItem|s
----       in use. You can list here the |bareline-built-in-items|. This is used by
+---       in use. You can list here the |bareline-builtin-items|. This is used by
 ---       Bareline to keep the statusline always showing up to date values.
 ---       Failing to do this can lead to seeing values not being updated.
 ---
@@ -239,7 +239,7 @@ end
 --- Bareline internally uses this feature to assign a different statusline for
 --- plugin windows (e.g., nvim-tree). This list is traversed in order and the
 --- statusline picked is the first one which its `when` function returns true.
---- See: |bareline-built-in-alt-statuslines|.
+--- See: |bareline-builtin-alt-statuslines|.
 
 --- #tag bareline.config.items
 --- Provide item-specific configuration.
@@ -264,9 +264,9 @@ end
 --- #tag bareline-item-structure
 --- Item structure ~
 ---
---- All custom and built-in items are a |bareline.BareItem|. See:
+--- All custom and builtin items are a |bareline.BareItem|. See:
 --- * |bareline-custom-items|.
---- * |bareline-built-in-items|.
+--- * |bareline-builtin-items|.
 
 --- Statusline item.
 ---@class BareItem
@@ -347,10 +347,10 @@ end
 bareline.items = {}
 
 --- #delimiter
---- #tag bareline-built-in-items
---- Built-in items ~
+--- #tag bareline-builtin-items
+--- Builtin items ~
 
---- All built-in items are a |bareline.BareItem|.
+--- All builtin items are a |bareline.BareItem|.
 
 --- Vim mode.
 --- The Vim mode in 3 characters.
@@ -558,7 +558,7 @@ bareline.items.current_working_dir = bareline.BareItem:new(
 )
 
 --- %m%h%r
---- Display the modified, help and read-only markers using the built-in statusline
+--- Display the modified, help and read-only markers using the builtin statusline
 --- fields, see 'statusline' for a list of fields where these are included.
 --- Options (set in |bareline.config.items|):
 ---  * {display_modified} `(boolean|fun():boolean)` Control when the modified
@@ -595,10 +595,10 @@ end, {
 bareline.alt_statuslines = {}
 
 --- #delimiter
---- #tag bareline-built-in-alt-statuslines
---- Built-in alt statuslines ~
+--- #tag bareline-builtin-alt-statuslines
+--- Builtin alt statuslines ~
 ---
---- All custom ad built-in alt stls are structured as a `BarelineAltStatusline`.
+--- All alt statuslines are structured as a `BarelineAltStatusline`.
 
 --- Statuslines defined as this class are meant to be used in the configuration
 --- key being |bareline.config.alt_statuslines|, which accepts a list. The list
