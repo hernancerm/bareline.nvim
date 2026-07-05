@@ -1011,7 +1011,7 @@ h.state = {
   fs_sep = h.get_fs_sep(),
   existent_item_autocmds = {},
   system_root_dir = h.get_system_root_dir(),
-  log_filepath = vim.fn.stdpath("data") .. "/bareline.nvim/bareline.log",
+  log_filepath = vim.fn.stdpath("log") .. "/bareline.nvim/bareline.log",
 }
 
 return bareline
