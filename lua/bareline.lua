@@ -249,7 +249,7 @@ end
 ---       See |bareline.items.mhr|.
 
 --- #tag bareline.config.logging
---- Log file location: `stdpath("data")` .. `/bareline.nvim/bareline.log`.
+--- Log file location: `stdpath("log")` .. `/bareline.nvim/bareline.log`.
 ---
 --- #tag bareline.config.logging.enabled
 ---     {enabled} `(boolean)`

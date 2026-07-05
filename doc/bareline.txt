@@ -139,7 +139,7 @@ Provide item-specific configuration.
       See |bareline.items.mhr|.
 
                                                        *bareline.config.logging*
-Log file location: `stdpath("data")` .. `/bareline.nvim/bareline.log`.
+Log file location: `stdpath("log")` .. `/bareline.nvim/bareline.log`.
 
                                                *bareline.config.logging.enabled*
     {enabled} `(boolean)`
