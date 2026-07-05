@@ -1,7 +1,3 @@
----@diagnostic disable: undefined-field, undefined-global
-
--- See: <https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md>.
-
 local h = dofile("tests/helpers.lua")
 local mini_test = require("mini.test")
 
@@ -13,7 +9,8 @@ local T = new_set({
   hooks = {
     pre_case = function()
       child.restart({ "-u", "scripts/minimal_init.lua" })
-      child.lua([[bareline = require("bareline")]])
+      child.lua('bareline = require("bareline")')
+      child.lua("bareline.setup()")
     end,
     post_once = function()
       child.stop()
@@ -21,18 +18,11 @@ local T = new_set({
   },
 })
 
--- VIM_MODE
-
-T["items"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua("bareline.setup()")
-    end,
-  },
-})
+-- =================================================================================================
+-- vim_mode
 
 -- stylua: ignore start
-T["items"]["vim_mode"] = new_set({
+T["vim_mode"] = new_set({
   parametrize = {
     { "",            "NOR" }, -- Normal.
     { "i",           "INS" }, -- Insert.
@@ -45,24 +35,29 @@ T["items"]["vim_mode"] = new_set({
 })
 -- stylua: ignore end
 
-T["items"]["vim_mode"]["p"] = function(keys, expected)
+T["vim_mode"]["parametrized"] = function(keys, expected)
   child.type_keys(keys)
-  child.lua("item = bareline.items.vim_mode")
-  child.lua("item.callback(item.var, item.opts)")
+  child.lua_func(function()
+    local item = require("bareline").items.vim_mode
+    item.callback(item.var)
+  end)
   eq(child.b[child.lua_get("bareline.items.vim_mode.var")], expected)
 end
 
--- FILEPATH
+-- =================================================================================================
+-- filepath
 
-T["items"]["filepath"] = new_set({})
+T["filepath"] = new_set({})
 
-T["items"]["filepath"]["[No Name]"] = function()
-  child.lua("item = bareline.items.filepath")
-  child.lua("item.callback(item.var, item.opts)")
+T["filepath"]["[No Name]"] = function()
+  child.lua_func(function()
+    local item = require("bareline").items.filepath
+    item.callback(item.var)
+  end)
   eq(child.b[child.lua_get("bareline.items.filepath.var")], "[No Name]")
 end
 
-T["items"]["filepath"]["trim current working dir"] = new_set({
+T["filepath"]["trim current working dir"] = new_set({
   parametrize = {
     -- Happy path.
     {
@@ -101,50 +96,61 @@ T["items"]["filepath"]["trim current working dir"] = new_set({
   },
 })
 
-T["items"]["filepath"]["trim current working dir"]["p"] = function(setup, expected)
-  child.cmd("cd " .. setup.cd)
-  child.cmd("edit " .. setup.edit)
-  child.lua("item = bareline.items.filepath")
-  child.lua("item.callback(item.var, item.opts)")
+T["filepath"]["trim current working dir"]["parametrized"] = function(setup, expected)
+  child.lua_func(function(s)
+    vim.cmd.cd(s.cd)
+    vim.cmd.edit(s.edit)
+    local item = require("bareline").items.filepath
+    item.callback(item.var)
+  end, setup)
   eq(child.b[child.lua_get("bareline.items.filepath.var")], expected)
 end
 
-T["items"]["filepath"]["terminal buffer"] = function()
-  child.type_keys(":term<CR>")
+T["filepath"]["terminal buffer"] = function()
+  child.cmd("term")
   -- Check that the buffer variable was set by the `TermOpen` autocmd.
   -- Don't call the callback manually since the autocmd should trigger it.
   local result = child.b[child.lua_get("bareline.items.filepath.var")]
   eq(string.match(result, "^term://"), "term://")
 end
 
--- MHR
+-- =================================================================================================
+-- mhr
 
-T["items"]["mhr"] = new_set({})
+T["mhr"] = new_set({})
 
-T["items"]["mhr"]["include %m%h%r when [No Name]"] = function()
-  child.lua("item = bareline.items.mhr")
-  child.lua("item.callback(item.var, item.opts)")
+T["mhr"]["include %m%h%r when [No Name]"] = function()
+  child.lua_func(function()
+    local item = require("bareline").items.mhr
+    item.callback(item.var)
+  end)
   eq(child.b[child.lua_get("bareline.items.mhr.var")], "%m%h%r")
 end
 
-T["items"]["mhr"]["include %m%h%r in file"] = function()
+T["mhr"]["include %m%h%r in file"] = function()
   child.cmd("edit " .. h.resources_dir .. "/test.txt")
-  child.lua("item = bareline.items.mhr")
-  child.lua("item.callback(item.var, item.opts)")
+  child.lua_func(function()
+    local item = require("bareline").items.mhr
+    item.callback(item.var)
+  end)
   eq(child.b[child.lua_get("bareline.items.mhr.var")], "%m%h%r")
 end
 
-T["items"]["mhr"]["include %h%r in Vim help file"] = function()
-  child.cmd("help")
-  child.lua("item = bareline.items.mhr")
-  child.lua("item.callback(item.var, item.opts)")
+T["mhr"]["include %h%r in Vim help file"] = function()
+  child.lua_func(function()
+    vim.cmd.help()
+    local item = require("bareline").items.mhr
+    item.callback(item.var)
+  end)
   eq(child.b[child.lua_get("bareline.items.mhr.var")], "%h%r")
 end
 
-T["items"]["mhr"]["include %h%r in 'nomodifiable' buf"] = function()
-  child.bo.modifiable = false
-  child.lua("item = bareline.items.mhr")
-  child.lua("item.callback(item.var, item.opts)")
+T["mhr"]["include %h%r in 'nomodifiable' buf"] = function()
+  child.lua_func(function()
+    vim.bo.modifiable = false
+    local item = require("bareline").items.mhr
+    item.callback(item.var)
+  end, setup)
   eq(child.b[child.lua_get("bareline.items.mhr.var")], "%h%r")
 end
 
@@ -179,10 +185,11 @@ end
 --   )
 -- end
 
--- INDENT_STYLE
+-- =================================================================================================
+-- indent_style
 
 -- stylua: ignore start
-T["items"]["indent_style"] = new_set({
+T["indent_style"] = new_set({
   parametrize = {
     { vim.NIL,  vim.NIL,  "tabs:8"   }, -- Nvim defaults.
     { false,    4,        "tabs:4"   },
@@ -192,37 +199,43 @@ T["items"]["indent_style"] = new_set({
 })
 -- stylua: ignore end
 
-T["items"]["indent_style"]["p"] = function(expandtab, tabstop, expected)
+T["indent_style"]["parametrized"] = function(expandtab, tabstop, expected)
   if expandtab ~= vim.NIL then
     child.bo.expandtab = expandtab
   end
   if tabstop ~= vim.NIL then
     child.bo.tabstop = tabstop
   end
-  child.lua("item = bareline.items.indent_style")
-  child.lua("item.callback(item.var, item.opts)")
+  child.lua_func(function()
+    local item = require("bareline").items.indent_style
+    item.callback(item.var)
+  end)
   eq(child.b[child.lua_get("bareline.items.indent_style.var")], expected)
 end
 
--- END_OF_LINE
+-- =================================================================================================
+-- end_of_line
 
-T["items"]["end_of_line"] = new_set({
+T["end_of_line"] = new_set({
   parametrize = {
     { ":set eol<CR>", vim.NIL },
     { ":set noeol<CR>", "noeol" },
   },
 })
 
-T["items"]["end_of_line"]["p"] = function(keys, expected)
+T["end_of_line"]["parametrized"] = function(keys, expected)
   child.type_keys(keys)
-  child.lua("item = bareline.items.end_of_line")
-  child.lua("item.callback(item.var, item.opts)")
+  child.lua_func(function()
+    local item = require("bareline").items.end_of_line
+    item.callback(item.var)
+  end)
   eq(child.b[child.lua_get("bareline.items.end_of_line.var")], expected)
 end
 
--- DIAGNOSTICS
+-- =================================================================================================
+-- diagnostics
 
-T["items"]["diagnostics"] = new_set({
+T["diagnostics"] = new_set({
   parametrize = {
     {
       {
@@ -262,43 +275,48 @@ T["items"]["diagnostics"] = new_set({
   },
 })
 
-T["items"]["diagnostics"]["p"] = function(diagnostics, expected)
+T["diagnostics"]["parametrized"] = function(diagnostics, expected)
   child.api.nvim_create_namespace("test")
   local test_ns = child.api.nvim_get_namespaces().test
   child.diagnostic.set(test_ns, 0, diagnostics)
-  child.lua("item = bareline.items.diagnostics")
-  child.lua("item.callback(item.var, item.opts)")
+  child.lua_func(function()
+    local item = require("bareline").items.diagnostics
+    item.callback(item.var)
+  end)
   eq(child.b[child.lua_get("bareline.items.diagnostics.var")], expected)
 end
 
--- CWD
+-- =================================================================================================
+-- cwd
 
-T["items"]["cwd"] = new_set({
+T["cwd"] = new_set({
   -- stylua: ignore start
   parametrize = {
     { h.resources_dir, vim.NIL,    "resources" },
     { h.resources_dir, "test.txt", "resources" },
     { vim.env.HOME,    vim.NIL,    "~" }
   }
-,
   -- stylua: ignore end
 })
 
-T["items"]["cwd"]["display in file"] = function(dir, filename, expected)
+T["cwd"]["display in file"] = function(dir, filename, expected)
   child.cmd("cd " .. dir)
   if filename ~= vim.NIL then
     child.cmd("edit " .. filename)
   end
-  child.lua("item = bareline.items.current_working_dir")
-  child.lua("item.callback(item.var, item.opts)")
+  child.lua_func(function()
+    local item = require("bareline").items.current_working_dir
+    item.callback(item.var)
+  end)
   eq(child.b[child.lua_get("bareline.items.current_working_dir.var")], expected)
 end
 
--- PLUGIN_NAME
+-- =================================================================================================
+-- plugin_name
 
-T["items"]["plugin_name"] = new_set({})
+T["plugin_name"] = new_set({})
 
-T["items"]["plugin_name"]["quickfix"] = new_set({
+T["plugin_name"]["quickfix"] = new_set({
   parametrize = {
     { "test.txt", ":copen<CR>", "[Quickfix List]" },
     { "test.txt", ":vimgrep /test/ %<CR>:copen<CR>", "[Quickfix List] :vimgrep /test/ test.txt" },
@@ -306,17 +324,19 @@ T["items"]["plugin_name"]["quickfix"] = new_set({
   },
 })
 
-T["items"]["plugin_name"]["quickfix"]["p"] = function(filename, keys, expected)
+T["plugin_name"]["quickfix"]["parametrized"] = function(filename, keys, expected)
   child.cmd("cd " .. h.resources_dir)
   child.cmd("edit " .. filename)
   child.type_keys(keys)
-  child.lua("item = bareline.items.plugin_name")
-  child.lua("item.callback(item.var, item.opts)")
+  child.lua_func(function()
+    local item = require("bareline").items.plugin_name
+    item.callback(item.var)
+  end)
   local var_value = child.b[child.lua_get("bareline.items.plugin_name.var")]
   eq(child.api.nvim_eval_statusline(var_value, {}).str, expected)
 end
 
-T["items"]["plugin_name"]["no quickfix"] = new_set({
+T["plugin_name"]["no quickfix"] = new_set({
   parametrize = {
     { "NvimTree", "[nvimtree]" },
     -- A "lua" filetype does not indicate a plugin buf, however the plugin_name BareItem simply
@@ -325,10 +345,12 @@ T["items"]["plugin_name"]["no quickfix"] = new_set({
   },
 })
 
-T["items"]["plugin_name"]["no quickfix"]["p"] = function(filetype, expected)
+T["plugin_name"]["no quickfix"]["parametrized"] = function(filetype, expected)
   child.bo.filetype = filetype
-  child.lua("item = bareline.items.plugin_name")
-  child.lua("item.callback(item.var, item.opts)")
+  child.lua_func(function()
+    local item = require("bareline").items.plugin_name
+    item.callback(item.var)
+  end)
   eq(child.b[child.lua_get("bareline.items.plugin_name.var")], expected)
 end
 
