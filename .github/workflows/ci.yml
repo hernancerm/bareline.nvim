@@ -1,4 +1,4 @@
-name: test
+name: CI
 on:
   push:
     branches:
@@ -20,12 +20,14 @@ jobs:
         with:
           mise_toml: |
             [tools]
-            neovim = "0.11.0"
+            neovim = "0.12.0"
             stylua = "2.4.0"
-      - name: Run all checks
-        run: |
-          nvim --version
-          make testci
+      - name: Check formatting
+        run: make testfmt
+      - name: Check docs are up to date
+        run: make testdocs
+      - name: Run tests
+        run: make test
 
 # ---
 # Full list of packages installed on ubuntu-latest:
