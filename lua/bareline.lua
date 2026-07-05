@@ -1,4 +1,4 @@
---- *bareline* A statusline plugin for the pragmatic.
+--- *bareline.txt* A statusline plugin for the pragmatic.
 ---
 --- MIT License Copyright (c) 2024 Hernán Cervera.
 ---
@@ -14,6 +14,7 @@
 --- 8. Functions                                                |bareline-functions|
 ---
 --- ==============================================================================
+--- #tag bareline
 --- #tag bareline-introduction
 --- Introduction ~
 ---

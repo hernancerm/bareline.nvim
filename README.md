@@ -122,7 +122,7 @@ bareline.setup({
 
 ## Documentation
 
-Please refer to the help file: [bareline.txt](./doc/bareline.txt).
+Please refer to the help file: [bareline.txt](./doc/bareline.txt) (`:help bareline.txt`).
 
 ## Similar plugins
 
