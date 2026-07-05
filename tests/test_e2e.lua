@@ -1,15 +1,8 @@
----@diagnostic disable: undefined-field, undefined-global
-
--- IMPORTANT: This file contains several Unicode Thin Space (U+2009) chars: ` `. These look
--- identical as a regular whitespace. These chars are relevant in the assertions. If you use the
--- kitty terminal, you can highlight them with a mark: <https://sw.kovidgoyal.net/kitty/marks/>.
-
--- See: <https://github.com/echasnovski/mini.nvim/blob/main/TESTING.md>.
-
 local h = dofile("tests/helpers.lua")
 local mini_test = require("mini.test")
 
 local child = mini_test.new_child_neovim()
+local expect_reference_screenshot = mini_test.expect.reference_screenshot
 local eq = mini_test.expect.equality
 local new_set = mini_test.new_set
 
@@ -17,7 +10,9 @@ local T = new_set({
   hooks = {
     pre_case = function()
       child.restart({ "-u", "scripts/minimal_init.lua" })
-      child.lua([[bareline = require("bareline")]])
+      child.lua('bareline = require("bareline")')
+      -- Do not show the intro screen.
+      child.o.shortmess = "ltToOCFI"
     end,
     post_once = function()
       child.stop()
@@ -25,139 +20,148 @@ local T = new_set({
   },
 })
 
-T["e2e"] = new_set({})
+-- =================================================================================================
+-- Triad (active, inactive, plugin)
 
--- DEFAULTS
+-- IMPORTANT: The golden files contain several Unicode Thin Space (U+2009) chars: ` `.
 
--- TODO: Test integration with <https://github.com/lewis6991/gitsigns.nvim>.
+T["active window"] = function()
+  child.lua_func(function(resources_dir)
+    require("bareline").setup()
+    vim.cmd.cd(resources_dir)
+  end, h.resources_dir)
+  expect_reference_screenshot(child.get_screenshot())
+end
 
-T["e2e"]["defaults"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua([[bareline.setup()]])
-      child.cmd("cd " .. h.resources_dir)
-    end,
-  },
-})
+T["inactive window"] = function()
+  child.lua_func(function(resources_dir)
+    require("bareline").setup()
+    vim.cmd.cd(resources_dir)
+    vim.cmd.new()
+  end, h.resources_dir)
+  expect_reference_screenshot(child.get_screenshot())
+end
 
--- TODO: Fix: ch 4 was closed by the peer
--- T["e2e"]["defaults"]["active buf using bareline.config.statusline"] = function()
---   -- TODO: Remove `new` call.
---   -- I do not know why calling `new` is necessary. When not called, the Vim mode, filepath, indent
---   -- style and cwd components are missing. Looking at the logs I noticed that `BufEnter` autocmds
---   -- are not run (this is only a problem when using `mini.test`), and one of those is responsible
---   -- for setting the initial value of the buf-local vars.
---   child.cmd("new")
---   child.o.columns = 50
---   local expected = " NOR  [No Name]       tabs:8  resources  00:00/01 "
---   eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, expected)
--- end
+T["plugin window"] = function()
+  child.lua_func(function()
+    -- Simulate plugin win.
+    vim.bo.buflisted = false
+    vim.bo.filetype = "NvimTree"
+    require("bareline").setup()
+  end)
+  expect_reference_screenshot(child.get_screenshot())
+end
 
--- TODO: Implement test.
--- T["e2e"]["defaults"]["inactive buf using bareline.config.statusline"] = function()
--- end
+-- =================================================================================================
+-- Config: bareline.config.statusline.items.mhr
 
--- TODO: Implement test.
--- T["e2e"]["defaults"]["active buf using bareline.statuslines.alt_statusline.plugin"] = function()
--- end
-
-T["e2e"]["defaults"]["items.mhr.display_modified (true)"] = function()
-  child.lua([[bareline.setup({
-    statusline = {
-      value = "%{%get(b:,'bl_mhr','')%}",
-      items = { bareline.items.mhr },
-    }
-  })]])
-  child.o.columns = 12
-  local expected = "[+]"
-  child.cmd("new") -- TODO: Remove `new` call. Should not be needed.
+T["bareline.config.items.mhr.display_modified = true"] = function()
+  child.lua_func(function()
+    require("bareline").setup({
+      statusline = {
+        value = "%{%get(b:,'bl_mhr','')%}",
+        items = {
+          require("bareline").items.mhr,
+        },
+      },
+      items = {
+        mhr = {
+          display_modified = true,
+        },
+      },
+    })
+  end)
   child.type_keys("aTest")
-  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, expected)
+  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, "[+]")
 end
 
--- OVERRIDE DEFAULTS
-
-T["e2e"]["config via setup()"] = new_set({})
-
-T["e2e"]["config via setup()"]["statusline"] = new_set({
-  hooks = {
-    pre_case = function()
-      child.lua([[
-        bareline.setup({
-          statusline = {
-            value = "%<"
-            .. "%{BlPad(get(b:,'bl_filepath',''))}"
-            .. "%{BlPad(get(b:,'bl_lsp_servers',''))}"
-            .. "%m%h%r"
-            .. "%="
-            .. "%{BlPad(get(b:,'bl_diagnostics',''))}"
-            .. "%{BlInarm(BlPad(BlWrap(get(b:,'gitsigns_head',''),'(',')')))}"
-            .. "%{BlIs(1)}"
-            .. "%02l:%02c/%02L"
-            .. "%{BlIs(1)}",
-            items = {
-              bareline.items.filepath,
-              bareline.items.lsp_servers,
-              bareline.items.diagnostics,
-            },
-          },
-        })
-      ]])
-    end,
-  },
-})
-
-T["e2e"]["config via setup()"]["statusline"]["active buf"] = function()
-  child.cmd("new") -- TODO: Remove `new` call. Should not be needed.
-  child.o.columns = 24
-  local expected = " [No Name]     00:00/01 "
-  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, expected)
+T["bareline.config.items.mhr.display_modified = false"] = function()
+  child.lua_func(function()
+    require("bareline").setup({
+      statusline = {
+        value = "%{%get(b:,'bl_mhr','')%}",
+        items = {
+          require("bareline").items.mhr,
+        },
+      },
+      items = {
+        mhr = {
+          display_modified = false,
+        },
+      },
+    })
+  end)
+  child.type_keys("aTest")
+  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, "")
 end
 
--- TODO: Implement test.
--- T["e2e"]["config via setup()"]["statusline"]["inactive buf"] = function()
--- end
+-- =================================================================================================
+-- Custom statusline
 
--- TODO: Test user-defined alt_statusline.
--- T["e2e"]["config via setup()"]["plugin stl from alt_statuslines"] = new_set({})
-
-T["e2e"]["config via setup()"]["items.mhr.display_modified = false"] = function()
-  child.lua([[bareline.setup({
-    statusline = {
-      value = "%{%get(b:,'bl_mhr','')%}",
-      items = { bareline.items.mhr, },
-    },
-    items = {
-      mhr = {
-        display_modified = false
-      }
-    }
-  })]])
-  child.cmd("new") -- TODO: Remove `new` call. Should not be needed.
-  child.o.columns = 12
-  local expected = ""
-  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, expected)
+T["custom statusline"] = function()
+  child.lua_func(function()
+    require("bareline").setup({
+      statusline = {
+        value = "%<"
+          .. "%{BlPad(get(b:,'bl_filepath',''))}"
+          .. "%m%h%r"
+          .. "%="
+          .. "%{BlIs(1)}"
+          .. "%{%BlInahide('%02l:%02c/%02L')%}"
+          .. "%{BlIs(1)}",
+        items = {
+          require("bareline").items.filepath,
+        },
+      },
+    })
+    vim.cmd.new()
+  end)
+  child.type_keys("aTest")
+  expect_reference_screenshot(child.get_screenshot())
 end
 
-T["e2e"]["config via setup()"]["user-defined item uses bareline.items"] = function()
-  child.lua([[item_hello = bareline.BareItem:new("bl_hello", function(var)
-    vim.b[var] = "Hi! " .. bareline.config.items.hello.message
-  end, {})]])
-  child.lua([[bareline.setup({
-    statusline = {
-      value = "%{get(b:,'bl_hello','')}",
-      items = { item_hello }
-    },
-    items = {
-      hello = {
-        message = "My name is Hernán"
-      }
-    }
-  })]])
-  child.cmd("new") -- TODO: Remove `new` call. Should not be needed.
-  child.o.columns = 21
-  local expected = "Hi! My name is Hernán"
-  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, expected)
+-- =================================================================================================
+-- User-defined BareItem
+
+T["user-defined BareItem"] = function()
+  child.lua_func(function()
+    local bareline = require("bareline")
+    local item_hello = bareline.BareItem:new("bl_hello", function(var)
+      vim.b[var] = "Hi!"
+    end, {})
+    bareline.setup({
+      statusline = {
+        value = "%{get(b:,'bl_hello','')}",
+        items = {
+          item_hello,
+        },
+      },
+    })
+  end)
+  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, "Hi!")
+end
+
+T["user-defined BareItem uses bareline.config.items"] = function()
+  child.lua_func(function()
+    local bareline = require("bareline")
+    local item_hello = bareline.BareItem:new("bl_hello", function(var)
+      vim.b[var] = "Hi! " .. bareline.config.items.hello.message
+    end, {})
+    bareline.setup({
+      statusline = {
+        value = "%{get(b:,'bl_hello','')}",
+        items = {
+          item_hello,
+        },
+      },
+      items = {
+        hello = {
+          message = "Test",
+        },
+      },
+    })
+  end)
+  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, "Hi! Test")
 end
 
 return T

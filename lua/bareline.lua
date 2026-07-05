@@ -121,11 +121,15 @@ function bareline.setup(config)
   -- "pays" on EACH buf for ALL their items across the base + alt statuslines.
   for _, item in ipairs(bareline.config.statusline.items) do
     h.create_item_autocmds(item)
+    -- Set initial var value.
+    item.callback(item.var)
   end
   for _, statusline in ipairs(bareline.config.alt_statuslines) do
     if type(statusline.items) == "table" then
       for _, item in ipairs(statusline.items) do
         h.create_item_autocmds(item)
+        -- Set initial var value.
+        item.callback(item.var)
       end
     end
   end
