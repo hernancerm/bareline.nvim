@@ -46,4 +46,4 @@ Your Neovim must have [mini.test](https://github.com/echasnovski/mini.test) inst
 Only [GNU Make](https://www.gnu.org/software/make/) required for:
 
 - Shell cmd to run all unit tests: `make test`.
-- Shell cmd to run all CI checks: `make testci`.
+- Shell cmd to run all CI checks: `make ci`.
