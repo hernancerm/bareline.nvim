@@ -59,6 +59,7 @@ local h = {}
 ---@param config table? Merged with the default config (|bareline.default_config|)
 --- and the former takes precedence on duplicate keys.
 function bareline.setup(config)
+  config = config or {}
   -- Cleanup.
   if #vim.api.nvim_get_autocmds({ group = h.statusline_augroup }) > 0 then
     vim.api.nvim_clear_autocmds({ group = h.statusline_augroup })
@@ -116,22 +117,31 @@ function bareline.setup(config)
     end,
   })
 
-  -- Create `BareItem` autocmds.
-  -- Currently buf-local autocmds cannot have a pattern, so at the moment the user
-  -- "pays" on EACH buf for ALL their items across the base + alt statuslines.
-  for _, item in ipairs(bareline.config.statusline.items) do
+  local items = vim
+    .iter(
+      vim.list_extend(
+        { bareline.config.statusline },
+        bareline.config.alt_statuslines
+      )
+    )
+    :map(function(statusline)
+      if type(statusline.items) == "table" then
+        return statusline.items
+      else
+        return {}
+      end
+    end)
+    :flatten()
+    :unique(function(item)
+      return item.var
+    end)
+    :totable()
+  for _, item in ipairs(items) do
+    -- Create `BareItem` autocmds.
+    -- The user "pays" on EACH buf for ALL their items (base stl + alt stls).
     h.create_item_autocmds(item)
     -- Set initial var value.
     item.callback(item.var)
-  end
-  for _, statusline in ipairs(bareline.config.alt_statuslines) do
-    if type(statusline.items) == "table" then
-      for _, item in ipairs(statusline.items) do
-        h.create_item_autocmds(item)
-        -- Set initial var value.
-        item.callback(item.var)
-      end
-    end
   end
 
   -- Assign a different statusline for inactive windows.
