@@ -150,40 +150,9 @@ T["mhr"]["include %h%r in 'nomodifiable' buf"] = function()
     vim.bo.modifiable = false
     local item = require("bareline").items.mhr
     item.callback(item.var)
-  end, setup)
+  end)
   eq(child.b[child.lua_get("bareline.items.mhr.var")], "%h%r")
 end
-
--- T["items"]["mhr"]["exclude %m as per boolean config (in [No Name])"] = function()
---   eq(child.lua_get("bareline.items.mhr:config({ display_modified = false }):get()"), "%h%r")
---
---   child.cmd("new")
---   child.lua("item = bareline.items.mhr")
---   child.lua("item.callback(item.var, item.opts)")
---   eq(child.b[child.lua_get("bareline.items.mhr.var")], "%m%h%r")
--- end
---
--- T["items"]["mhr"]["exclude %m as per function config"] = function()
---   eq(
---     child.lua_get([[bareline.items.mhr:config({
---           display_modified = function()
---             return false
---           end
---         }):get()]]),
---     "%h%r"
---   )
--- end
---
--- T["items"]["mhr"]["include %m as per function config"] = function()
---   eq(
---     child.lua_get([[bareline.items.mhr:config({
---           display_modified = function()
---             return true
---           end
---         }):get()]]),
---     "%m%h%r"
---   )
--- end
 
 -- =================================================================================================
 -- indent_style
@@ -296,6 +265,7 @@ T["cwd"] = new_set({
     { h.resources_dir, "test.txt", "resources" },
     { vim.env.HOME,    vim.NIL,    "~" }
   }
+,
   -- stylua: ignore end
 })
 
