@@ -481,13 +481,21 @@ end, {
 
 --- Stable `%f`.
 --- If the file is in the cwd (|:pwd|) at any depth level, the filepath relative
---- to the cwd is displayed. Otherwise, the full filepath is displayed.
+--- to the cwd is displayed. Else, the full filepath is displayed. For a `jdt://`
+--- buf (a Java class file opened by jdtls), the URI query string is dropped.
 --- Mockup: `lua/bareline.lua`
 ---@type BareItem
 bareline.items.filepath = bareline.BareItem:new("bl_filepath", function(var)
   local buf_name = vim.api.nvim_buf_get_name(0)
   if buf_name == "" or vim.bo.filetype == "help" then
     vim.b[var] = vim.api.nvim_eval_statusline("%f", {}).str
+    return
+  end
+  -- A `jdt://` URI carries the whole classpath in its query string, hundreds of
+  -- columns wide. The part before `?` names the class, keep just that.
+  local jdt_uri_head = buf_name:match("^(jdt://.-)%?")
+  if jdt_uri_head then
+    vim.b[var] = jdt_uri_head
     return
   end
   local cwd = vim.uv.cwd() .. ""

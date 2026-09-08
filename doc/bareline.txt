@@ -282,7 +282,8 @@ Type ~
                            `bareline.items.filepath`
 Stable `%f`.
 If the file is in the cwd (|:pwd|) at any depth level, the filepath relative
-to the cwd is displayed. Otherwise, the full filepath is displayed.
+to the cwd is displayed. Else, the full filepath is displayed. For a `jdt://`
+buf (a Java class file opened by jdtls), the URI query string is dropped.
 Mockup: `lua/bareline.lua`
 Type ~
 `(BareItem)`

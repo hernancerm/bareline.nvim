@@ -106,6 +106,23 @@ T["filepath"]["trim current working dir"]["parametrized"] = function(setup, expe
   eq(child.b[child.lua_get("bareline.items.filepath.var")], expected)
 end
 
+T["filepath"]["jdt:// buffer"] = function()
+  child.lua_func(function()
+    -- Set the name instead of `:edit`, which would expand the `%` in the URI.
+    vim.api.nvim_buf_set_name(
+      0,
+      "jdt://contents/java.base/java.lang/Exception.java"
+        .. "?=prj/%5C/opt%5C/jdk%5C/lib%5C/jrt-fs.jar%60java.base=/=/%3Cjava.lang%28Exception.class"
+    )
+    local item = require("bareline").items.filepath
+    item.callback(item.var)
+  end)
+  eq(
+    child.b[child.lua_get("bareline.items.filepath.var")],
+    "jdt://contents/java.base/java.lang/Exception.java"
+  )
+end
+
 T["filepath"]["terminal buffer"] = function()
   child.cmd("term")
   -- Check that the buffer variable was set by the `TermOpen` autocmd.
