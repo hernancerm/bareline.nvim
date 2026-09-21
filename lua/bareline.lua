@@ -91,16 +91,16 @@ function bareline.setup(config)
   }, {
     group = h.statusline_augroup,
     callback = function()
-      vim.b._bareline_is_buf_active = true
       bareline.refresh_statusline()
     end,
   })
 
-  -- The window where `bareline.setup()` is run is considered active.
-  vim.b._bareline_is_buf_active = true
-
-  -- Assign the initial values for the BareItem buf-local vars.
-  vim.api.nvim_create_autocmd("BufEnter", {
+  -- Assign the initial values for the BareItem buf-local vars. BufWinEnter
+  -- covers the buf a plugin shows in a window it does not enter, e.g. a build
+  -- output split: without it the stl of that win draws from unset vars until
+  -- the user moves there. During both events the win and buf of the event are
+  -- current, so the items read and write the right ones.
+  vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
     group = h.item_augroup,
     callback = function()
       for _, item in ipairs(bareline.config.statusline.items) do
@@ -151,7 +151,6 @@ function bareline.setup(config)
       if vim.o.laststatus == 3 then
         return
       end
-      vim.b._bareline_is_buf_active = false
       bareline.refresh_statusline()
     end,
   })
@@ -686,7 +685,10 @@ endfunction
 --- `(string)`
 vim.cmd([[
 function! BlIna(value,mapper)
-  if get(b:, '_bareline_is_buf_active', v:false)
+  " A buf-local flag cannot answer this: the same buf can sit in an active and
+  " an inactive window at once. See 'statusline' on `g:actual_curwin`, which is
+  " only set while a statusline is being drawn.
+  if win_getid() == get(g:, 'actual_curwin', win_getid())
     return a:value
   else
     return a:mapper(a:value)
