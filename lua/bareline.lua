@@ -866,20 +866,54 @@ end
 h.statusline_augroup = vim.api.nvim_create_augroup("BarelineSetStatusline", {})
 h.item_augroup = vim.api.nvim_create_augroup("BarelineCallItemCallback", {})
 
+local shipped_filetype_cache = {}
+
+--- Whether Neovim ships support for `filetype`, as opposed to it being the
+--- private name a plugin gives its own window, e.g. "NvimTree". Tells a buf a
+--- job filled with markdown, which is a document, from a file tree, which is not.
+--- Cached: this runs on every statusline refresh and walks 'runtimepath'.
+---@param filetype string
+---@return boolean
+function h.is_shipped_filetype(filetype)
+  if filetype == "" then
+    return false
+  end
+  if shipped_filetype_cache[filetype] == nil then
+    shipped_filetype_cache[filetype] = #vim.api.nvim_get_runtime_file(
+      "syntax/" .. filetype .. ".vim",
+      false
+    ) > 0 or #vim.api.nvim_get_runtime_file(
+      "ftplugin/" .. filetype .. ".*",
+      false
+    ) > 0
+  end
+  return shipped_filetype_cache[filetype]
+end
+
 ---@param bufnr integer The buffer number, as returned by |bufnr()|.
 ---@return boolean
 function h.is_plugin_buf(bufnr)
-  local filetype = vim.bo[bufnr].filetype
-  local special_non_plugin_filetypes = { nil, "", "help", "man" }
-  local matched_filetype, _ = vim.filetype.match({ buf = bufnr })
   -- Although the quickfix and location lists are not plugin windows, using the
   -- plugin window format in these windows looks more sensible.
-  if vim.bo.buftype == "quickfix" then
+  if vim.bo[bufnr].buftype == "quickfix" then
     return true
   end
-  return matched_filetype == nil
-    and not vim.bo.buflisted
-    and not vim.tbl_contains(special_non_plugin_filetypes, filetype)
+  local filetype = vim.bo[bufnr].filetype
+  if vim.tbl_contains({ "", "help", "man" }, filetype) then
+    return false
+  end
+  if vim.bo[bufnr].buflisted then
+    return false
+  end
+  -- By name, never by content. A buf a job writes into is empty when its window
+  -- opens, so content answers one way then and another once the output lands,
+  -- leaving whichever statusline was picked first until something else refreshes.
+  if
+    vim.filetype.match({ filename = vim.api.nvim_buf_get_name(bufnr) }) ~= nil
+  then
+    return false
+  end
+  return not h.is_shipped_filetype(filetype)
 end
 
 ---@param win_id integer
