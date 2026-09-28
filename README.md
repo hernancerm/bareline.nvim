@@ -72,31 +72,21 @@ Some things to notice:
 require("bareline").setup({
   statusline = {
     value = "%{BlIs(1)}"
-      .. "%{BlInahide(get(b:,'bl_vim_mode',''))}"
+      .. "%{BlInahide(BlItem('vim_mode'))}"
       .. "%{BlIs(1)}"
       .. "%<"
-      .. "%{BlPad(get(b:,'bl_filepath',''))}"
-      .. "%{BlPad(get(b:,'bl_lsp_servers',''))}"
-      .. "%{%BlPad(get(b:,'bl_mhr',''))%}"
+      .. "%{BlPad(BlItem('filepath'))}"
+      .. "%{BlPad(BlItem('lsp_servers'))}"
+      .. "%{%BlPad(BlItem('mhr'))%}"
       .. "%="
-      .. "%{BlPad(get(b:,'bl_diagnostics',''))}"
-      .. "%{BlPad(get(b:,'bl_end_of_line',''))}"
-      .. "%{BlPad(get(b:,'bl_indent_style',''))}"
+      .. "%{BlPad(BlItem('diagnostics'))}"
+      .. "%{BlPad(BlItem('end_of_line'))}"
+      .. "%{BlPad(BlItem('indent_style'))}"
       .. "%{BlInarm(BlPad(BlWrap(get(b:,'gitsigns_head',''),'(',')')))}"
-      .. "%{BlPad(get(b:,'bl_current_working_dir',''))}"
+      .. "%{BlPad(BlItem('current_working_dir'))}"
       .. "%{BlIs(1)}"
       .. "%02l:%02c/%02L"
       .. "%{BlIs(1)}",
-    items = {
-      bareline.items.vim_mode,
-      bareline.items.filepath,
-      bareline.items.lsp_servers,
-      bareline.items.mhr,
-      bareline.items.diagnostics,
-      bareline.items.end_of_line,
-      bareline.items.indent_style,
-      bareline.items.current_working_dir,
-    },
   },
   alt_statuslines = {
     bareline.alt_statuslines.plugin,

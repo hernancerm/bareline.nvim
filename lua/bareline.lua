@@ -35,9 +35,9 @@
 --- 3. The plugin exposes "statusline items", which group a buf-local var, a
 ---    callback which sets the var, and autocmds firing the callback.
 ---    See: |bareline.item-structure|.
---- 4. When using any buf-local var in the statusline, reference it either
----    directly (`%{b:foo}`) or with a `get` call, `%{get(b:,'foo','')}`. This is
----    so the stl is updated by Neovim immediately when the var is updated.
+--- 4. Items are drawn with |BlItem()|, e.g. `%{BlItem('filepath')}`. The first
+---    draw of an item in a buf creates its autocmds and sets its var, so the
+---    config does not list the items in use. Later draws only read the var.
 ---
 --- With this design, all Bareline items are asynchronous.
 
@@ -66,7 +66,8 @@ function bareline.setup(config)
   if #vim.api.nvim_get_autocmds({ group = h.statusline_augroup }) > 0 then
     vim.api.nvim_clear_autocmds({ group = h.statusline_augroup })
   end
-  h.state.existent_item_autocmds = {}
+  h.state.active_items = {}
+  h.state.set_item_vars = {}
   if #vim.api.nvim_get_autocmds({ group = h.item_augroup }) > 0 then
     vim.api.nvim_clear_autocmds({ group = h.item_augroup })
   end
@@ -99,54 +100,27 @@ function bareline.setup(config)
     end,
   })
 
-  -- Assign the initial values for the BareItem buf-local vars. BufWinEnter
-  -- covers the buf a plugin shows in a window it does not enter, e.g. a build
-  -- output split: without it the stl of that win draws from unset vars until
-  -- the user moves there. During both events the win and buf of the event are
-  -- current, so the items read and write the right ones.
+  -- Refresh the vars of the items drawn so far. BufWinEnter covers the buf a
+  -- plugin shows in a window it does not enter, e.g. a build output split. During
+  -- both events the win and buf of the event are current, so the items read and
+  -- write the right ones.
   vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
     group = h.item_augroup,
     callback = function()
-      for _, item in ipairs(bareline.config.statusline.items) do
-        item.callback(item.var, item.opts)
+      for _, item in pairs(h.state.active_items) do
+        h.set_item_var(item)
       end
-      for _, statusline in ipairs(bareline.config.alt_statuslines) do
-        if type(statusline.items) == "table" then
-          for _, item in ipairs(statusline.items) do
-            item.callback(item.var, item.opts)
-          end
-        end
-      end
-      h.log("Initial value set for all buf-local vars in buf " .. vim.fn.bufnr())
+      h.log("Refreshed all active item vars in buf " .. vim.fn.bufnr())
     end,
   })
 
-  local items = vim
-    .iter(
-      vim.list_extend(
-        { bareline.config.statusline },
-        bareline.config.alt_statuslines
-      )
-    )
-    :map(function(statusline)
-      if type(statusline.items) == "table" then
-        return statusline.items
-      else
-        return {}
-      end
-    end)
-    :flatten()
-    :unique(function(item)
-      return item.var
-    end)
-    :totable()
-  for _, item in ipairs(items) do
-    -- Create `BareItem` autocmds.
-    -- The user "pays" on EACH buf for ALL their items (base stl + alt stls).
-    h.create_item_autocmds(item)
-    -- Set initial var value.
-    item.callback(item.var)
-  end
+  -- `:bdelete` also deletes the b: vars, so the next draw has to set them again.
+  vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+    group = h.item_augroup,
+    callback = function(args)
+      h.state.set_item_vars[args.buf] = nil
+    end,
+  })
 
   -- Assign a different statusline for inactive windows.
   vim.api.nvim_create_autocmd("BufLeave", {
@@ -195,31 +169,21 @@ local function assign_default_config()
     --minidoc_replace_end
     statusline = {
       value = "%{BlIs(1)}"
-        .. "%{BlInahide(get(b:,'bl_vim_mode',''))}"
+        .. "%{BlInahide(BlItem('vim_mode'))}"
         .. "%{BlIs(1)}"
         .. "%<"
-        .. "%{BlPad(get(b:,'bl_filepath',''))}"
-        .. "%{BlPad(get(b:,'bl_lsp_servers',''))}"
-        .. "%{%BlPad(get(b:,'bl_mhr',''))%}"
+        .. "%{BlPad(BlItem('filepath'))}"
+        .. "%{BlPad(BlItem('lsp_servers'))}"
+        .. "%{%BlPad(BlItem('mhr'))%}"
         .. "%="
-        .. "%{BlPad(get(b:,'bl_diagnostics',''))}"
-        .. "%{BlPad(get(b:,'bl_end_of_line',''))}"
-        .. "%{BlPad(get(b:,'bl_indent_style',''))}"
+        .. "%{BlPad(BlItem('diagnostics'))}"
+        .. "%{BlPad(BlItem('end_of_line'))}"
+        .. "%{BlPad(BlItem('indent_style'))}"
         .. "%{BlInarm(BlPad(BlWrap(get(b:,'gitsigns_head',''),'(',')')))}"
-        .. "%{BlPad(get(b:,'bl_current_working_dir',''))}"
+        .. "%{BlPad(BlItem('current_working_dir'))}"
         .. "%{BlIs(1)}"
         .. "%02l:%02c/%02L"
         .. "%{BlIs(1)}",
-      items = {
-        bareline.items.vim_mode,
-        bareline.items.filepath,
-        bareline.items.lsp_servers,
-        bareline.items.mhr,
-        bareline.items.diagnostics,
-        bareline.items.end_of_line,
-        bareline.items.indent_style,
-        bareline.items.current_working_dir,
-      },
     },
     alt_statuslines = {
       bareline.alt_statuslines.plugin,
@@ -243,13 +207,6 @@ end
 --- #tag bareline.config.statusline.value
 ---     {value} `(string)`
 ---       String directly assigned to window local 'statusline'.
----
---- #tag bareline.config.statusline.items
----     {items} `(BareItem[])`
----       What you are "paying" for in `value`. List here the |bareline.BareItem|s
----       in use. You can list here the |bareline-builtin-items|. This is used by
----       Bareline to keep the statusline always showing up to date values.
----       Failing to do this can lead to seeing values not being updated.
 ---
 --- #tag bareline.config.alt_statuslines
 --- Alternate statuslines to |bareline.config.statusline|. These can be used to
@@ -323,9 +280,11 @@ end
 --- #tag bareline-custom-items
 --- Custom items ~
 ---
---- All custom items are a |bareline.BareItem|. Example item indicating soft wrap:
+--- All custom items are a |bareline.BareItem|. To draw an item with |BlItem()|,
+--- add it to `bareline.items`. Example item indicating soft wrap:
 --- >lua
----   local item_soft_wrap = bareline.BareItem:new(
+---   local bareline = require("bareline")
+---   bareline.items.soft_wrap = bareline.BareItem:new(
 ---     "bl_x_soft_wrap",
 ---     function(var)
 ---       local label = nil
@@ -346,19 +305,12 @@ end
 --- <
 --- Use it:
 --- >lua
----   require("bareline").setup({
----     statuslines = {
----       active = {
----         statusline = "%{get(b:,'bl_x_soft_wrap','')}",
----         items = {
----           -- IMPORTANT: Do not forget to add the item in the `items` list,
----           -- otherwise the value won't be updated as expected.
----           item_soft_wrap,
----         },
----       },
+---   bareline.setup({
+---     statusline = {
+---       value = "%{BlItem('soft_wrap')}",
 ---     },
 ---   })
---- >
+--- <
 
 -- ITEMS
 
@@ -631,20 +583,16 @@ bareline.alt_statuslines = {}
 --- gets walked in order to find a match (`when`). The first match is used.
 ---@class BarelineAltStatusline
 ---@field value string Value for 'statusline'.
----@field items BareItem[] List of bare items.
 ---@field when (fun():boolean)? Indicates a match. The stl should be used.
 
 --- Statusline for plugin windows, including the plugin name.
 ---@type BarelineAltStatusline
 bareline.alt_statuslines.plugin = {
   value = "%{BlIs(1)}"
-    .. "%{%get(b:,'bl_plugin_name','')%}"
+    .. "%{%BlItem('plugin_name')%}"
     .. "%="
     .. "%02l:%02c/%02L"
     .. "%{BlIs(1)}",
-  items = {
-    bareline.items.plugin_name,
-  },
   when = function()
     return h.is_plugin_buf(0)
   end,
@@ -657,6 +605,21 @@ bareline.alt_statuslines.plugin = {
 --- The functions in this section have the goal of facilitating writing the value
 --- for |bareline.config.statusline.value| (i.e., 'statusline'). So the functions
 --- are intended to be used in the statusline string.
+
+--- #tag BlItem()
+---                              `BlItem`({name})
+--- Return the value of the item `bareline.items[{name}]` in the current buf. The
+--- first call in a buf creates the autocmds of the item and sets its var.
+--- See: |bareline-item-structure|.
+--- Parameters:
+--- * {name} `(string)` Key of the item in `bareline.items`.
+--- Return:
+--- `(string)`
+vim.cmd([[
+function! BlItem(name)
+  return v:lua.require'bareline'._item_value(a:name)
+endfunction
+]])
 
 --- #tag BlIs()
 ---                              `BlIs`({length})
@@ -943,14 +906,6 @@ function h.create_item_autocmds(item)
   vim.validate("item", item, "table")
   vim.validate("item.var", item.var, "string")
   vim.validate("item.opts", item.opts, "table")
-  local buf_handler = vim.fn.bufnr()
-  if h.state.existent_item_autocmds[buf_handler] == nil then
-    h.state.existent_item_autocmds[buf_handler] = {}
-  end
-  -- Do not create duplicate autocmds.
-  if vim.tbl_contains(h.state.existent_item_autocmds[buf_handler], item.var) then
-    return
-  end
   if type(item.opts.autocmds) == "table" then
     for i = 1, #item.opts.autocmds do
       vim.validate(
@@ -979,14 +934,43 @@ function h.create_item_autocmd(item, autocmd)
     string_ac_event = vim.fn.join(string_ac_event, ",")
   end
   autocmd.opts.callback = function()
-    item.callback(item.var)
+    h.set_item_var(item)
     h.log("Ran autocmd with event {" .. string_ac_event .. "} for: " .. item.var)
   end
   vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
-  table.insert(h.state.existent_item_autocmds[vim.fn.bufnr()], item.var)
   h.log(
     "Created autocmd with event {" .. string_ac_event .. "} for: " .. item.var
   )
+end
+
+--- Call the callback of `item` in the current buf, and record that the buf has
+--- the var set, so |BlItem()| does not call it again.
+---@param item BareItem
+function h.set_item_var(item)
+  local buf = vim.api.nvim_get_current_buf()
+  h.state.set_item_vars[buf] = h.state.set_item_vars[buf] or {}
+  h.state.set_item_vars[buf][item.var] = true
+  item.callback(item.var)
+end
+
+-- Backs |BlItem()|. Runs while the stl is drawn, when the buf and win being
+-- drawn are the current ones.
+---@param name string
+---@return string
+function bareline._item_value(name)
+  local item = bareline.items[name]
+  if item == nil then
+    error("Bareline: no item in bareline.items named: " .. name)
+  end
+  if h.state.active_items[item.var] == nil then
+    h.state.active_items[item.var] = item
+    h.create_item_autocmds(item)
+  end
+  local set_vars = h.state.set_item_vars[vim.api.nvim_get_current_buf()]
+  if set_vars == nil or not set_vars[item.var] then
+    h.set_item_var(item)
+  end
+  return tostring(vim.b[item.var] or "")
 end
 
 --- Merge user-supplied config with the plugin's default config. For every key
@@ -1001,7 +985,6 @@ function h.get_config_with_fallback(config, default_config)
     vim.tbl_deep_extend("force", vim.deepcopy(default_config), config or {})
   vim.validate("config.statusline", config.statusline, "table")
   vim.validate("config.statusline.value", config.statusline.value, "string")
-  vim.validate("config.statuslines.items", config.statusline.items, "table")
   vim.validate("config.alt_statuslines", config.alt_statuslines, "table", true)
   return config
 end
@@ -1072,7 +1055,10 @@ end
 
 h.state = {
   fs_sep = h.get_fs_sep(),
-  existent_item_autocmds = {},
+  -- Items drawn at least once, keyed by var.
+  active_items = {},
+  -- Per buf, the vars of the items set in it, e.g. `{ [1] = { bl_filepath = true } }`.
+  set_item_vars = {},
   system_root_dir = h.get_system_root_dir(),
   log_filepath = vim.fn.stdpath("log") .. "/bareline.nvim/bareline.log",
 }
