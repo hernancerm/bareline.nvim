@@ -48,12 +48,14 @@ local h = {}
 
 --- Quickstart
 ---
---- To enable the plugin you need to call the |bareline.setup()| function. To use
---- the defaults, call it without arguments:
+--- Install the plugin and the statusline is drawn with the default config.
+--- Optionally, hide the mode shown in the cmdline, since Bareline shows it:
 --- >lua
----   require("bareline").setup()
----   vim.o.showmode = false -- Optional.
+---   vim.o.showmode = false
 --- <
+--- Some things to notice:
+---
+--- * No need to call |bareline.setup()|, but you may do so to configure the plugin.
 
 --- Module setup.
 ---@param config table? Merged with the default config (|bareline.default_config|)
@@ -64,7 +66,7 @@ function bareline.setup(config)
   if #vim.api.nvim_get_autocmds({ group = h.statusline_augroup }) > 0 then
     vim.api.nvim_clear_autocmds({ group = h.statusline_augroup })
   end
-  h.existent_item_autocmds = {}
+  h.state.existent_item_autocmds = {}
   if #vim.api.nvim_get_autocmds({ group = h.item_augroup }) > 0 then
     vim.api.nvim_clear_autocmds({ group = h.item_augroup })
   end
@@ -76,6 +78,8 @@ function bareline.setup(config)
   if bareline.config.logging.enabled then
     vim.fn.mkdir(vim.fn.fnamemodify(h.state.log_filepath, ":h"), "p")
   end
+  local caller = debug.getinfo(2, "Sl")
+  h.log("Called setup() from " .. caller.short_src .. ":" .. caller.currentline)
 
   -- Assign the statusline for the active window.
   vim.api.nvim_create_autocmd({
@@ -1056,7 +1060,7 @@ function h.log(message, level)
     vim.defer_fn(function()
       vim.fn.writefile({
         string.format(
-          "%s %s - %s\n",
+          "%s %s - %s",
           vim.fn.get({ "D", "I", "W", "E" }, level - 1),
           vim.fn.strftime("%H:%M:%S"),
           message

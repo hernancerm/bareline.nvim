@@ -43,12 +43,15 @@ With this design, all Bareline items are asynchronous.
 
 Quickstart
 
-To enable the plugin you need to call the |bareline.setup()| function. To use
-the defaults, call it without arguments:
+Install the plugin and the statusline is drawn with the default config.
+Optionally, hide the mode shown in the cmdline, since Bareline shows it:
 >lua
-  require("bareline").setup()
-  vim.o.showmode = false -- Optional.
+  vim.o.showmode = false
 <
+Some things to notice:
+
+• No need to call |bareline.setup()|, but you may do so to configure the plugin.
+
                                                               *bareline.setup()*
                            `bareline.setup`({config})
 Module setup.

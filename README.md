@@ -49,34 +49,27 @@ A statusline plugin for the pragmatic.
 
 ## Requirements
 
-- Neovim >= 0.11.0
+- Neovim >= 0.12.0
 
 ## Installation
 
-Use your favorite package manager. For example, [Lazy.nvim](https://github.com/folke/lazy.nvim):
+Install with your favorite package manager. For example, using Neovim's builtin package manager,
+[vim.pack](https://neovim.io/doc/user/pack/#vim.pack):
 
 ```lua
-{
-  "hernancerm/bareline.nvim",
-  opts = {}
-},
+vim.pack.add({
+  "https://github.com/hernancerm/bareline.nvim",
+})
 ```
 
-The function `require("barelilne").setup()` needs to be called for Bareline to draw the statusline.
-Lazy.nvim does this automatically using the snippet above.
+Some things to notice:
+
+- `require("bareline").setup()` does **not** need to be called. You may call it to configure the plugin.
 
 ## Default config
 
 ```lua
-local bareline = require("bareline")
-bareline.setup()
-```
-
-Is equivalent to:
-
-```lua
-local bareline = require("bareline")
-bareline.setup({
+require("bareline").setup({
   statusline = {
     value = "%{BlIs(1)}"
       .. "%{BlInahide(get(b:,'bl_vim_mode',''))}"
