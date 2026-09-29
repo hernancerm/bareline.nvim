@@ -24,6 +24,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Calling `setup()` is no longer required. Call it only to configure the plugin.
 - Requires Neovim 0.12.
 - Items shared by several statuslines create their autocmds only once.
+- The item `current_working_dir` is now called `cwd`.
 
 ### Removed
 
@@ -49,7 +50,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Vimscript helper functions: `BlIs()`, `BlPad()`, `BlPadl()`, `BlPadr()`, `BlWrap()`, `BlIna()`,
   `BlInahide()` and `BlInarm()`.
 - Item `mhr`, which fixes the whitespace between `%m%h%r`.
-- Item `cwd`.
+- Item `current_working_dir`.
 - Support for detached and linked Git work trees.
 - Optional logging of statusline redraws.
 
