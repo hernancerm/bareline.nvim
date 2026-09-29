@@ -9,7 +9,7 @@
 --- 3. Item structure                                      |bareline-item-structure|
 --- 4. Custom items                                          |bareline-custom-items|
 --- 5. Builtin items                                        |bareline-builtin-items|
---- 6. Statusline parts                                    |bareline-statusline-parts|
+--- 6. Statusline parts                                  |bareline-statusline-parts|
 --- 7. Builtin statuslines                            |bareline-builtin-statuslines|
 --- 8. Functions                                                |bareline-functions|
 ---
