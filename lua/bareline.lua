@@ -75,13 +75,6 @@ function bareline.setup(config)
   -- Merge user and default configs.
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
 
-  -- Logger setup.
-  if bareline.config.logging.enabled then
-    vim.fn.mkdir(vim.fn.fnamemodify(h.state.log_filepath, ":h"), "p")
-  end
-  local caller = debug.getinfo(2, "Sl")
-  h.log("Called setup() from " .. caller.short_src .. ":" .. caller.currentline)
-
   -- Assign the statusline for the active window.
   vim.api.nvim_create_autocmd({
     "BufNew",
@@ -110,7 +103,6 @@ function bareline.setup(config)
       for _, item in pairs(h.state.active_items) do
         h.set_item_var(item)
       end
-      h.log("Refreshed all active item vars in buf " .. vim.fn.bufnr())
     end,
   })
 
@@ -191,10 +183,6 @@ local function assign_default_config()
         display_modified = true,
       },
     },
-    logging = {
-      enabled = false,
-      level = vim.log.levels.INFO,
-    },
   }
   --minidoc_afterlines_end
 end
@@ -217,18 +205,6 @@ end
 --- #tag bareline.config.items.mhr
 ---     {mhr} `(boolean|fun():boolean)`
 ---       See |bareline.items.mhr|.
-
---- #tag bareline.config.logging
---- Log file location: `stdpath("log")` .. `/bareline.nvim/bareline.log`.
----
---- #tag bareline.config.logging.enabled
----     {enabled} `(boolean)`
----       Whether to write to the log file. Default: `false`.
----
---- #tag bareline.config.logging.level
----     {level} `(integer)`
----       Log statements on this level and up are written to the log file.
----       Default: `vim.log.levels.INFO`.
 
 --- #delimiter
 --- #tag bareline-item-structure
@@ -889,8 +865,6 @@ function h.draw_window_statusline(statusline)
     return
   end
   vim.wo.statusline = statusline
-  h.log(statusline, vim.log.levels.DEBUG)
-  h.log("Stl win-local opt set")
 end
 
 --- Create the autocmds to call the `callback` of a `BareItem`.
@@ -922,18 +896,10 @@ end
 function h.create_item_autocmd(item, autocmd)
   autocmd.opts = autocmd.opts or {}
   autocmd.opts.group = h.item_augroup
-  local string_ac_event = autocmd.event
-  if type(string_ac_event) == "table" then
-    string_ac_event = vim.fn.join(string_ac_event, ",")
-  end
   autocmd.opts.callback = function()
     h.set_item_var(item)
-    h.log("Ran autocmd with event {" .. string_ac_event .. "} for: " .. item.var)
   end
   vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
-  h.log(
-    "Created autocmd with event {" .. string_ac_event .. "} for: " .. item.var
-  )
 end
 
 --- Call the callback of `item` in the current buf, and record that the buf has
@@ -1021,30 +987,6 @@ function h.get_system_root_dir()
   return system_root_dir
 end
 
----@param level integer As per |vim.log.levels|.
-function h.should_log(level)
-  return bareline.config.logging.enabled
-    and level >= bareline.config.logging.level
-end
-
----@param message string
----@param level integer? As per |vim.log.levels|.
-function h.log(message, level)
-  level = level or vim.log.levels.INFO
-  if h.should_log(level) then
-    vim.defer_fn(function()
-      vim.fn.writefile({
-        string.format(
-          "%s %s - %s",
-          vim.fn.get({ "D", "I", "W", "E" }, level - 1),
-          vim.fn.strftime("%H:%M:%S"),
-          message
-        ),
-      }, h.state.log_filepath, "a")
-    end, 0)
-  end
-end
-
 h.state = {
   fs_sep = h.get_fs_sep(),
   -- Items drawn at least once, keyed by var.
@@ -1052,7 +994,6 @@ h.state = {
   -- Per buf, the vars of the items set in it, e.g. `{ [1] = { bl_filepath = true } }`.
   set_item_vars = {},
   system_root_dir = h.get_system_root_dir(),
-  log_filepath = vim.fn.stdpath("log") .. "/bareline.nvim/bareline.log",
 }
 
 return bareline

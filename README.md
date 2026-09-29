@@ -94,10 +94,6 @@ require("bareline").setup({
       display_modified = true,
     },
   },
-  logging = {
-    enabled = false,
-    level = vim.log.levels.INFO,
-  },
 })
 ```
 

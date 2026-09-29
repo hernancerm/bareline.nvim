@@ -16,12 +16,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Config key `statusline.value` is now just `statusline`.
 - Calling `setup()` is no longer required. Call it only to configure the plugin.
 - Requires Neovim 0.12.
-- The log file moved from `stdpath("data")` to `stdpath("log")`.
 - Items shared by several statuslines create their autocmds only once.
 
 ### Removed
 
 - Config key `statusline.items`. Items drawn with `BlItem()` need no registration.
+- Config key `logging`, and with it the log file.
 
 ### Fixed
 

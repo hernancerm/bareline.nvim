@@ -95,10 +95,6 @@ Below is the default config, where `bareline` equals `require("bareline")`.
         display_modified = true,
       },
     },
-    logging = {
-      enabled = false,
-      level = vim.log.levels.INFO,
-    },
   }
 <
                                                     *bareline.config.statusline*
@@ -119,18 +115,6 @@ Provide item-specific configuration.
                                                      *bareline.config.items.mhr*
     {mhr} `(boolean|fun():boolean)`
       See |bareline.items.mhr|.
-
-                                                       *bareline.config.logging*
-Log file location: `stdpath("log")` .. `/bareline.nvim/bareline.log`.
-
-                                               *bareline.config.logging.enabled*
-    {enabled} `(boolean)`
-      Whether to write to the log file. Default: `false`.
-
-                                                 *bareline.config.logging.level*
-    {level} `(integer)`
-      Log statements on this level and up are written to the log file.
-      Default: `vim.log.levels.INFO`.
 
 ------------------------------------------------------------------------------
                                                        *bareline-item-structure*
