@@ -82,7 +82,7 @@ Below is the default config, where `bareline` equals `require("bareline")`.
       return {
         space(1),
         item("vim_mode", {
-          inactive = "hide"
+          inactive = "hide",
         }),
         space(1),
         "%<",
