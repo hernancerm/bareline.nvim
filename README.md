@@ -75,11 +75,14 @@ bareline.setup({
     if bareline.is_plugin_win() then
       return bareline.statuslines.plugin(ctx)
     end
-    local item, text, s, each = bareline.item, bareline.text, bareline.space, bareline.each
+    local item, text = bareline.item, bareline.text
+    local space, each = bareline.space, bareline.each
     return {
-      s(1),
-      item("vim_mode", { inactive = "hide" }),
-      s(1),
+      space(1),
+      item("vim_mode", {
+        inactive = "hide"
+      }),
+      space(1),
       "%<",
       each({ pad = true }, {
         item("filepath"),
@@ -91,12 +94,15 @@ bareline.setup({
         item("diagnostics"),
         item("end_of_line"),
         item("indent_style"),
-        text(vim.b.gitsigns_head, { wrap = { "(", ")" }, inactive = "remove" }),
+        text(vim.b.gitsigns_head, {
+          wrap = { "(", ")" },
+          inactive = "remove",
+        }),
         item("cwd"),
       }),
-      s(1),
+      space(1),
       "%02l:%02c/%02L",
-      s(1),
+      space(1),
     }
   end,
   items = {
