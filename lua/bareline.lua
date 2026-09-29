@@ -9,8 +9,8 @@
 --- 3. Item structure                                      |bareline-item-structure|
 --- 4. Custom items                                          |bareline-custom-items|
 --- 5. Builtin items                                        |bareline-builtin-items|
---- 6. Builtin alt statuslines                    |bareline-builtin-alt-statuslines|
---- 7. Vimscript functions                            |bareline-vimscript-functions|
+--- 6. Statusline parts                                    |bareline-statusline-parts|
+--- 7. Builtin statuslines                            |bareline-builtin-statuslines|
 --- 8. Functions                                                |bareline-functions|
 ---
 --- ==============================================================================
@@ -28,18 +28,20 @@
 ---
 --- Bareline takes this approach to statusline configuration:
 ---
---- 1. The statusline DSL ('statusline') is not abstracted away from the user.
----    See: |bareline.config.statusline|.
---- 2. Helper functions are provided to improve the experience of using the DSL.
----    See: |bareline-vimscript-functions|.
+--- 1. The statusline is a Lua function returning a list of parts. Plain strings
+---    in the list are the statusline DSL ('statusline'), so it is not abstracted
+---    away from the user. See: |bareline.config.statusline|.
+--- 2. Functions build the other parts, e.g. padded and escaped text.
+---    See: |bareline-statusline-parts|.
 --- 3. The plugin exposes "statusline items", which group a buf-local var, a
 ---    callback which sets the var, and autocmds firing the callback.
----    See: |bareline.item-structure|.
---- 4. Items are drawn with |BlItem()|, e.g. `%{BlItem('filepath')}`. The first
+---    See: |bareline-item-structure|.
+--- 4. Items are drawn with |bareline.item()|, e.g. `item("filepath")`. The first
 ---    draw of an item in a buf creates its autocmds and sets its var, so the
 ---    config does not list the items in use. Later draws only read the var.
 ---
---- With this design, all Bareline items are asynchronous.
+--- With this design, all Bareline items are asynchronous. Drawing the statusline
+--- only reads vars.
 
 -- MODULE SETUP
 
@@ -71,27 +73,13 @@ function bareline.setup(config)
   if #vim.api.nvim_get_autocmds({ group = h.item_augroup }) > 0 then
     vim.api.nvim_clear_autocmds({ group = h.item_augroup })
   end
+  h.state.draw_error_notified = false
 
   -- Merge user and default configs.
   bareline.config = h.get_config_with_fallback(config, bareline.default_config)
 
-  -- Assign the statusline for the active window.
-  vim.api.nvim_create_autocmd({
-    "BufNew",
-    "BufEnter",
-    "BufWinEnter",
-    "FocusGained",
-    "DirChanged",
-    "VimResume",
-    "TermOpen",
-    "TermLeave",
-    "WinEnter",
-  }, {
-    group = h.statusline_augroup,
-    callback = function()
-      bareline.refresh_statusline()
-    end,
-  })
+  -- Global, so every window draws through `_draw()`. See 'statusline' on `%!`.
+  vim.o.statusline = "%!v:lua.require'bareline'._draw()"
 
   -- Refresh the vars of the items drawn so far. BufWinEnter covers the buf a
   -- plugin shows in a window it does not enter, e.g. a build output split. During
@@ -113,22 +101,6 @@ function bareline.setup(config)
       h.state.set_item_vars[args.buf] = nil
     end,
   })
-
-  -- Assign a different statusline for inactive windows.
-  vim.api.nvim_create_autocmd("BufLeave", {
-    group = h.statusline_augroup,
-    callback = function()
-      if vim.o.laststatus == 3 then
-        return
-      end
-      bareline.refresh_statusline()
-    end,
-  })
-
-  -- Initial statusline assingment.
-  if vim.v.vim_did_enter == 1 then
-    bareline.refresh_statusline()
-  end
 
   -- Gitsigns integration.
   if pcall(require, "gitsigns") then
@@ -159,25 +131,40 @@ local function assign_default_config()
   --minidoc_replace_start {
   bareline.default_config = {
     --minidoc_replace_end
-    statusline = "%{BlIs(1)}"
-      .. "%{BlInahide(BlItem('vim_mode'))}"
-      .. "%{BlIs(1)}"
-      .. "%<"
-      .. "%{BlPad(BlItem('filepath'))}"
-      .. "%{BlPad(BlItem('lsp_servers'))}"
-      .. "%{%BlPad(BlItem('mhr'))%}"
-      .. "%="
-      .. "%{BlPad(BlItem('diagnostics'))}"
-      .. "%{BlPad(BlItem('end_of_line'))}"
-      .. "%{BlPad(BlItem('indent_style'))}"
-      .. "%{BlInarm(BlPad(BlWrap(get(b:,'gitsigns_head',''),'(',')')))}"
-      .. "%{BlPad(BlItem('current_working_dir'))}"
-      .. "%{BlIs(1)}"
-      .. "%02l:%02c/%02L"
-      .. "%{BlIs(1)}",
-    alt_statuslines = {
-      bareline.alt_statuslines.plugin,
-    },
+    statusline = function(ctx)
+      if bareline.is_plugin_win() then
+        return bareline.statuslines.plugin(ctx)
+      end
+      local item, text = bareline.item, bareline.text
+      local space, each = bareline.space, bareline.each
+      return {
+        space(1),
+        item("vim_mode", {
+          inactive = "hide"
+        }),
+        space(1),
+        "%<",
+        each({ pad = true }, {
+          item("filepath"),
+          item("lsp_servers"),
+          item("mhr"),
+        }),
+        "%=",
+        each({ pad = true }, {
+          item("diagnostics"),
+          item("end_of_line"),
+          item("indent_style"),
+          text(vim.b.gitsigns_head, {
+            wrap = { "(", ")" },
+            inactive = "remove",
+          }),
+          item("current_working_dir"),
+        }),
+        space(1),
+        "%02l:%02c/%02L",
+        space(1),
+      }
+    end,
     items = {
       mhr = {
         display_modified = true,
@@ -188,16 +175,24 @@ local function assign_default_config()
 end
 
 --- #tag bareline.config.statusline
----     {statusline} `(string)`
----       The main statusline. Directly assigned to window local 'statusline'.
+---     {statusline} `(fun(ctx:BarelineCtx):table|string)`
+---       Called on every draw of every statusline. Returns a list of parts:
+---       * `string`: Statusline DSL, used as-is, e.g. `"%<"`, `"%02l"`.
+---       * The return of |bareline.item()| and |bareline.text()|: Text, where
+---         `%` is escaped.
+---       * A nested list, e.g. the return of |bareline.each()|.
+---       * `nil` or `false`: Skipped, so `ctx.active and "foo"` works.
+---       The function runs in the window being drawn, so |vim.b|, |vim.wo| and
+---       |vim.fn| read that window and its buf. If the function errors, the
+---       error is shown once and a basic statusline is drawn instead.
+---       To pick a different statusline for some windows, use an `if`. The
+---       default config does so for plugin windows.
 ---
---- #tag bareline.config.alt_statuslines
---- Alternate statuslines to |bareline.config.statusline|. These can be used to
---- assign a different statusline on windows that meet some criteria. For example,
---- Bareline internally uses this feature to assign a different statusline for
---- plugin windows (e.g., nvim-tree). This list is traversed in order and the
---- statusline picked is the first one which its `when` function returns true.
---- See: |bareline-builtin-alt-statuslines|.
+--- Context of the draw, passed to |bareline.config.statusline|.
+---@class BarelineCtx
+---@field active boolean Whether the window being drawn is the current window.
+--- It cannot be read from within the function, since the window being drawn is
+--- current while it runs.
 
 --- #tag bareline.config.items
 --- Provide item-specific configuration.
@@ -232,6 +227,8 @@ bareline.BareItem["__index"] = bareline.BareItem
 ---@class BareItemCommonOpts
 ---@field autocmds table[]? Expects tables each with the keys `event` and `opts`,
 --- which are passed to: |vim.api.nvim_create_autocmd()|.
+---@field stl_code boolean? Whether the value is statusline DSL, e.g. `"%m%r"`.
+--- When `true`, |bareline.item()| does not escape `%` in the value.
 
 --- Constructor.
 ---@param var string
@@ -251,8 +248,9 @@ end
 --- #tag bareline-custom-items
 --- Custom items ~
 ---
---- All custom items are a |bareline.BareItem|. To draw an item with |BlItem()|,
---- add it to `bareline.items`. Example item indicating soft wrap:
+--- All custom items are a |bareline.BareItem|. To draw an item with
+--- |bareline.item()|, add it to `bareline.items`. Example item indicating soft
+--- wrap:
 --- >lua
 ---   local bareline = require("bareline")
 ---   bareline.items.soft_wrap = bareline.BareItem:new(
@@ -277,7 +275,9 @@ end
 --- Use it:
 --- >lua
 ---   bareline.setup({
----     statusline = "%{BlItem('soft_wrap')}",
+---     statusline = function()
+---       return { bareline.item("soft_wrap") }
+---     end,
 ---   })
 --- <
 
@@ -330,6 +330,7 @@ bareline.items.plugin_name = bareline.BareItem:new("bl_plugin_name", function(va
     vim.b[var] = string.format("[%s]", vim.bo.filetype:lower():gsub("%s", ""))
   end
 end, {
+  stl_code = true,
   autocmds = {
     {
       event = "BufWinEnter",
@@ -525,6 +526,7 @@ bareline.items.mhr = bareline.BareItem:new("bl_mhr", function(var)
   end
   vim.b[var] = value
 end, {
+  stl_code = true,
   autocmds = {
     {
       event = {
@@ -537,208 +539,140 @@ end, {
   },
 })
 
--- ALT STATUSLINES
-
-bareline.alt_statuslines = {}
+-- STATUSLINE PARTS
 
 --- #delimiter
---- #tag bareline-builtin-alt-statuslines
---- Builtin alt statuslines ~
+--- #tag bareline-statusline-parts
+--- Statusline parts ~
 ---
---- All alt statuslines are structured as a `BarelineAltStatusline`.
+--- The functions in this section build the parts returned by
+--- |bareline.config.statusline|. They are meant to be called while it runs.
+---
+--- #tag bareline.PartOpts
+--- Options of |bareline.item()| and |bareline.text()|. Nothing is added when the
+--- value is empty. Applied in this order: `wrap`, `pad`, `inactive`.
+---@class BarelinePartOpts
+---@field pad boolean? Add |bareline.space()| on both sides.
+---@field wrap string[]? Add a prefix and a suffix, e.g. `{ "(", ")" }`. These
+--- are statusline DSL, so `%` is not escaped.
+---@field inactive ("hide"|"remove"|false)? In inactive windows, either replace
+--- the part with spaces of the same width (`"hide"`), or drop it (`"remove"`).
 
---- Statuslines defined as this class are meant to be used in the configuration
---- key being |bareline.config.alt_statuslines|, which accepts a list. The list
---- gets walked in order to find a match (`when`). The first match is used.
----@class BarelineAltStatusline
----@field value string Value for 'statusline'.
----@field when (fun():boolean)? Indicates a match. The stl should be used.
+--- Value of the item `bareline.items[{name}]` in the current buf. The first
+--- call in a buf creates the autocmds of the item and sets its var. The value is
+--- escaped, unless the item sets `stl_code`. See: |bareline-item-structure|.
+---@param name string Key of the item in `bareline.items`.
+---@param opts BarelinePartOpts?
+---@return table
+function bareline.item(name, opts)
+  local item = bareline.items[name]
+  if item == nil then
+    error("Bareline: no item in bareline.items named: " .. name)
+  end
+  if h.state.active_items[item.var] == nil then
+    h.state.active_items[item.var] = item
+    h.create_item_autocmds(item)
+  end
+  local set_vars = h.state.set_item_vars[vim.api.nvim_get_current_buf()]
+  if set_vars == nil or not set_vars[item.var] then
+    h.set_item_var(item)
+  end
+  return h.new_part(vim.b[item.var], item.opts.stl_code == true, opts)
+end
+
+--- Any value as text, so `%` is escaped. `nil` is an empty string. Example
+--- usage to wrap with parens the Git HEAD set by
+--- `https://github.com/lewis6991/gitsigns.nvim`:
+--- `text(vim.b.gitsigns_head, { wrap = { "(", ")" } })`
+---@param value any
+---@param opts BarelinePartOpts?
+---@return table
+function bareline.text(value, opts)
+  return h.new_part(value, false, opts)
+end
+
+--- Apply {opts} to each |bareline.item()| and |bareline.text()| in {parts},
+--- including nested lists. The opts of a part take precedence, e.g. a part with
+--- `{ pad = false }` is not padded by `each({ pad = true }, ...)`.
+---@param opts BarelinePartOpts
+---@param parts table
+---@return table
+function bareline.each(opts, parts)
+  vim.validate("opts", opts, "table")
+  vim.validate("parts", parts, "table")
+  local result = {}
+  for i = 1, table.maxn(parts) do
+    local part = parts[i]
+    if getmetatable(part) == h.part_mt then
+      result[i] = h.new_part(
+        part.value,
+        part.stl_code,
+        vim.tbl_extend("force", opts, part.opts)
+      )
+    elseif type(part) == "table" then
+      result[i] = bareline.each(opts, part)
+    else
+      result[i] = part
+    end
+  end
+  return result
+end
+
+--- Invisible space. Return {length} Unicode Thin Space (U+2009) chars. ASCII
+--- whitespace is sometimes trimmed by Neovim, while this char is not.
+---@param length integer
+---@return string
+function bareline.space(length)
+  -- The UTF-8 bytes of U+2009.
+  return string.rep("\226\128\137", length)
+end
+
+-- BUILTIN STATUSLINES
+
+bareline.statuslines = {}
+
+--- #delimiter
+--- #tag bareline-builtin-statuslines
+--- Builtin statuslines ~
+---
+--- Each is a function like |bareline.config.statusline|, so it can be returned
+--- from it, e.g. `return bareline.statuslines.plugin(ctx)`.
 
 --- Statusline for plugin windows, including the plugin name.
----@type BarelineAltStatusline
-bareline.alt_statuslines.plugin = {
-  value = "%{BlIs(1)}"
-    .. "%{%BlItem('plugin_name')%}"
-    .. "%="
-    .. "%02l:%02c/%02L"
-    .. "%{BlIs(1)}",
-  when = function()
-    return h.is_plugin_buf(0)
-  end,
-}
-
---- #delimiter
---- #tag bareline-vimscript-functions
---- Vimscript functions ~
----
---- The functions in this section have the goal of facilitating writing the value
---- for |bareline.config.statusline| (i.e., 'statusline'). So the functions
---- are intended to be used in the statusline string.
-
---- #tag BlItem()
----                              `BlItem`({name})
---- Return the value of the item `bareline.items[{name}]` in the current buf. The
---- first call in a buf creates the autocmds of the item and sets its var.
---- See: |bareline-item-structure|.
---- Parameters:
---- * {name} `(string)` Key of the item in `bareline.items`.
---- Return:
---- `(string)`
-vim.cmd([[
-function! BlItem(name)
-  return v:lua.require'bareline'._item_value(a:name)
-endfunction
-]])
-
---- #tag BlIs()
----                              `BlIs`({length})
---- Invisible space. Return a {length} amount of Unicode Thin Space (U+2009)
---- chars. This is useful to control empty space in the statusline, since ASCII
---- whitespace is sometimes trimmed by Neovim, while this Unicode char is not.
---- Parameters:
---- * {length} `(string)` Amount of consecutive U+2009 chars to return.
---- Return:
---- `(string)`
-vim.cmd([[
-function! BlIs(length)
-  let u2009_chars = ''
-  for i in range(1, a:length)
-    " Unicode Thin Space (U+2009)
-    let u2009_chars .= ' '
-  endfor
-  return u2009_chars
-endfunction
-]])
-
---- #tag BlIna()
----                          `BlIna`({value},{mapper})
---- Inactive. In inactive windows return {value} mapped via the funcref {mapper}.
---- In active windows return {value} as-is.
---- Parameters:
---- * {value} `(string)` Any.
---- * {mapper} `(Funcref)` Takes `{value}` as its single arg. See |Funcref|.
---- Return:
---- `(string)`
-vim.cmd([[
-function! BlIna(value,mapper)
-  " A buf-local flag cannot answer this: the same buf can sit in an active and
-  " an inactive window at once. See 'statusline' on `g:actual_curwin`, which is
-  " only set while a statusline is being drawn.
-  if win_getid() == get(g:, 'actual_curwin', win_getid())
-    return a:value
-  else
-    return a:mapper(a:value)
-  endif
-endfunction
-]])
-
---- #tag BlInarm()
----                              `BlInarm`({value})
---- Inactive remove. In inactive windows return an empty string. In active windows
---- return {value} as-is.
---- Parameters:
---- * {value} `(string)` Any.
---- Return:
---- `(string)`
-vim.cmd([[
-function! BlInarm(value)
-  return BlIna(a:value, { -> '' })
-endfunction
-]])
-
---- #tag BlInahide()
----                             `BlInahide`({value})
---- Inactive hide. In inactive windows return {value} masked using |BlIs()|. In
---- active windows return {value} as-is.
---- Parameters:
---- * {value} `(string)` Any.
---- Return:
---- `(string)`
-vim.cmd([[
-function! BlInahide(value)
-  return BlIna(a:value, { v -> BlIs(strlen(v)) })
-endfunction
-]])
-
---- #tag BlPadl()
----                              `BlPadl`({value})
---- Return {value} padded on the left with `BlIs(1)`.
---- Parameters:
---- * {value} `(string)` Any.
---- Return:
---- `(string)`
-vim.cmd([[
-function! BlPadl(value)
-  if a:value !=# ''
-    return BlIs(1) . a:value
-  endif
-  return ''
-endfunction
-]])
-
---- #tag BlPadr()
----                              `BlPadr`({value})
---- Return {value} padded on the right with `BlIs(1)`.
---- Parameters:
---- * {value} `(string)` Any.
---- Return:
---- `(string)`
-vim.cmd([[
-function! BlPadr(value)
-  if a:value !=# ''
-    return a:value . BlIs(1)
-  endif
-  return ''
-endfunction
-]])
-
---- #tag BlPad()
----                               `BlPad`({value})
---- Return {value} padded on both the left and right with `BlIs(1)`.
---- Parameters:
---- * {value} `(string)` Any.
---- Return:
---- `(string)`
-vim.cmd([[
-function! BlPad(value)
-  return BlPadr(BlPadl(a:value))
-endfunction
-]])
-
---- #tag BlWrap()
----                     `BlWrap`({value},{prefix},{suffix})
---- Return {value} wrapped with {prefix} and {suffix}. Example usage to wrap with
---- parens the Git HEAD returned by `https://github.com/lewis6991/gitsigns.nvim`:
---- `BlWrap(get(b:,'gitsigns_head',''),'(',')')`
---- Parameters:
---- * {value} `(string)` Any.
---- * {prefix} `(string)` Any.
---- * {suffix} `(string)` Any.
---- Return:
---- `(string)`
-vim.cmd([[
-function! BlWrap(value,prefix,suffix)
-  if a:value !=# ''
-    return a:prefix . a:value . a:suffix
-  endif
-  return ''
-endfunction
-]])
+--- See: |bareline.is_plugin_win()|.
+---@param ctx BarelineCtx
+---@return table
+---@diagnostic disable-next-line: unused-local
+function bareline.statuslines.plugin(ctx)
+  return {
+    bareline.space(1),
+    bareline.item("plugin_name"),
+    "%=",
+    "%02l:%02c/%02L",
+    bareline.space(1),
+  }
+end
 
 --- #delimiter
 --- #tag bareline-functions
 --- Functions ~
 
---- Reassign the proper value to the window local 'statusline'. Use this to
---- integrate with plugins which provide statusline integration through buf-local
---- vars and user autocmds.
+--- Whether the current window is a plugin window, e.g. nvim-tree. Also `true`
+--- for the quickfix and location lists.
+---@return boolean
+function bareline.is_plugin_win()
+  return h.is_plugin_buf(0)
+end
+
+--- Redraw all statuslines. Use this to integrate with plugins which provide
+--- statusline integration through buf-local vars and user autocmds. Calls in the
+--- same event loop cycle are merged into one redraw.
 ---
 --- For example, consider the integration with `lewis6991/gitsigns.nvim`. Out of
 --- the box, Bareline provides this. If it did not provide it, this is how a user
 --- could define it themselves:
 --- >lua
 ---   vim.api.nvim_create_autocmd("User", {
----     group = h.statusline_augroup,
 ---     pattern = "GitSignsUpdate",
 ---     callback = function()
 ---       bareline.refresh_statusline()
@@ -746,13 +680,14 @@ endfunction
 ---   })
 --- <
 function bareline.refresh_statusline()
-  local statusline_to_assign = bareline.config.statusline
-  for _, statusline in ipairs(bareline.config.alt_statuslines) do
-    if statusline.when() then
-      statusline_to_assign = statusline.value
-    end
+  if h.state.redraw_pending then
+    return
   end
-  h.draw_window_statusline(statusline_to_assign)
+  h.state.redraw_pending = true
+  vim.schedule(function()
+    h.state.redraw_pending = false
+    vim.cmd("redrawstatus!")
+  end)
 end
 
 -- Set module default config.
@@ -852,21 +787,6 @@ function h.is_plugin_buf(bufnr)
   return not h.is_shipped_filetype(filetype)
 end
 
----@param win_id integer
----@return boolean
-function h.is_floating_win(win_id)
-  -- See |api-floatwin| to learn how to check whether a win is floating.
-  return vim.api.nvim_win_get_config(win_id).relative ~= ""
-end
-
----@param statusline string
-function h.draw_window_statusline(statusline)
-  if h.is_floating_win(0) then
-    return
-  end
-  vim.wo.statusline = statusline
-end
-
 --- Create the autocmds to call the `callback` of a `BareItem`.
 ---@param item BareItem
 function h.create_item_autocmds(item)
@@ -898,12 +818,14 @@ function h.create_item_autocmd(item, autocmd)
   autocmd.opts.group = h.item_augroup
   autocmd.opts.callback = function()
     h.set_item_var(item)
+    -- A b: var change alone does not redraw the statusline.
+    bareline.refresh_statusline()
   end
   vim.api.nvim_create_autocmd(autocmd.event, autocmd.opts)
 end
 
 --- Call the callback of `item` in the current buf, and record that the buf has
---- the var set, so |BlItem()| does not call it again.
+--- the var set, so |bareline.item()| does not call it again.
 ---@param item BareItem
 function h.set_item_var(item)
   local buf = vim.api.nvim_get_current_buf()
@@ -912,24 +834,104 @@ function h.set_item_var(item)
   item.callback(item.var)
 end
 
--- Backs |BlItem()|. Runs while the stl is drawn, when the buf and win being
--- drawn are the current ones.
----@param name string
+-- Marks the tables returned by `item()` and `text()`, to tell them apart from a
+-- nested list of parts.
+h.part_mt = {}
+
+---@param value any
+---@param stl_code boolean
+---@param opts BarelinePartOpts?
+---@return table
+function h.new_part(value, stl_code, opts)
+  vim.validate("opts", opts, "table", true)
+  local part = {
+    value = value == nil and "" or tostring(value),
+    stl_code = stl_code,
+    opts = opts or {},
+  }
+  return setmetatable(part, h.part_mt)
+end
+
+-- Drawn when nothing better can be, e.g. the user's statusline errors.
+h.fallback_statusline = "%<%f %h%w%m%r%=%l,%c %P"
+
+-- Backs 'statusline' (see `setup()`). `%!` runs in the current window, while
+-- `g:statusline_winid` is the one being drawn, so the user's function runs in
+-- the latter. That way `vim.b` reads the drawn buf, like `%{}` would.
 ---@return string
-function bareline._item_value(name)
-  local item = bareline.items[name]
-  if item == nil then
-    error("Bareline: no item in bareline.items named: " .. name)
+function bareline._draw()
+  local current_win = vim.api.nvim_get_current_win()
+  local win = vim.g.statusline_winid or current_win
+  if bareline.config == nil then
+    return h.fallback_statusline
   end
-  if h.state.active_items[item.var] == nil then
-    h.state.active_items[item.var] = item
-    h.create_item_autocmds(item)
+  local ctx = { active = win == current_win }
+  local ok, result = pcall(vim.api.nvim_win_call, win, function()
+    local parts = bareline.config.statusline(ctx)
+    local out = {}
+    h.render_parts({ parts }, ctx.active, out)
+    return table.concat(out)
+  end)
+  if ok then
+    return result
   end
-  local set_vars = h.state.set_item_vars[vim.api.nvim_get_current_buf()]
-  if set_vars == nil or not set_vars[item.var] then
-    h.set_item_var(item)
+  if not h.state.draw_error_notified then
+    h.state.draw_error_notified = true
+    -- Deferred: notifying while the statusline is drawn is not reliable.
+    vim.schedule(function()
+      vim.notify("Bareline: " .. result, vim.log.levels.ERROR)
+    end)
   end
-  return tostring(vim.b[item.var] or "")
+  return h.fallback_statusline
+end
+
+--- Render the statusline parts in `parts`, appending to `out`.
+---@param parts table
+---@param active boolean
+---@param out string[]
+function h.render_parts(parts, active, out)
+  -- `table.maxn` over `ipairs`, since `nil` parts leave holes in the list.
+  for i = 1, table.maxn(parts) do
+    local part = parts[i]
+    if getmetatable(part) == h.part_mt then
+      table.insert(out, h.render_part(part, active))
+    elseif type(part) == "table" then
+      h.render_parts(part, active, out)
+    elseif type(part) == "string" or type(part) == "number" then
+      table.insert(out, tostring(part))
+    elseif part ~= nil and part ~= false then
+      error("statusline part must be a string or table, got " .. type(part))
+    end
+  end
+end
+
+---@param part table Built by `h.new_part()`.
+---@param active boolean
+---@return string
+function h.render_part(part, active)
+  local opts = part.opts
+  if part.value == "" or (not active and opts.inactive == "remove") then
+    return ""
+  end
+  local value = part.value
+  if not part.stl_code then
+    value = value:gsub("%%", "%%%%")
+  end
+  local prefix, suffix = "", ""
+  if opts.wrap then
+    prefix, suffix = opts.wrap[1] or "", opts.wrap[2] or ""
+  end
+  local pad = opts.pad and bareline.space(1) or ""
+  if not active and opts.inactive == "hide" then
+    -- Measured on the unescaped value, as it is displayed.
+    local width = vim.api.nvim_strwidth(part.value)
+      + vim.api.nvim_strwidth(prefix .. suffix)
+    if opts.pad then
+      width = width + 2
+    end
+    return bareline.space(width)
+  end
+  return pad .. prefix .. value .. suffix .. pad
 end
 
 --- Merge user-supplied config with the plugin's default config. For every key
@@ -942,8 +944,7 @@ function h.get_config_with_fallback(config, default_config)
   vim.validate("config", config, "table", true)
   config =
     vim.tbl_deep_extend("force", vim.deepcopy(default_config), config or {})
-  vim.validate("config.statusline", config.statusline, "string")
-  vim.validate("config.alt_statuslines", config.alt_statuslines, "table", true)
+  vim.validate("config.statusline", config.statusline, "function")
   return config
 end
 
@@ -993,6 +994,10 @@ h.state = {
   active_items = {},
   -- Per buf, the vars of the items set in it, e.g. `{ [1] = { bl_filepath = true } }`.
   set_item_vars = {},
+  -- Whether an error of the user's statusline was shown, to show it only once.
+  draw_error_notified = false,
+  -- Whether a redraw is scheduled by `refresh_statusline()`.
+  redraw_pending = false,
   system_root_dir = h.get_system_root_dir(),
 }
 

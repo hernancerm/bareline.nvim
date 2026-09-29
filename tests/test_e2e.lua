@@ -6,6 +6,9 @@ local expect_reference_screenshot = mini_test.expect.reference_screenshot
 local eq = mini_test.expect.equality
 local new_set = mini_test.new_set
 
+-- Unicode Thin Space (U+2009), as drawn by `bareline.space(1)`.
+local ts = "\226\128\137"
+
 local T = new_set({
   hooks = {
     pre_case = function()
@@ -57,8 +60,11 @@ end
 
 T["bareline.config.items.mhr.display_modified = true"] = function()
   child.lua_func(function()
-    require("bareline").setup({
-      statusline = "%{%BlItem('mhr')%}",
+    local bareline = require("bareline")
+    bareline.setup({
+      statusline = function()
+        return { bareline.item("mhr") }
+      end,
       items = {
         mhr = {
           display_modified = true,
@@ -67,13 +73,16 @@ T["bareline.config.items.mhr.display_modified = true"] = function()
     })
   end)
   child.type_keys("aTest")
-  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, "[+]")
+  eq(h.get_child_evaluated_stl(child), "[+]")
 end
 
 T["bareline.config.items.mhr.display_modified = false"] = function()
   child.lua_func(function()
-    require("bareline").setup({
-      statusline = "%{%BlItem('mhr')%}",
+    local bareline = require("bareline")
+    bareline.setup({
+      statusline = function()
+        return { bareline.item("mhr") }
+      end,
       items = {
         mhr = {
           display_modified = false,
@@ -82,7 +91,7 @@ T["bareline.config.items.mhr.display_modified = false"] = function()
     })
   end)
   child.type_keys("aTest")
-  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, "")
+  eq(h.get_child_evaluated_stl(child), "")
 end
 
 -- =================================================================================================
@@ -90,19 +99,107 @@ end
 
 T["custom statusline"] = function()
   child.lua_func(function()
-    require("bareline").setup({
-      statusline = "%<"
-        .. "%{BlPad(BlItem('filepath'))}"
-        .. "%m%h%r"
-        .. "%="
-        .. "%{BlIs(1)}"
-        .. "%{%BlInahide('%02l:%02c/%02L')%}"
-        .. "%{BlIs(1)}",
+    local bareline = require("bareline")
+    local s = bareline.space
+    bareline.setup({
+      statusline = function(ctx)
+        return {
+          "%<",
+          bareline.item("filepath", { pad = true }),
+          "%m%h%r",
+          "%=",
+          s(1),
+          ctx.active and "%02l:%02c/%02L" or s(14),
+          s(1),
+        }
+      end,
     })
     vim.cmd.new()
   end)
   child.type_keys("aTest")
   expect_reference_screenshot(child.get_screenshot())
+end
+
+-- =================================================================================================
+-- Statusline parts
+
+---@param statusline string Lua code of the function body, where `bareline` and `ctx` are in scope.
+local function setup_statusline(statusline)
+  child.lua_func(function(body)
+    local bareline = require("bareline")
+    local fn = assert(loadstring("local bareline, ctx = ...; " .. body))
+    bareline.setup({
+      statusline = function(ctx)
+        return fn(bareline, ctx)
+      end,
+    })
+  end, statusline)
+end
+
+T["text() escapes %"] = function()
+  setup_statusline([[return { bareline.text("50%"), "%%" }]])
+  eq(h.get_child_evaluated_stl(child), "50%%")
+end
+
+T["text() of nil is empty, so it gets neither pad nor wrap"] = function()
+  setup_statusline([[return { "a", bareline.text(nil, { pad = true, wrap = { "(", ")" } }), "b" }]])
+  eq(h.get_child_evaluated_stl(child), "ab")
+end
+
+T["wrap is applied before pad"] = function()
+  setup_statusline([[return { bareline.text("x", { pad = true, wrap = { "(", ")" } }) }]])
+  eq(h.get_child_evaluated_stl(child), ts .. "(x)" .. ts)
+end
+
+T["nil and false parts are skipped, nested lists are flattened"] = function()
+  setup_statusline([[return { "a", nil, false, { "b", { "c" } }, "d" }]])
+  eq(h.get_child_evaluated_stl(child), "abcd")
+end
+
+T["each() applies its opts to each part, and the opts of a part win"] = function()
+  setup_statusline([[
+    return bareline.each({ pad = true }, {
+      bareline.text("a"),
+      "|",
+      { bareline.text("b") },
+      bareline.text("c", { pad = false }),
+    })
+  ]])
+  eq(h.get_child_evaluated_stl(child), ts .. "a" .. ts .. "|" .. ts .. "b" .. ts .. "c")
+end
+
+T["inactive = remove, hide"] = function()
+  setup_statusline([[
+    return {
+      "[",
+      bareline.text("rm", { inactive = "remove" }),
+      bareline.text("hide", { inactive = "hide", pad = true }),
+      "]",
+    }
+  ]])
+  child.cmd("new")
+  local inactive_win = child.fn.win_getid(2)
+  eq(h.get_child_evaluated_stl(child), "[rm" .. ts .. "hide" .. ts .. "]")
+  eq(h.get_child_evaluated_stl(child, inactive_win), "[" .. ts:rep(6) .. "]")
+end
+
+T["the function runs in the window being drawn"] = function()
+  setup_statusline([[return { bareline.text(vim.b.name) }]])
+  child.b.name = "below"
+  child.cmd("new")
+  child.b.name = "above"
+  eq(h.get_child_evaluated_stl(child), "above")
+  eq(h.get_child_evaluated_stl(child, child.fn.win_getid(2)), "below")
+end
+
+T["an error draws the fallback statusline"] = function()
+  setup_statusline([[error("boom")]])
+  eq(h.get_child_evaluated_stl(child):match("^%[No Name%]"), "[No Name]")
+  -- The error is shown once, on the next event loop cycle.
+  h.get_child_evaluated_stl(child)
+  child.lua("vim.wait(50)")
+  local messages = child.api.nvim_exec2("messages", { output = true }).output
+  eq(select(2, messages:gsub("Bareline: ", "")), 1)
 end
 
 -- =================================================================================================
@@ -114,11 +211,9 @@ T["user-defined BareItem"] = function()
     bareline.items.hello = bareline.BareItem:new("bl_hello", function(var)
       vim.b[var] = "Hi!"
     end, {})
-    bareline.setup({
-      statusline = "%{BlItem('hello')}",
-    })
   end)
-  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, "Hi!")
+  setup_statusline([[return { bareline.item("hello") }]])
+  eq(h.get_child_evaluated_stl(child), "Hi!")
 end
 
 T["user-defined BareItem uses bareline.config.items"] = function()
@@ -128,7 +223,9 @@ T["user-defined BareItem uses bareline.config.items"] = function()
       vim.b[var] = "Hi! " .. bareline.config.items.hello.message
     end, {})
     bareline.setup({
-      statusline = "%{BlItem('hello')}",
+      statusline = function()
+        return { bareline.item("hello") }
+      end,
       items = {
         hello = {
           message = "Test",
@@ -136,10 +233,10 @@ T["user-defined BareItem uses bareline.config.items"] = function()
       },
     })
   end)
-  eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, "Hi! Test")
+  eq(h.get_child_evaluated_stl(child), "Hi! Test")
 end
 
-T["BlItem() creates the autocmds of drawn items only"] = function()
+T["item() creates the autocmds of drawn items only"] = function()
   child.lua_func(function()
     local bareline = require("bareline")
     bareline.items.wrap = bareline.BareItem:new("bl_wrap", function(var)
@@ -148,8 +245,8 @@ T["BlItem() creates the autocmds of drawn items only"] = function()
     bareline.items.list = bareline.BareItem:new("bl_list", function(var)
       vim.b[var] = "list"
     end, { autocmds = { { event = "OptionSet", opts = { pattern = "list" } } } })
-    bareline.setup({ statusline = "%{BlItem('wrap')}" })
   end)
+  setup_statusline([[return { bareline.item("wrap") }]])
   eq(h.get_child_evaluated_stl(child), "wrap")
   child.cmd("set nowrap")
   eq(h.get_child_evaluated_stl(child), "nowrap")

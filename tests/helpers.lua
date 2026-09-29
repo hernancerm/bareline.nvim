@@ -14,8 +14,11 @@ function h.sleep(child, milliseconds, times)
 end
 
 ---@param child MiniTest.child
-function h.get_child_evaluated_stl(child)
-  return child.lua_get("vim.api.nvim_eval_statusline(vim.wo.statusline, {}).str")
+---@param winid integer? Window to draw the statusline of. Default: current window.
+function h.get_child_evaluated_stl(child, winid)
+  return child.lua_func(function(win)
+    return vim.api.nvim_eval_statusline(vim.o.statusline, { winid = win }).str
+  end, winid or 0)
 end
 
 function h.rename_git_dirs_for_testing()

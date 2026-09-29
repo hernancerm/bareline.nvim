@@ -39,7 +39,7 @@ A statusline plugin for the pragmatic.
 - Support for global statusline (`laststatus=3`).
 - Bundled statusline items for common use cases.
 - Allows defining a variation of the statusline for inactive windows.
-- Allows defining alternative statuslines for buffers matching a criteria.
+- Allows picking a different statusline for some windows, with a plain `if`.
 - Async. No timer. Autocmds are used to update the statusline immediately as changes happen.
 
 ## Out of scope
@@ -69,26 +69,36 @@ Some things to notice:
 ## Default config
 
 ```lua
-require("bareline").setup({
-  statusline = "%{BlIs(1)}"
-    .. "%{BlInahide(BlItem('vim_mode'))}"
-    .. "%{BlIs(1)}"
-    .. "%<"
-    .. "%{BlPad(BlItem('filepath'))}"
-    .. "%{BlPad(BlItem('lsp_servers'))}"
-    .. "%{%BlPad(BlItem('mhr'))%}"
-    .. "%="
-    .. "%{BlPad(BlItem('diagnostics'))}"
-    .. "%{BlPad(BlItem('end_of_line'))}"
-    .. "%{BlPad(BlItem('indent_style'))}"
-    .. "%{BlInarm(BlPad(BlWrap(get(b:,'gitsigns_head',''),'(',')')))}"
-    .. "%{BlPad(BlItem('current_working_dir'))}"
-    .. "%{BlIs(1)}"
-    .. "%02l:%02c/%02L"
-    .. "%{BlIs(1)}",
-  alt_statuslines = {
-    bareline.alt_statuslines.plugin,
-  },
+local bareline = require("bareline")
+bareline.setup({
+  statusline = function(ctx)
+    if bareline.is_plugin_win() then
+      return bareline.statuslines.plugin(ctx)
+    end
+    local item, text, s, each = bareline.item, bareline.text, bareline.space, bareline.each
+    return {
+      s(1),
+      item("vim_mode", { inactive = "hide" }),
+      s(1),
+      "%<",
+      each({ pad = true }, {
+        item("filepath"),
+        item("lsp_servers"),
+        item("mhr"),
+      }),
+      "%=",
+      each({ pad = true }, {
+        item("diagnostics"),
+        item("end_of_line"),
+        item("indent_style"),
+        text(vim.b.gitsigns_head, { wrap = { "(", ")" }, inactive = "remove" }),
+        item("current_working_dir"),
+      }),
+      s(1),
+      "%02l:%02c/%02L",
+      s(1),
+    }
+  end,
   items = {
     mhr = {
       display_modified = true,

@@ -9,18 +9,28 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Vimscript function `BlItem()` to draw an item, e.g. `%{BlItem('filepath')}`.
+- Lua functions to build the statusline: `item()`, `text()`, `each()` and `space()`.
+- `%` in item values and `text()` is escaped, e.g. a file named `50%.txt` is drawn right.
+- `is_plugin_win()` and `statuslines.plugin()`, to pick the plugin statusline with an `if`.
+- If the statusline function errors, the error is shown once and a basic statusline is drawn.
+- Item option `stl_code`, for items whose value is statusline DSL, e.g. `mhr`.
 
 ### Changed
 
-- Config key `statusline.value` is now just `statusline`.
+- Config key `statusline.value` is now `statusline`, a Lua function returning a list of parts. It
+  runs in the window being drawn, so `vim.b` reads the right buf.
+- The global `'statusline'` is set once, to `%!v:lua.require'bareline'._draw()`.
+- `refresh_statusline()` redraws all statuslines, instead of reassigning `'statusline'`.
 - Calling `setup()` is no longer required. Call it only to configure the plugin.
 - Requires Neovim 0.12.
 - Items shared by several statuslines create their autocmds only once.
 
 ### Removed
 
-- Config key `statusline.items`. Items drawn with `BlItem()` need no registration.
+- Config key `statusline.items`. Items drawn with `item()` need no registration.
+- Config key `alt_statuslines` and `bareline.alt_statuslines`. Use an `if` in `statusline`.
+- Vimscript functions `BlIs()`, `BlPad()`, `BlPadl()`, `BlPadr()`, `BlWrap()`, `BlIna()`,
+  `BlInahide()` and `BlInarm()`. Use `space()` and the opts of `item()` and `text()`.
 - Config key `logging`, and with it the log file.
 
 ### Fixed

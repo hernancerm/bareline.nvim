@@ -9,8 +9,8 @@ Contents:
 3. Item structure                                      |bareline-item-structure|
 4. Custom items                                          |bareline-custom-items|
 5. Builtin items                                        |bareline-builtin-items|
-6. Builtin alt statuslines                    |bareline-builtin-alt-statuslines|
-7. Vimscript functions                            |bareline-vimscript-functions|
+6. Statusline parts                                    |bareline-statusline-parts|
+7. Builtin statuslines                            |bareline-builtin-statuslines|
 8. Functions                                                |bareline-functions|
 
 ==============================================================================
@@ -28,18 +28,20 @@ Design
 
 Bareline takes this approach to statusline configuration:
 
-1. The statusline DSL ('statusline') is not abstracted away from the user.
-   See: |bareline.config.statusline|.
-2. Helper functions are provided to improve the experience of using the DSL.
-   See: |bareline-vimscript-functions|.
+1. The statusline is a Lua function returning a list of parts. Plain strings
+   in the list are the statusline DSL ('statusline'), so it is not abstracted
+   away from the user. See: |bareline.config.statusline|.
+2. Functions build the other parts, e.g. padded and escaped text.
+   See: |bareline-statusline-parts|.
 3. The plugin exposes "statusline items", which group a buf-local var, a
    callback which sets the var, and autocmds firing the callback.
-   See: |bareline.item-structure|.
-4. Items are drawn with |BlItem()|, e.g. `%{BlItem('filepath')}`. The first
+   See: |bareline-item-structure|.
+4. Items are drawn with |bareline.item()|, e.g. `item("filepath")`. The first
    draw of an item in a buf creates its autocmds and sets its var, so the
    config does not list the items in use. Later draws only read the var.
 
-With this design, all Bareline items are asynchronous.
+With this design, all Bareline items are asynchronous. Drawing the statusline
+only reads vars.
 
 Quickstart
 
@@ -71,25 +73,40 @@ default config is available in `bareline.default_config`.
 Below is the default config, where `bareline` equals `require("bareline")`.
 >lua
   {
-    statusline = "%{BlIs(1)}"
-      .. "%{BlInahide(BlItem('vim_mode'))}"
-      .. "%{BlIs(1)}"
-      .. "%<"
-      .. "%{BlPad(BlItem('filepath'))}"
-      .. "%{BlPad(BlItem('lsp_servers'))}"
-      .. "%{%BlPad(BlItem('mhr'))%}"
-      .. "%="
-      .. "%{BlPad(BlItem('diagnostics'))}"
-      .. "%{BlPad(BlItem('end_of_line'))}"
-      .. "%{BlPad(BlItem('indent_style'))}"
-      .. "%{BlInarm(BlPad(BlWrap(get(b:,'gitsigns_head',''),'(',')')))}"
-      .. "%{BlPad(BlItem('current_working_dir'))}"
-      .. "%{BlIs(1)}"
-      .. "%02l:%02c/%02L"
-      .. "%{BlIs(1)}",
-    alt_statuslines = {
-      bareline.alt_statuslines.plugin,
-    },
+    statusline = function(ctx)
+      if bareline.is_plugin_win() then
+        return bareline.statuslines.plugin(ctx)
+      end
+      local item, text = bareline.item, bareline.text
+      local space, each = bareline.space, bareline.each
+      return {
+        space(1),
+        item("vim_mode", {
+          inactive = "hide"
+        }),
+        space(1),
+        "%<",
+        each({ pad = true }, {
+          item("filepath"),
+          item("lsp_servers"),
+          item("mhr"),
+        }),
+        "%=",
+        each({ pad = true }, {
+          item("diagnostics"),
+          item("end_of_line"),
+          item("indent_style"),
+          text(vim.b.gitsigns_head, {
+            wrap = { "(", ")" },
+            inactive = "remove",
+          }),
+          item("current_working_dir"),
+        }),
+        space(1),
+        "%02l:%02c/%02L",
+        space(1),
+      }
+    end,
     items = {
       mhr = {
         display_modified = true,
@@ -98,16 +115,26 @@ Below is the default config, where `bareline` equals `require("bareline")`.
   }
 <
                                                     *bareline.config.statusline*
-    {statusline} `(string)`
-      The main statusline. Directly assigned to window local 'statusline'.
+    {statusline} `(fun(ctx:BarelineCtx):table|string)`
+      Called on every draw of every statusline. Returns a list of parts:
+      • `string`: Statusline DSL, used as-is, e.g. `"%<"`, `"%02l"`.
+      • The return of |bareline.item()| and |bareline.text()|: Text, where
+        `%` is escaped.
+      • A nested list, e.g. the return of |bareline.each()|.
+      • `nil` or `false`: Skipped, so `ctx.active and "foo"` works.
+      The function runs in the window being drawn, so |vim.b|, |vim.wo| and
+      |vim.fn| read that window and its buf. If the function errors, the
+      error is shown once and a basic statusline is drawn instead.
+      To pick a different statusline for some windows, use an `if`. The
+      default config does so for plugin windows.
 
-                                               *bareline.config.alt_statuslines*
-Alternate statuslines to |bareline.config.statusline|. These can be used to
-assign a different statusline on windows that meet some criteria. For example,
-Bareline internally uses this feature to assign a different statusline for
-plugin windows (e.g., nvim-tree). This list is traversed in order and the
-statusline picked is the first one which its `when` function returns true.
-See: |bareline-builtin-alt-statuslines|.
+Context of the draw, passed to |bareline.config.statusline|.
+Class ~
+{BarelineCtx}
+Fields ~
+{active} `(boolean)` Whether the window being drawn is the current window.
+It cannot be read from within the function, since the window being drawn is
+current while it runs.
 
                                                          *bareline.config.items*
 Provide item-specific configuration.
@@ -146,6 +173,8 @@ Class ~
 Fields ~
 {autocmds} `(table[]?)` Expects tables each with the keys `event` and `opts`,
 which are passed to: |vim.api.nvim_create_autocmd()|.
+{stl_code} `(boolean?)` Whether the value is statusline DSL, e.g. `"%m%r"`.
+When `true`, |bareline.item()| does not escape `%` in the value.
 
                                                        *bareline.BareItem:new()*
                `bareline.BareItem:new`({var}, {callback}, {opts})
@@ -161,8 +190,9 @@ Return ~
                                                          *bareline-custom-items*
 Custom items ~
 
-All custom items are a |bareline.BareItem|. To draw an item with |BlItem()|,
-add it to `bareline.items`. Example item indicating soft wrap:
+All custom items are a |bareline.BareItem|. To draw an item with
+|bareline.item()|, add it to `bareline.items`. Example item indicating soft
+wrap:
 >lua
   local bareline = require("bareline")
   bareline.items.soft_wrap = bareline.BareItem:new(
@@ -187,7 +217,9 @@ add it to `bareline.items`. Example item indicating soft wrap:
 Use it:
 >lua
   bareline.setup({
-    statusline = "%{BlItem('soft_wrap')}",
+    statusline = function()
+      return { bareline.item("soft_wrap") }
+    end,
   })
 <
 ------------------------------------------------------------------------------
@@ -278,134 +310,105 @@ Type ~
 `(BareItem)`
 
 ------------------------------------------------------------------------------
-                                              *bareline-builtin-alt-statuslines*
-Builtin alt statuslines ~
+                                                     *bareline-statusline-parts*
+Statusline parts ~
 
-All alt statuslines are structured as a `BarelineAltStatusline`.
+The functions in this section build the parts returned by
+|bareline.config.statusline|. They are meant to be called while it runs.
 
-Statuslines defined as this class are meant to be used in the configuration
-key being |bareline.config.alt_statuslines|, which accepts a list. The list
-gets walked in order to find a match (`when`). The first match is used.
+                                                             *bareline.PartOpts*
+Options of |bareline.item()| and |bareline.text()|. Nothing is added when the
+value is empty. Applied in this order: `wrap`, `pad`, `inactive`.
 Class ~
-{BarelineAltStatusline}
+{BarelinePartOpts}
 Fields ~
-{value} `(string)` Value for 'statusline'.
-{when} `((fun():boolean)?)` Indicates a match. The stl should be used.
+{pad} `(boolean?)` Add |bareline.space()| on both sides.
+{wrap} `(string[]?)` Add a prefix and a suffix, e.g. `{ "(", ")" }`. These
+are statusline DSL, so `%` is not escaped.
+{inactive} `(("hide"|"remove"|false)?)` In inactive windows, either replace
+the part with spaces of the same width (`"hide"`), or drop it (`"remove"`).
 
-                                               *bareline.alt_statuslines.plugin*
-                       `bareline.alt_statuslines.plugin`
-Statusline for plugin windows, including the plugin name.
-Type ~
-`(BarelineAltStatusline)`
+                                                               *bareline.item()*
+                        `bareline.item`({name}, {opts})
+Value of the item `bareline.items[{name}]` in the current buf. The first
+call in a buf creates the autocmds of the item and sets its var. The value is
+escaped, unless the item sets `stl_code`. See: |bareline-item-structure|.
+Parameters ~
+{name} `(string)` Key of the item in `bareline.items`.
+{opts} `(BarelinePartOpts?)`
+Return ~
+`(table)`
+
+                                                               *bareline.text()*
+                        `bareline.text`({value}, {opts})
+Any value as text, so `%` is escaped. `nil` is an empty string. Example
+usage to wrap with parens the Git HEAD set by
+`https://github.com/lewis6991/gitsigns.nvim`:
+`text(vim.b.gitsigns_head, { wrap = { "(", ")" } })`
+Parameters ~
+{value} `(any)`
+{opts} `(BarelinePartOpts?)`
+Return ~
+`(table)`
+
+                                                               *bareline.each()*
+                        `bareline.each`({opts}, {parts})
+Apply {opts} to each |bareline.item()| and |bareline.text()| in {parts},
+including nested lists. The opts of a part take precedence, e.g. a part with
+`{ pad = false }` is not padded by `each({ pad = true }, ...)`.
+Parameters ~
+{opts} `(BarelinePartOpts)`
+{parts} `(table)`
+Return ~
+`(table)`
+
+                                                              *bareline.space()*
+                           `bareline.space`({length})
+Invisible space. Return {length} Unicode Thin Space (U+2009) chars. ASCII
+whitespace is sometimes trimmed by Neovim, while this char is not.
+Parameters ~
+{length} `(integer)`
+Return ~
+`(string)`
 
 ------------------------------------------------------------------------------
-                                                  *bareline-vimscript-functions*
-Vimscript functions ~
+                                                  *bareline-builtin-statuslines*
+Builtin statuslines ~
 
-The functions in this section have the goal of facilitating writing the value
-for |bareline.config.statusline| (i.e., 'statusline'). So the functions
-are intended to be used in the statusline string.
+Each is a function like |bareline.config.statusline|, so it can be returned
+from it, e.g. `return bareline.statuslines.plugin(ctx)`.
 
-                                                                      *BlItem()*
-                             `BlItem`({name})
-Return the value of the item `bareline.items[{name}]` in the current buf. The
-first call in a buf creates the autocmds of the item and sets its var.
-See: |bareline-item-structure|.
-Parameters:
-• {name} `(string)` Key of the item in `bareline.items`.
-Return:
-`(string)`
-
-                                                                        *BlIs()*
-                             `BlIs`({length})
-Invisible space. Return a {length} amount of Unicode Thin Space (U+2009)
-chars. This is useful to control empty space in the statusline, since ASCII
-whitespace is sometimes trimmed by Neovim, while this Unicode char is not.
-Parameters:
-• {length} `(string)` Amount of consecutive U+2009 chars to return.
-Return:
-`(string)`
-
-                                                                       *BlIna()*
-                         `BlIna`({value},{mapper})
-Inactive. In inactive windows return {value} mapped via the funcref {mapper}.
-In active windows return {value} as-is.
-Parameters:
-• {value} `(string)` Any.
-• {mapper} `(Funcref)` Takes `{value}` as its single arg. See |Funcref|.
-Return:
-`(string)`
-
-                                                                     *BlInarm()*
-                             `BlInarm`({value})
-Inactive remove. In inactive windows return an empty string. In active windows
-return {value} as-is.
-Parameters:
-• {value} `(string)` Any.
-Return:
-`(string)`
-
-                                                                   *BlInahide()*
-                            `BlInahide`({value})
-Inactive hide. In inactive windows return {value} masked using |BlIs()|. In
-active windows return {value} as-is.
-Parameters:
-• {value} `(string)` Any.
-Return:
-`(string)`
-
-                                                                      *BlPadl()*
-                             `BlPadl`({value})
-Return {value} padded on the left with `BlIs(1)`.
-Parameters:
-• {value} `(string)` Any.
-Return:
-`(string)`
-
-                                                                      *BlPadr()*
-                             `BlPadr`({value})
-Return {value} padded on the right with `BlIs(1)`.
-Parameters:
-• {value} `(string)` Any.
-Return:
-`(string)`
-
-                                                                       *BlPad()*
-                              `BlPad`({value})
-Return {value} padded on both the left and right with `BlIs(1)`.
-Parameters:
-• {value} `(string)` Any.
-Return:
-`(string)`
-
-                                                                      *BlWrap()*
-                    `BlWrap`({value},{prefix},{suffix})
-Return {value} wrapped with {prefix} and {suffix}. Example usage to wrap with
-parens the Git HEAD returned by `https://github.com/lewis6991/gitsigns.nvim`:
-`BlWrap(get(b:,'gitsigns_head',''),'(',')')`
-Parameters:
-• {value} `(string)` Any.
-• {prefix} `(string)` Any.
-• {suffix} `(string)` Any.
-Return:
-`(string)`
+                                                 *bareline.statuslines.plugin()*
+                      `bareline.statuslines.plugin`({ctx})
+Statusline for plugin windows, including the plugin name.
+See: |bareline.is_plugin_win()|.
+Parameters ~
+{ctx} `(BarelineCtx)`
+Return ~
+`(table)`
 
 ------------------------------------------------------------------------------
                                                             *bareline-functions*
 Functions ~
 
+                                                      *bareline.is_plugin_win()*
+                           `bareline.is_plugin_win`()
+Whether the current window is a plugin window, e.g. nvim-tree. Also `true`
+for the quickfix and location lists.
+Return ~
+`(boolean)`
+
                                                  *bareline.refresh_statusline()*
                         `bareline.refresh_statusline`()
-Reassign the proper value to the window local 'statusline'. Use this to
-integrate with plugins which provide statusline integration through buf-local
-vars and user autocmds.
+Redraw all statuslines. Use this to integrate with plugins which provide
+statusline integration through buf-local vars and user autocmds. Calls in the
+same event loop cycle are merged into one redraw.
 
 For example, consider the integration with `lewis6991/gitsigns.nvim`. Out of
 the box, Bareline provides this. If it did not provide it, this is how a user
 could define it themselves:
 >lua
   vim.api.nvim_create_autocmd("User", {
-    group = h.statusline_augroup,
     pattern = "GitSignsUpdate",
     callback = function()
       bareline.refresh_statusline()
