@@ -47,3 +47,13 @@ Only [GNU Make](https://www.gnu.org/software/make/) required for:
 
 - Shell cmd to run all unit tests: `make test`.
 - Shell cmd to run all CI checks: `make ci`.
+
+## Tools
+
+If using mise-en-place:
+
+```toml
+[tools]
+lua-language-server = "3.17.1"
+stylua = "2.4.0"
+```
