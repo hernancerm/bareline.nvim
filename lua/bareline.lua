@@ -140,7 +140,7 @@ local function assign_default_config()
       return {
         space(1),
         item("vim_mode", {
-          inactive = "hide"
+          inactive = "hide",
         }),
         space(1),
         "%<",
@@ -480,30 +480,26 @@ end, {
 --- The tail of the current working directory.
 --- Mockup: `bareline.nvim`
 ---@type BareItem
-bareline.items.cwd = bareline.BareItem:new(
-  "bl_cwd",
-  function(var)
-    local cwd_tail = nil
-    local cwd = vim.uv.cwd() or ""
-    if cwd == vim.uv.os_homedir() then
-      cwd_tail = "~"
-    elseif cwd == h.state.system_root_dir then
-      cwd_tail = h.state.system_root_dir
-    else
-      cwd_tail = vim.fn.fnamemodify(cwd, ":t")
-    end
-    vim.b[var] = cwd_tail
-  end,
-  {
-    autocmds = {
-      {
-        event = {
-          "DirChanged",
-        },
+bareline.items.cwd = bareline.BareItem:new("bl_cwd", function(var)
+  local cwd_tail = nil
+  local cwd = vim.uv.cwd() or ""
+  if cwd == vim.uv.os_homedir() then
+    cwd_tail = "~"
+  elseif cwd == h.state.system_root_dir then
+    cwd_tail = h.state.system_root_dir
+  else
+    cwd_tail = vim.fn.fnamemodify(cwd, ":t")
+  end
+  vim.b[var] = cwd_tail
+end, {
+  autocmds = {
+    {
+      event = {
+        "DirChanged",
       },
     },
-  }
-)
+  },
+})
 
 --- %m%h%r
 --- Display the modified, help and read-only markers using the builtin statusline
