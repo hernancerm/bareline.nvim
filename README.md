@@ -70,24 +70,22 @@ Some things to notice:
 
 ```lua
 require("bareline").setup({
-  statusline = {
-    value = "%{BlIs(1)}"
-      .. "%{BlInahide(BlItem('vim_mode'))}"
-      .. "%{BlIs(1)}"
-      .. "%<"
-      .. "%{BlPad(BlItem('filepath'))}"
-      .. "%{BlPad(BlItem('lsp_servers'))}"
-      .. "%{%BlPad(BlItem('mhr'))%}"
-      .. "%="
-      .. "%{BlPad(BlItem('diagnostics'))}"
-      .. "%{BlPad(BlItem('end_of_line'))}"
-      .. "%{BlPad(BlItem('indent_style'))}"
-      .. "%{BlInarm(BlPad(BlWrap(get(b:,'gitsigns_head',''),'(',')')))}"
-      .. "%{BlPad(BlItem('current_working_dir'))}"
-      .. "%{BlIs(1)}"
-      .. "%02l:%02c/%02L"
-      .. "%{BlIs(1)}",
-  },
+  statusline = "%{BlIs(1)}"
+    .. "%{BlInahide(BlItem('vim_mode'))}"
+    .. "%{BlIs(1)}"
+    .. "%<"
+    .. "%{BlPad(BlItem('filepath'))}"
+    .. "%{BlPad(BlItem('lsp_servers'))}"
+    .. "%{%BlPad(BlItem('mhr'))%}"
+    .. "%="
+    .. "%{BlPad(BlItem('diagnostics'))}"
+    .. "%{BlPad(BlItem('end_of_line'))}"
+    .. "%{BlPad(BlItem('indent_style'))}"
+    .. "%{BlInarm(BlPad(BlWrap(get(b:,'gitsigns_head',''),'(',')')))}"
+    .. "%{BlPad(BlItem('current_working_dir'))}"
+    .. "%{BlIs(1)}"
+    .. "%02l:%02c/%02L"
+    .. "%{BlIs(1)}",
   alt_statuslines = {
     bareline.alt_statuslines.plugin,
   },

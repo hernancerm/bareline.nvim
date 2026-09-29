@@ -53,14 +53,12 @@ T["plugin window"] = function()
 end
 
 -- =================================================================================================
--- Config: bareline.config.statusline.items.mhr
+-- Config: bareline.config.items.mhr
 
 T["bareline.config.items.mhr.display_modified = true"] = function()
   child.lua_func(function()
     require("bareline").setup({
-      statusline = {
-        value = "%{%BlItem('mhr')%}",
-      },
+      statusline = "%{%BlItem('mhr')%}",
       items = {
         mhr = {
           display_modified = true,
@@ -75,9 +73,7 @@ end
 T["bareline.config.items.mhr.display_modified = false"] = function()
   child.lua_func(function()
     require("bareline").setup({
-      statusline = {
-        value = "%{%BlItem('mhr')%}",
-      },
+      statusline = "%{%BlItem('mhr')%}",
       items = {
         mhr = {
           display_modified = false,
@@ -95,15 +91,13 @@ end
 T["custom statusline"] = function()
   child.lua_func(function()
     require("bareline").setup({
-      statusline = {
-        value = "%<"
-          .. "%{BlPad(BlItem('filepath'))}"
-          .. "%m%h%r"
-          .. "%="
-          .. "%{BlIs(1)}"
-          .. "%{%BlInahide('%02l:%02c/%02L')%}"
-          .. "%{BlIs(1)}",
-      },
+      statusline = "%<"
+        .. "%{BlPad(BlItem('filepath'))}"
+        .. "%m%h%r"
+        .. "%="
+        .. "%{BlIs(1)}"
+        .. "%{%BlInahide('%02l:%02c/%02L')%}"
+        .. "%{BlIs(1)}",
     })
     vim.cmd.new()
   end)
@@ -121,9 +115,7 @@ T["user-defined BareItem"] = function()
       vim.b[var] = "Hi!"
     end, {})
     bareline.setup({
-      statusline = {
-        value = "%{BlItem('hello')}",
-      },
+      statusline = "%{BlItem('hello')}",
     })
   end)
   eq(child.api.nvim_eval_statusline(child.wo.statusline, {}).str, "Hi!")
@@ -136,9 +128,7 @@ T["user-defined BareItem uses bareline.config.items"] = function()
       vim.b[var] = "Hi! " .. bareline.config.items.hello.message
     end, {})
     bareline.setup({
-      statusline = {
-        value = "%{BlItem('hello')}",
-      },
+      statusline = "%{BlItem('hello')}",
       items = {
         hello = {
           message = "Test",
@@ -158,7 +148,7 @@ T["BlItem() creates the autocmds of drawn items only"] = function()
     bareline.items.list = bareline.BareItem:new("bl_list", function(var)
       vim.b[var] = "list"
     end, { autocmds = { { event = "OptionSet", opts = { pattern = "list" } } } })
-    bareline.setup({ statusline = { value = "%{BlItem('wrap')}" } })
+    bareline.setup({ statusline = "%{BlItem('wrap')}" })
   end)
   eq(h.get_child_evaluated_stl(child), "wrap")
   child.cmd("set nowrap")

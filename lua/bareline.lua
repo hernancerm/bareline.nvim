@@ -29,7 +29,7 @@
 --- Bareline takes this approach to statusline configuration:
 ---
 --- 1. The statusline DSL ('statusline') is not abstracted away from the user.
----    See: |bareline.config.statusline.value|.
+---    See: |bareline.config.statusline|.
 --- 2. Helper functions are provided to improve the experience of using the DSL.
 ---    See: |bareline-vimscript-functions|.
 --- 3. The plugin exposes "statusline items", which group a buf-local var, a
@@ -167,24 +167,22 @@ local function assign_default_config()
   --minidoc_replace_start {
   bareline.default_config = {
     --minidoc_replace_end
-    statusline = {
-      value = "%{BlIs(1)}"
-        .. "%{BlInahide(BlItem('vim_mode'))}"
-        .. "%{BlIs(1)}"
-        .. "%<"
-        .. "%{BlPad(BlItem('filepath'))}"
-        .. "%{BlPad(BlItem('lsp_servers'))}"
-        .. "%{%BlPad(BlItem('mhr'))%}"
-        .. "%="
-        .. "%{BlPad(BlItem('diagnostics'))}"
-        .. "%{BlPad(BlItem('end_of_line'))}"
-        .. "%{BlPad(BlItem('indent_style'))}"
-        .. "%{BlInarm(BlPad(BlWrap(get(b:,'gitsigns_head',''),'(',')')))}"
-        .. "%{BlPad(BlItem('current_working_dir'))}"
-        .. "%{BlIs(1)}"
-        .. "%02l:%02c/%02L"
-        .. "%{BlIs(1)}",
-    },
+    statusline = "%{BlIs(1)}"
+      .. "%{BlInahide(BlItem('vim_mode'))}"
+      .. "%{BlIs(1)}"
+      .. "%<"
+      .. "%{BlPad(BlItem('filepath'))}"
+      .. "%{BlPad(BlItem('lsp_servers'))}"
+      .. "%{%BlPad(BlItem('mhr'))%}"
+      .. "%="
+      .. "%{BlPad(BlItem('diagnostics'))}"
+      .. "%{BlPad(BlItem('end_of_line'))}"
+      .. "%{BlPad(BlItem('indent_style'))}"
+      .. "%{BlInarm(BlPad(BlWrap(get(b:,'gitsigns_head',''),'(',')')))}"
+      .. "%{BlPad(BlItem('current_working_dir'))}"
+      .. "%{BlIs(1)}"
+      .. "%02l:%02c/%02L"
+      .. "%{BlIs(1)}",
     alt_statuslines = {
       bareline.alt_statuslines.plugin,
     },
@@ -202,11 +200,8 @@ local function assign_default_config()
 end
 
 --- #tag bareline.config.statusline
---- The main statusline.
----
---- #tag bareline.config.statusline.value
----     {value} `(string)`
----       String directly assigned to window local 'statusline'.
+---     {statusline} `(string)`
+---       The main statusline. Directly assigned to window local 'statusline'.
 ---
 --- #tag bareline.config.alt_statuslines
 --- Alternate statuslines to |bareline.config.statusline|. These can be used to
@@ -306,9 +301,7 @@ end
 --- Use it:
 --- >lua
 ---   bareline.setup({
----     statusline = {
----       value = "%{BlItem('soft_wrap')}",
----     },
+---     statusline = "%{BlItem('soft_wrap')}",
 ---   })
 --- <
 
@@ -603,7 +596,7 @@ bareline.alt_statuslines.plugin = {
 --- Vimscript functions ~
 ---
 --- The functions in this section have the goal of facilitating writing the value
---- for |bareline.config.statusline.value| (i.e., 'statusline'). So the functions
+--- for |bareline.config.statusline| (i.e., 'statusline'). So the functions
 --- are intended to be used in the statusline string.
 
 --- #tag BlItem()
@@ -780,10 +773,10 @@ function bareline.refresh_statusline()
   local statusline_to_assign = bareline.config.statusline
   for _, statusline in ipairs(bareline.config.alt_statuslines) do
     if statusline.when() then
-      statusline_to_assign = statusline
+      statusline_to_assign = statusline.value
     end
   end
-  h.draw_window_statusline(statusline_to_assign.value)
+  h.draw_window_statusline(statusline_to_assign)
 end
 
 -- Set module default config.
@@ -983,8 +976,7 @@ function h.get_config_with_fallback(config, default_config)
   vim.validate("config", config, "table", true)
   config =
     vim.tbl_deep_extend("force", vim.deepcopy(default_config), config or {})
-  vim.validate("config.statusline", config.statusline, "table")
-  vim.validate("config.statusline.value", config.statusline.value, "string")
+  vim.validate("config.statusline", config.statusline, "string")
   vim.validate("config.alt_statuslines", config.alt_statuslines, "table", true)
   return config
 end

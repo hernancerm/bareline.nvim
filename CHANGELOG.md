@@ -13,6 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Config key `statusline.value` is now just `statusline`.
 - Calling `setup()` is no longer required. Call it only to configure the plugin.
 - Requires Neovim 0.12.
 - The log file moved from `stdpath("data")` to `stdpath("log")`.
