@@ -100,7 +100,7 @@ Below is the default config, where `bareline` equals `require("bareline")`.
             wrap = { "(", ")" },
             inactive = "remove",
           }),
-          item("current_working_dir"),
+          item("cwd"),
         }),
         space(1),
         "%02l:%02c/%02L",
@@ -287,8 +287,8 @@ Mockup: `e:2,w:1`
 Type ~
 `(BareItem)`
 
-                                            *bareline.items.current_working_dir*
-                      `bareline.items.current_working_dir`
+                                                            *bareline.items.cwd*
+                              `bareline.items.cwd`
 Current working directory (cwd).
 The tail of the current working directory.
 Mockup: `bareline.nvim`

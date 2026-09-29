@@ -158,7 +158,7 @@ local function assign_default_config()
             wrap = { "(", ")" },
             inactive = "remove",
           }),
-          item("current_working_dir"),
+          item("cwd"),
         }),
         space(1),
         "%02l:%02c/%02L",
@@ -480,8 +480,8 @@ end, {
 --- The tail of the current working directory.
 --- Mockup: `bareline.nvim`
 ---@type BareItem
-bareline.items.current_working_dir = bareline.BareItem:new(
-  "bl_current_working_dir",
+bareline.items.cwd = bareline.BareItem:new(
+  "bl_cwd",
   function(var)
     local cwd_tail = nil
     local cwd = vim.uv.cwd() or ""

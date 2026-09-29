@@ -49,7 +49,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Vimscript helper functions: `BlIs()`, `BlPad()`, `BlPadl()`, `BlPadr()`, `BlWrap()`, `BlIna()`,
   `BlInahide()` and `BlInarm()`.
 - Item `mhr`, which fixes the whitespace between `%m%h%r`.
-- Item `current_working_dir`.
+- Item `cwd`.
 - Support for detached and linked Git work trees.
 - Optional logging of statusline redraws.
 

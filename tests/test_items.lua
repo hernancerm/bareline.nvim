@@ -292,10 +292,10 @@ T["cwd"]["display in file"] = function(dir, filename, expected)
     child.cmd("edit " .. filename)
   end
   child.lua_func(function()
-    local item = require("bareline").items.current_working_dir
+    local item = require("bareline").items.cwd
     item.callback(item.var)
   end)
-  eq(child.b[child.lua_get("bareline.items.current_working_dir.var")], expected)
+  eq(child.b[child.lua_get("bareline.items.cwd.var")], expected)
 end
 
 -- =================================================================================================

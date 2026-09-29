@@ -92,7 +92,7 @@ bareline.setup({
         item("end_of_line"),
         item("indent_style"),
         text(vim.b.gitsigns_head, { wrap = { "(", ")" }, inactive = "remove" }),
-        item("current_working_dir"),
+        item("cwd"),
       }),
       s(1),
       "%02l:%02c/%02L",
