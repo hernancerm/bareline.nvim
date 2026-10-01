@@ -59,6 +59,16 @@ local h = {}
 ---
 --- * No need to call |bareline.setup()|, but you may do so to configure the plugin.
 
+--- #delimiter
+--- #tag bareline.config
+--- #tag bareline.default_config
+--- #tag bareline-configuration
+--- Configuration ~
+
+--- The merged config (defaults with overrides) is in `require("bareline").config`,
+--- which is set by |bareline.setup()|. The default config remains constant and is
+--- in `require("bareline").default_config`, for reference.
+
 --- Module setup.
 ---@param config table? Merged with the default config (|bareline.default_config|)
 --- and the former takes precedence on duplicate keys.
@@ -114,16 +124,7 @@ function bareline.setup(config)
   end
 end
 
---- #delimiter
---- #tag bareline.config
---- #tag bareline.default_config
---- #tag bareline-configuration
---- Configuration ~
-
---- The merged config (defaults with user overrides) is in `bareline.config`. The
---- default config is available in `bareline.default_config`.
----
---- Below is the default config, where `bareline` equals `require("bareline")`.
+--- Default config:
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
 --minidoc_replace_start
 local function assign_default_config()
@@ -175,18 +176,17 @@ local function assign_default_config()
 end
 
 --- #tag bareline.config.statusline
----     {statusline} `(fun(ctx:BarelineCtx):table|string)`
----       Called on every draw of every statusline. Returns a list of parts:
----       * `string`: Statusline DSL, used as-is, e.g. `"%<"`, `"%02l"`.
----       * The return of |bareline.item()| and |bareline.text()|: Text, where
----         `%` is escaped.
----       * A nested list, e.g. the return of |bareline.each()|.
----       * `nil` or `false`: Skipped, so `ctx.active and "foo"` works.
----       The function runs in the window being drawn, so |vim.b|, |vim.wo| and
----       |vim.fn| read that window and its buf. If the function errors, the
----       error is shown once and a basic statusline is drawn instead.
----       To pick a different statusline for some windows, use an `if`. The
----       default config does so for plugin windows.
+--- `(fun(ctx:BarelineCtx):table|string)`
+--- Called on every draw of every statusline. Returns a list of parts, where the
+--- list can be of any size and each part can be one of the following:
+--- * A string: used as-is, e.g., `"%<"`, `"%02l"`.
+--- * The return of |bareline.item()| and |bareline.text()|.
+--- * A nested list, e.g., the return of |bareline.each()|.
+--- * `nil` or `false`: Skipped.
+--- The function runs in the window being drawn, so |vim.b|, |vim.wo| and |vim.fn|
+--- read that window and its buf. If the function errors, the error is shown once
+--- and a basic statusline is drawn instead. To pick a different statusline for
+--- some windows, use an `if`.
 ---
 --- Context of the draw, passed to |bareline.config.statusline|.
 ---@class BarelineCtx
@@ -194,12 +194,9 @@ end
 --- It cannot be read from within the function, since the window being drawn is
 --- current while it runs.
 
---- #tag bareline.config.items
---- Provide item-specific configuration.
----
 --- #tag bareline.config.items.mhr
----     {mhr} `(boolean|fun():boolean)`
----       See |bareline.items.mhr|.
+--- `(boolean|fun():boolean)`
+--- See |bareline.items.mhr|.
 
 --- #delimiter
 --- #tag bareline-item-structure
